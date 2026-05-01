@@ -1,0 +1,10 @@
+// 셔틀이 도메인 스키마. 실제 모델은 다음 커밋에서.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
