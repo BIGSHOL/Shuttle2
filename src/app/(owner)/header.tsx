@@ -26,7 +26,7 @@ const NAV = [
   { href: "/dashboard", label: "대시보드" },
   { href: "/vehicles", label: "차량" },
   { href: "/stops", label: "정류장" },
-  // W2-3: { href: "/routes", label: "노선" },
+  { href: "/routes", label: "노선" },
 ];
 
 export function OwnerHeader({
