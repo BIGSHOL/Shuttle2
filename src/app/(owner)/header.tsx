@@ -22,12 +22,16 @@ const ORG_TYPE_LABEL: Record<"ACADEMY" | "DAYCARE" | "KINDERGARTEN", string> = {
   KINDERGARTEN: "유치원",
 };
 
-const NAV = [
-  { href: "/dashboard", label: "대시보드" },
-  { href: "/vehicles", label: "차량" },
-  { href: "/stops", label: "정류장" },
-  { href: "/routes", label: "노선" },
-];
+function buildNav(orgType: "ACADEMY" | "DAYCARE" | "KINDERGARTEN") {
+  const studentLabel = orgType === "ACADEMY" ? "학생" : "원아";
+  return [
+    { href: "/dashboard", label: "대시보드" },
+    { href: "/vehicles", label: "차량" },
+    { href: "/stops", label: "정류장" },
+    { href: "/routes", label: "노선" },
+    { href: "/students", label: studentLabel },
+  ];
+}
 
 export function OwnerHeader({
   orgName,
@@ -40,6 +44,7 @@ export function OwnerHeader({
 }) {
   const [pending, startTransition] = useTransition();
   const pathname = usePathname();
+  const nav = buildNav(orgType);
 
   return (
     <header className="bg-background border-b">
@@ -52,7 +57,7 @@ export function OwnerHeader({
             </p>
           </Link>
           <nav className="hidden items-center gap-1 sm:flex">
-            {NAV.map((item) => {
+            {nav.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (

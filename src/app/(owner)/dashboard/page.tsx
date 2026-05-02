@@ -94,17 +94,21 @@ export default async function DashboardPage() {
           </Card>
         </Link>
 
-        <Card>
-          <CardHeader>
-            <CardDescription>등록된 학생·원아</CardDescription>
-            <CardTitle className="text-3xl">{studentCount}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-xs">
-              W3에서 등록·노선 배정
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/students" className="block">
+          <Card className="hover:border-primary transition-colors">
+            <CardHeader>
+              <CardDescription>
+                등록된 {user.org.type === "ACADEMY" ? "학생" : "원아"}
+              </CardDescription>
+              <CardTitle className="text-3xl">{studentCount}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground text-xs">
+                노선·정류장 배정 · 클릭해서 관리
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </section>
 
       <section className="bg-background rounded-lg border p-6">
