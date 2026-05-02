@@ -32,6 +32,7 @@ function buildNav(orgType: "ACADEMY" | "DAYCARE" | "KINDERGARTEN") {
     { href: "/students", label: studentLabel },
     { href: "/staff", label: "직원" },
     { href: "/guardians", label: "보호자" },
+    { href: "/absences", label: "결석" },
   ];
 }
 

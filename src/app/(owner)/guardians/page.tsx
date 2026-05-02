@@ -20,6 +20,7 @@ import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 
 import { RevokeGuardianInviteButton } from "./_components/revoke-guardian-invite-button";
+import { UnlinkGuardianLinkButton } from "./_components/unlink-guardian-link-button";
 
 function formatDate(d: Date) {
   return d.toISOString().slice(0, 10);
@@ -45,7 +46,13 @@ export default async function GuardiansPage() {
     name: string;
     phone: string;
     userId: string | null;
-    children: { id: string; name: string; relation: string; isPrimary: boolean }[];
+    children: {
+      id: string;
+      name: string;
+      relation: string;
+      isPrimary: boolean;
+      linkId: string;
+    }[];
   };
   const byGuardian = new Map<string, GuardianRow>();
   for (const l of links) {
@@ -55,6 +62,7 @@ export default async function GuardiansPage() {
       name: l.student.name,
       relation: l.relation,
       isPrimary: l.isPrimary,
+      linkId: l.id,
     };
     if (cur) {
       cur.children.push(child);
@@ -128,12 +136,20 @@ export default async function GuardiansPage() {
                     <TableCell className="text-sm">
                       <ul className="space-y-0.5">
                         {g.children.map((c) => (
-                          <li key={c.id} className="flex items-center gap-2">
+                          <li
+                            key={c.linkId}
+                            className="flex items-center gap-2"
+                          >
                             <span>{c.name}</span>
                             <span className="text-muted-foreground text-xs">
                               ({c.relation}
                               {c.isPrimary ? " · 주" : ""})
                             </span>
+                            <UnlinkGuardianLinkButton
+                              linkId={c.linkId}
+                              guardianName={g.name}
+                              studentName={c.name}
+                            />
                           </li>
                         ))}
                       </ul>

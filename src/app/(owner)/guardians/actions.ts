@@ -112,6 +112,25 @@ export async function revokeGuardianInviteAction(id: string): Promise<void> {
 }
 
 // ────────────────────────────────────────────────────────────────────
+// GuardianLink 해제 — 보호자-자녀 연결 끊기
+// 학부모 계정(Guardian) 자체는 삭제하지 않고 link만 끊는다 (다른 학원 자녀가
+// 있을 수 있으므로). orgId 검증을 위해 student.orgId로 필터.
+// ────────────────────────────────────────────────────────────────────
+export async function unlinkGuardianLinkAction(linkId: string): Promise<void> {
+  await requireOwner();
+  const orgId = await getOrgId();
+
+  const result = await db.guardianLink.deleteMany({
+    where: { id: linkId, student: { orgId } },
+  });
+  if (result.count === 0) {
+    throw new Error("해제할 수 없는 연결입니다 (다른 학원이거나 없음)");
+  }
+
+  revalidatePath("/guardians");
+}
+
+// ────────────────────────────────────────────────────────────────────
 // public — 토큰 미리보기 + 가입
 // ────────────────────────────────────────────────────────────────────
 

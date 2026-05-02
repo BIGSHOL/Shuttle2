@@ -214,7 +214,9 @@ model Guardian {
   name   String
   phone  String  @unique
 
-  links GuardianLink[]
+  links             GuardianLink[]
+  absences          AbsenceRequest[]
+  pushSubscriptions PushSubscription[]
 }
 
 model GuardianLink {
@@ -334,7 +336,11 @@ model AbsenceRequest {
   reason    String?
   status    AbsenceStatus @default(PENDING)
   createdBy String // guardianId
+  guardian  Guardian      @relation(fields: [createdBy], references: [id])
   createdAt DateTime      @default(now())
+
+  @@index([studentId, date])
+  @@index([createdBy])
 }
 
 enum AbsenceType {
@@ -347,4 +353,19 @@ enum AbsenceStatus {
   PENDING
   NOTIFIED_DRIVER
   ACKNOWLEDGED
+}
+
+// W4-3 발판: VAPID 키 교환 후 학부모 브라우저에서 push 구독 정보 저장.
+// 실제 발송은 W6에서 web-push 라이브러리로 발신. 이번엔 모델·구독 흐름까지만.
+model PushSubscription {
+  id         String   @id @default(cuid())
+  guardianId String
+  guardian   Guardian @relation(fields: [guardianId], references: [id], onDelete: Cascade)
+  endpoint   String   @unique
+  p256dh     String
+  auth       String
+  userAgent  String?
+  createdAt  DateTime @default(now())
+
+  @@index([guardianId])
 }

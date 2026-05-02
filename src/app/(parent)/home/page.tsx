@@ -16,6 +16,12 @@ import {
   type ChildTripCard,
 } from "@/lib/parent/today-trips";
 
+const ABSENCE_TYPE_SHORT = {
+  ABSENT_BOTH: "등·하원",
+  ABSENT_PICKUP: "등원",
+  ABSENT_DROPOFF: "하원",
+} as const;
+
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
 function fmtHHmm(d: Date): string {
@@ -127,6 +133,20 @@ export default async function ParentHomePage() {
     me.students.map((s) => ({ id: s.id, name: s.name })),
   );
 
+  // 다가오는 결석 신청 (오늘 또는 미래, ACKNOWLEDGED 제외, 5건)
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const upcomingAbsences = await db.absenceRequest.findMany({
+    where: {
+      studentId: { in: studentIds },
+      date: { gte: today },
+      status: { not: "ACKNOWLEDGED" },
+    },
+    orderBy: { date: "asc" },
+    take: 5,
+    include: { student: { select: { id: true, name: true } } },
+  });
+
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
       <section>
@@ -174,15 +194,47 @@ export default async function ParentHomePage() {
       )}
 
       <section className="space-y-2">
-        <h3 className="text-sm font-medium">결석 신청</h3>
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base">결석 신청은 곧 열려요</CardTitle>
-            <CardDescription>
-              결석 사유와 날짜를 보낼 수 있는 기능을 준비 중이에요. (W4-3)
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="flex items-end justify-between">
+          <h3 className="text-sm font-medium">결석 신청</h3>
+          <div className="flex gap-2">
+            <Button asChild size="sm" variant="outline">
+              <Link href="/my-absences">전체 보기</Link>
+            </Button>
+            <Button asChild size="sm">
+              <Link href="/my-absences/new">+ 새 신청</Link>
+            </Button>
+          </div>
+        </div>
+        {upcomingAbsences.length === 0 ? (
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-muted-foreground text-base">
+                예정된 결석 없음
+              </CardTitle>
+              <CardDescription>
+                결석 사유가 생기면 위의 &quot;+ 새 신청&quot; 버튼을 눌러
+                주세요.
+              </CardDescription>
+            </CardHeader>
+          </Card>
+        ) : (
+          <div className="space-y-2">
+            {upcomingAbsences.map((a) => (
+              <Card key={a.id}>
+                <CardContent className="flex items-center justify-between gap-2 p-3 text-sm">
+                  <span>
+                    <span className="font-medium">{a.student.name}</span> ·{" "}
+                    {a.date.toISOString().slice(0, 10)} ·{" "}
+                    {ABSENCE_TYPE_SHORT[a.type]}
+                  </span>
+                  <span className="rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900">
+                    {a.status === "PENDING" ? "대기" : "전달됨"}
+                  </span>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
       </section>
     </main>
   );

@@ -1,6 +1,7 @@
 import { requireGuardian } from "@/lib/auth/session";
 
 import { ParentHeader } from "./parent-header";
+import { SwRegister } from "./sw-register";
 
 export default async function ParentLayout({
   children,
@@ -16,6 +17,7 @@ export default async function ParentLayout({
         email={me.email}
         childCount={me.students.length}
       />
+      <SwRegister />
       {children}
     </div>
   );
