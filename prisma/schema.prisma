@@ -1,0 +1,298 @@
+// 셔틀이 도메인 스키마.
+// 운영자(학원·교습소·어린이집·유치원), 차량, 노선, 정류장, 학생,
+// 보호자, 운행, 위치 ping, 안전점검, 결석 신청까지 W1-2 명세 그대로.
+//
+// fullTextSearchPostgres는 Prisma 6에서 GA로 승격됐기 때문에
+// previewFeatures에 더 이상 명시하지 않음 (Prisma 7 기준).
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL") // pooler (6543)
+  directUrl = env("DIRECT_URL") // migrations (5432)
+}
+
+// === 테넌트 ===
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  type      OrgType  @default(ACADEMY)
+  plan      Plan     @default(TRIAL)
+  createdAt DateTime @default(now())
+
+  vehicles Vehicle[]
+  students Student[]
+  staffs   Staff[]
+  stops    Stop[]
+}
+
+enum OrgType {
+  ACADEMY // 학원·교습소
+  DAYCARE // 어린이집
+  KINDERGARTEN // 유치원
+}
+
+enum Plan {
+  TRIAL
+  BASIC
+  PRO
+}
+
+// === 차량·운영자 ===
+model Vehicle {
+  id             String       @id @default(cuid())
+  orgId          String
+  org            Organization @relation(fields: [orgId], references: [id])
+  plate          String // 차량번호
+  mode           VehicleMode  @default(GENERAL)
+  // KIDS 모드 전용 필드 (nullable)
+  reportNo       String? // 어린이통학버스 신고증명서 번호
+  insuranceUntil DateTime? // 보험 만료일
+
+  routes Route[]
+  trips  Trip[]
+}
+
+enum VehicleMode {
+  KIDS
+  GENERAL
+}
+
+model Staff {
+  id     String       @id @default(cuid())
+  orgId  String
+  org    Organization @relation(fields: [orgId], references: [id])
+  userId String? // Supabase auth.users 연결
+  name   String
+  phone  String
+  role   StaffRole
+
+  trainings   TrainingRecord[]
+  driverTrips Trip[]           @relation("DriverTrips")
+  helperTrips Trip[]           @relation("HelperTrips")
+}
+
+enum StaffRole {
+  OWNER
+  DRIVER
+  HELPER
+}
+
+// 안전교육 이수 기록 (운영자·운전자·동승자 2년마다)
+model TrainingRecord {
+  id             String           @id @default(cuid())
+  staffId        String
+  staff          Staff            @relation(fields: [staffId], references: [id])
+  category       TrainingCategory
+  completedOn    DateTime
+  expiresOn      DateTime // completedOn + 2년 (해당 연도 12/31)
+  certificateUrl String?
+}
+
+enum TrainingCategory {
+  OPERATOR
+  DRIVER
+  HELPER
+}
+
+// === 노선·정류장 ===
+model Route {
+  id        String         @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle        @relation(fields: [vehicleId], references: [id])
+  name      String // "월수금 등원 1코스"
+  direction RouteDirection
+  weekdays  Int // 비트마스크: 월=1 화=2 수=4 목=8 금=16 토=32 일=64
+
+  stops    RouteStop[]
+  students RouteStudent[]
+  trips    Trip[]
+}
+
+enum RouteDirection {
+  PICKUP // 등원
+  DROPOFF // 하원
+}
+
+model Stop {
+  id      String       @id @default(cuid())
+  orgId   String
+  org     Organization @relation(fields: [orgId], references: [id])
+  name    String // "○○아파트 정문"
+  lat     Float
+  lng     Float
+  radiusM Int          @default(50) // 도착 판정 반경 (미터)
+
+  routes   RouteStop[]
+  students RouteStudent[]
+}
+
+model RouteStop {
+  id          String @id @default(cuid())
+  routeId     String
+  route       Route  @relation(fields: [routeId], references: [id])
+  stopId      String
+  stop        Stop   @relation(fields: [stopId], references: [id])
+  order       Int // 순서
+  scheduledAt String // "HH:mm" 형식 예정 시각
+
+  @@unique([routeId, order])
+}
+
+// === 학생·보호자 ===
+model Student {
+  id        String       @id @default(cuid())
+  orgId     String
+  org       Organization @relation(fields: [orgId], references: [id])
+  name      String
+  birthYear Int // KIDS 모드 자동 판정용
+
+  guardians GuardianLink[]
+  routes    RouteStudent[]
+  events    BoardingEvent[]
+  absences  AbsenceRequest[]
+}
+
+model Guardian {
+  id     String  @id @default(cuid())
+  userId String? // Supabase auth (학부모 본인 계정)
+  name   String
+  phone  String  @unique
+
+  links GuardianLink[]
+}
+
+model GuardianLink {
+  id         String   @id @default(cuid())
+  studentId  String
+  student    Student  @relation(fields: [studentId], references: [id])
+  guardianId String
+  guardian   Guardian @relation(fields: [guardianId], references: [id])
+  relation   String // "모", "부", "조부" 등
+  isPrimary  Boolean  @default(false)
+
+  @@unique([studentId, guardianId])
+}
+
+model RouteStudent {
+  id        String  @id @default(cuid())
+  routeId   String
+  route     Route   @relation(fields: [routeId], references: [id])
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id])
+  stopId    String // 이 학생이 타고 내리는 정류장
+  stop      Stop    @relation(fields: [stopId], references: [id])
+
+  @@unique([routeId, studentId])
+}
+
+// === 일별 운행 ===
+model Trip {
+  id        String    @id @default(cuid())
+  vehicleId String
+  vehicle   Vehicle   @relation(fields: [vehicleId], references: [id])
+  routeId   String
+  route     Route     @relation(fields: [routeId], references: [id])
+  driverId  String
+  driver    Staff     @relation("DriverTrips", fields: [driverId], references: [id])
+  helperId  String?
+  helper    Staff?    @relation("HelperTrips", fields: [helperId], references: [id])
+  date      DateTime  @db.Date
+  startedAt DateTime?
+  endedAt   DateTime?
+
+  // 운행 시작·종료 위치 (요약용, 상세 트랙은 LocationPing)
+  startLat Float?
+  startLng Float?
+  endLat   Float?
+  endLng   Float?
+
+  events      BoardingEvent[]
+  safetyCheck SafetyCheck?
+  pings       LocationPing[]
+
+  @@unique([vehicleId, routeId, date])
+}
+
+model BoardingEvent {
+  id        String       @id @default(cuid())
+  tripId    String
+  trip      Trip         @relation(fields: [tripId], references: [id])
+  studentId String
+  student   Student      @relation(fields: [studentId], references: [id])
+  type      BoardingType
+  at        DateTime     @default(now())
+  lat       Float?
+  lng       Float?
+  notes     String?
+}
+
+enum BoardingType {
+  BOARD
+  ALIGHT
+}
+
+// 운행 중 위치 ping (영구 저장, 면책 자료)
+// 영구 저장 정책: 30초 간격 + 정류장 통과 시점 + 시작/종료
+// (실시간 broadcast는 DB 거치지 않고 Supabase Realtime broadcast 채널 사용)
+model LocationPing {
+  id         String     @id @default(cuid())
+  tripId     String
+  trip       Trip       @relation(fields: [tripId], references: [id])
+  lat        Float
+  lng        Float
+  accuracy   Float? // GPS 정확도 (미터)
+  speed      Float? // 속도 (m/s)
+  heading    Float? // 진행 방향 0~360
+  recordedAt DateTime   @default(now())
+  source     PingSource @default(INTERVAL)
+
+  @@index([tripId, recordedAt])
+}
+
+enum PingSource {
+  INTERVAL // 30초 간격 자동
+  STOP_PASS // 정류장 반경 진입 (자동 판정)
+  START // 운행 시작 시점
+  END // 운행 종료 시점
+}
+
+// KIDS 모드: 매 운행 안전점검 (도교법 §53⑦ 안전운행기록 원천 데이터)
+model SafetyCheck {
+  id                String    @id @default(cuid())
+  tripId            String    @unique
+  trip              Trip      @relation(fields: [tripId], references: [id])
+  seatbeltAllOk     Boolean // 출발 전 전원 안전띠 확인
+  seatbeltCheckedAt DateTime?
+  helperPresent     Boolean // 동승보호자 동승 확인
+  allAlightedOk     Boolean // 운행 종료 후 전원 하차 확인
+  alightCheckedAt   DateTime?
+}
+
+// 결석·일시 불승차 신청
+model AbsenceRequest {
+  id        String        @id @default(cuid())
+  studentId String
+  student   Student       @relation(fields: [studentId], references: [id])
+  date      DateTime      @db.Date
+  type      AbsenceType
+  reason    String?
+  status    AbsenceStatus @default(PENDING)
+  createdBy String // guardianId
+  createdAt DateTime      @default(now())
+}
+
+enum AbsenceType {
+  ABSENT_BOTH
+  ABSENT_PICKUP
+  ABSENT_DROPOFF
+}
+
+enum AbsenceStatus {
+  PENDING
+  NOTIFIED_DRIVER
+  ACKNOWLEDGED
+}
