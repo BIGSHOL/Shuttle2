@@ -34,14 +34,16 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  // (owner) 라우트 보호: 미인증이면 /login으로
+  // 보호 경로 화이트리스트 방식: public path만 명시하고 나머지 전부 보호.
+  // 새 owner 라우트(/vehicles, /stops, /routes, ...)가 추가되어도 자동 가드.
   const path = request.nextUrl.pathname;
-  const isOwnerRoute =
-    path.startsWith("/dashboard") ||
-    path.startsWith("/owner") ||
-    path.startsWith("/api/owner");
+  const PUBLIC_PATHS = new Set(["/", "/login", "/signup"]);
+  const isPublic =
+    PUBLIC_PATHS.has(path) ||
+    path.startsWith("/_next/") ||
+    path === "/favicon.ico";
 
-  if (isOwnerRoute && !user) {
+  if (!isPublic && !user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("redirectTo", path);
