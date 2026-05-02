@@ -14,6 +14,7 @@ import {
 import { useWakeLock } from "@/lib/wake-lock/use-wake-lock";
 
 import { endTripAction } from "../../run/actions";
+import { useGpsTracker } from "./gps-tracker";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
@@ -22,6 +23,9 @@ type StopRow = {
   order: number;
   scheduledAt: string;
   name: string;
+  lat: number;
+  lng: number;
+  radiusM: number;
 };
 
 export function TripRunningView({
@@ -41,6 +45,20 @@ export function TripRunningView({
 }) {
   // Wake Lock — 화면 자동 꺼짐 방지
   const wakeLock = useWakeLock(true);
+
+  // GPS 추적 — watchPosition + 5초 broadcast + 30초 LocationPing + 정류장 자동 통과
+  const gps = useGpsTracker({
+    tripId,
+    active: true,
+    stops: stops.map((s) => ({
+      id: s.id,
+      name: s.name,
+      lat: s.lat,
+      lng: s.lng,
+      radiusM: s.radiusM,
+      order: s.order,
+    })),
+  });
 
   // 경과 시간 표시
   const [elapsed, setElapsed] = useState("00:00");
@@ -121,7 +139,7 @@ export function TripRunningView({
           </div>
         </CardHeader>
         <CardContent className="space-y-2 text-xs">
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <span
               className={
                 wakeLock.active
@@ -131,8 +149,21 @@ export function TripRunningView({
             >
               화면 잠금 방지: {wakeLock.active ? "ON" : "OFF"}
             </span>
-            <span className="rounded-md bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700">
-              GPS: 더미 (W3-3b에서 연결)
+            <span
+              className={
+                gps.fix
+                  ? "rounded-md bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900"
+                  : gps.error
+                    ? "rounded-md bg-rose-100 px-2 py-0.5 font-medium text-rose-900"
+                    : "rounded-md bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700"
+              }
+            >
+              GPS:{" "}
+              {gps.fix
+                ? `±${Math.round(gps.fix.accuracy)}m`
+                : gps.error
+                  ? "오류"
+                  : "수신 대기"}
             </span>
             {isKidsMode ? (
               <span className="rounded-md bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
@@ -143,6 +174,15 @@ export function TripRunningView({
           {wakeLock.error ? (
             <p className="text-destructive">{wakeLock.error}</p>
           ) : null}
+          {gps.error ? (
+            <p className="text-destructive">GPS: {gps.error}</p>
+          ) : null}
+          {gps.fix ? (
+            <p className="text-muted-foreground font-mono">
+              위도 {gps.fix.latitude.toFixed(6)}, 경도{" "}
+              {gps.fix.longitude.toFixed(6)}
+            </p>
+          ) : null}
         </CardContent>
       </Card>
 
@@ -151,25 +191,47 @@ export function TripRunningView({
         <CardHeader>
           <CardTitle className="text-base">정류장 진행</CardTitle>
           <CardDescription>
-            {stops.length}개 정류장. W3-3b에서 GPS 반경 진입 시 자동 진행 표시.
+            {stops.length}개 정류장 중 통과 {gps.passed.size}개. GPS가 정류장
+            반경 안에 들어오면 자동으로 통과 표시됩니다.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           <ol className="divide-y">
-            {stops.map((s) => (
-              <li
-                key={s.id}
-                className="flex items-center gap-3 px-4 py-3 text-sm"
-              >
-                <span className="bg-muted text-muted-foreground flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs">
-                  {s.order}
-                </span>
-                <span className="flex-1 font-medium">{s.name}</span>
-                <span className="text-muted-foreground font-mono text-xs">
-                  {s.scheduledAt}
-                </span>
-              </li>
-            ))}
+            {stops.map((s) => {
+              const isPassed = gps.passed.has(s.id);
+              return (
+                <li
+                  key={s.id}
+                  className={
+                    isPassed
+                      ? "flex items-center gap-3 bg-emerald-50/60 px-4 py-3 text-sm"
+                      : "flex items-center gap-3 px-4 py-3 text-sm"
+                  }
+                >
+                  <span
+                    className={
+                      isPassed
+                        ? "flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 font-mono text-xs text-white"
+                        : "bg-muted text-muted-foreground flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs"
+                    }
+                  >
+                    {isPassed ? "✓" : s.order}
+                  </span>
+                  <span
+                    className={
+                      isPassed
+                        ? "flex-1 font-medium line-through"
+                        : "flex-1 font-medium"
+                    }
+                  >
+                    {s.name}
+                  </span>
+                  <span className="text-muted-foreground font-mono text-xs">
+                    {s.scheduledAt}
+                  </span>
+                </li>
+              );
+            })}
           </ol>
         </CardContent>
       </Card>

@@ -3,6 +3,7 @@
 import { randomBytes } from "node:crypto";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
@@ -268,9 +269,8 @@ export async function acceptInviteAction(
   const supabase = await createClient();
   await supabase.auth.signInWithPassword(parsed.data);
 
-  // role 기반 redirect path를 클라이언트로 알려줌 (가입 직후 운행 화면으로)
-  return {
-    success: true,
-    redirectTo: homePathForRole(invite.role),
-  };
+  // role 기반 server-side redirect (NEXT_REDIRECT throw → 클라이언트가 자동 navigate).
+  // useEffect 라운드트립 없이 서버에서 끝내야 invite 페이지가 재렌더링되어 "이미 사용됨"이
+  // 깜빡이는 현상을 방지한다.
+  redirect(homePathForRole(invite.role));
 }

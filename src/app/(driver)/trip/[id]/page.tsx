@@ -28,7 +28,17 @@ export default async function TripPage({
         include: {
           stops: {
             orderBy: { order: "asc" },
-            include: { stop: { select: { id: true, name: true } } },
+            include: {
+              stop: {
+                select: {
+                  id: true,
+                  name: true,
+                  lat: true,
+                  lng: true,
+                  radiusM: true,
+                },
+              },
+            },
           },
         },
       },
@@ -82,6 +92,9 @@ export default async function TripPage({
         order: rs.order,
         scheduledAt: rs.scheduledAt,
         name: rs.stop.name,
+        lat: rs.stop.lat,
+        lng: rs.stop.lng,
+        radiusM: rs.stop.radiusM,
       }))}
       isKidsMode={trip.vehicle.mode === "KIDS"}
       startedAtISO={trip.startedAt?.toISOString() ?? null}

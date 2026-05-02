@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useEffect } from "react";
+import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -41,13 +41,7 @@ export function AcceptForm({
     AcceptInviteState,
     FormData
   >(boundAction, {});
-
-  // 가입 성공 시 role별 home path로 이동 (DRIVER → /run, HELPER → /helper-run, OWNER → /dashboard).
-  useEffect(() => {
-    if (state.success && state.redirectTo) {
-      window.location.href = state.redirectTo;
-    }
-  }, [state.success, state.redirectTo]);
+  // 성공 시 server-side redirect로 이동하므로 클라이언트 useEffect 불필요.
 
   return (
     <Card className="w-full max-w-md">
