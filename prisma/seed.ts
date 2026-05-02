@@ -14,28 +14,43 @@ const DEMO_ORG_NAME = "데모 학원·어린이집 (시드)";
 async function main() {
   console.log("🌱 Seeding demo data…");
 
-  // 기존 데모 데이터 정리 (cascade 안 걸려 있어서 자식부터 직접 제거)
+  // 기존 데모 데이터 정리 (cascade 안 걸려 있어서 자식부터 직접 제거).
+  // ⚠️ 모든 deleteMany는 반드시 demo orgId로 필터해야 함 — 실사용자 데이터 보호.
   const existing = await db.organization.findFirst({
     where: { name: DEMO_ORG_NAME },
   });
   if (existing) {
-    console.log(`  ↺ Found existing demo org ${existing.id}, wiping children…`);
-    await db.absenceRequest.deleteMany({});
-    await db.locationPing.deleteMany({});
-    await db.boardingEvent.deleteMany({});
-    await db.safetyCheck.deleteMany({});
-    await db.trip.deleteMany({});
-    await db.routeStudent.deleteMany({});
-    await db.routeStop.deleteMany({});
-    await db.guardianLink.deleteMany({});
-    await db.guardian.deleteMany({});
-    await db.student.deleteMany({});
-    await db.route.deleteMany({});
-    await db.stop.deleteMany({});
-    await db.trainingRecord.deleteMany({});
-    await db.staff.deleteMany({});
-    await db.vehicle.deleteMany({});
-    await db.organization.deleteMany({ where: { id: existing.id } });
+    const orgId = existing.id;
+    console.log(
+      `  ↺ Found existing demo org ${orgId}, wiping demo children only…`,
+    );
+    await db.absenceRequest.deleteMany({ where: { student: { orgId } } });
+    await db.locationPing.deleteMany({
+      where: { trip: { vehicle: { orgId } } },
+    });
+    await db.boardingEvent.deleteMany({
+      where: { trip: { vehicle: { orgId } } },
+    });
+    await db.safetyCheck.deleteMany({
+      where: { trip: { vehicle: { orgId } } },
+    });
+    await db.trip.deleteMany({ where: { vehicle: { orgId } } });
+    await db.routeStudent.deleteMany({
+      where: { route: { vehicle: { orgId } } },
+    });
+    await db.routeStop.deleteMany({ where: { route: { vehicle: { orgId } } } });
+    await db.guardianLink.deleteMany({ where: { student: { orgId } } });
+    // Guardian은 orgId 컬럼이 없음. 데모가 만든 010-2000-* 번호만 남은 link 없을 때 삭제.
+    await db.guardian.deleteMany({
+      where: { phone: { startsWith: "010-2000-" }, links: { none: {} } },
+    });
+    await db.student.deleteMany({ where: { orgId } });
+    await db.route.deleteMany({ where: { vehicle: { orgId } } });
+    await db.stop.deleteMany({ where: { orgId } });
+    await db.trainingRecord.deleteMany({ where: { staff: { orgId } } });
+    await db.staff.deleteMany({ where: { orgId } });
+    await db.vehicle.deleteMany({ where: { orgId } });
+    await db.organization.delete({ where: { id: orgId } });
   }
 
   const org = await db.organization.create({
