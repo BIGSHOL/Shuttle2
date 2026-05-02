@@ -13,7 +13,13 @@ import {
 } from "@/components/ui/card";
 import { useWakeLock } from "@/lib/wake-lock/use-wake-lock";
 
-import { endTripAction } from "../../run/actions";
+import {
+  assignHelperAction,
+  endTripAction,
+  toggleBoardingEventAction,
+  upsertSafetyCheckAction,
+  type SafetyFieldsInput,
+} from "../../run/actions";
 import { useGpsTracker } from "./gps-tracker";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
@@ -26,7 +32,10 @@ type StopRow = {
   lat: number;
   lng: number;
   radiusM: number;
+  students: { id: string; name: string }[];
 };
+
+type StaffRef = { id: string; name: string };
 
 export function TripRunningView({
   tripId,
@@ -35,6 +44,14 @@ export function TripRunningView({
   stops,
   isKidsMode,
   startedAtISO,
+  safetyCheck,
+  boardedStudentIds,
+  alightedStudentIds,
+  driver,
+  helper,
+  helperCandidates,
+  isDriver,
+  isHelper,
 }: {
   tripId: string;
   route: { name: string; direction: "PICKUP" | "DROPOFF" };
@@ -42,11 +59,23 @@ export function TripRunningView({
   stops: StopRow[];
   isKidsMode: boolean;
   startedAtISO: string | null;
+  safetyCheck: {
+    seatbeltAllOk: boolean;
+    helperPresent: boolean;
+    allAlightedOk: boolean;
+  } | null;
+  boardedStudentIds: string[];
+  alightedStudentIds: string[];
+  driver: StaffRef;
+  helper: StaffRef | null;
+  helperCandidates: StaffRef[];
+  isDriver: boolean;
+  isHelper: boolean;
 }) {
   // Wake Lock — 화면 자동 꺼짐 방지
   const wakeLock = useWakeLock(true);
 
-  // GPS 추적 — watchPosition + 5초 broadcast + 30초 LocationPing + 정류장 자동 통과
+  // GPS 추적
   const gps = useGpsTracker({
     tripId,
     active: true,
@@ -60,12 +89,11 @@ export function TripRunningView({
     })),
   });
 
-  // 경과 시간 표시
+  // 경과 시간
   const [elapsed, setElapsed] = useState("00:00");
   useEffect(() => {
     if (!startedAtISO) return;
     const start = new Date(startedAtISO).getTime();
-
     const tick = () => {
       const sec = Math.floor((Date.now() - start) / 1000);
       const m = Math.floor(sec / 60)
@@ -79,11 +107,29 @@ export function TripRunningView({
     return () => clearInterval(id);
   }, [startedAtISO]);
 
+  const boardedSet = new Set(boardedStudentIds);
+  const alightedSet = new Set(alightedStudentIds);
+  // PICKUP은 BOARD 토글, DROPOFF는 ALIGHT 토글
+  const eventType: "BOARD" | "ALIGHT" =
+    route.direction === "PICKUP" ? "BOARD" : "ALIGHT";
+  const checkedSet = eventType === "BOARD" ? boardedSet : alightedSet;
+
+  // 운행 종료
   const [endPending, startEndTransition] = useTransition();
   const [endError, setEndError] = useState<string | null>(null);
-
   function handleEnd() {
-    if (!confirm("운행을 종료할까요? 종료 후에는 GPS 송신이 멈춥니다.")) return;
+    if (isKidsMode && !safetyCheck?.allAlightedOk) {
+      if (
+        !confirm(
+          "전원 하차 확인이 체크되지 않았습니다. 그래도 운행을 종료할까요?",
+        )
+      )
+        return;
+    } else if (
+      !confirm("운행을 종료할까요? 종료 후에는 GPS 송신이 멈춥니다.")
+    ) {
+      return;
+    }
     setEndError(null);
     startEndTransition(async () => {
       try {
@@ -96,7 +142,6 @@ export function TripRunningView({
 
   return (
     <main className="mx-auto max-w-3xl space-y-4 p-4">
-      {/* Wake Lock 상태 */}
       {!wakeLock.supported ? (
         <Card className="border-amber-300 bg-amber-50/60">
           <CardHeader className="py-3">
@@ -167,7 +212,17 @@ export function TripRunningView({
             </span>
             {isKidsMode ? (
               <span className="rounded-md bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
-                KIDS 모드 · 안전점검 필요
+                KIDS 모드
+              </span>
+            ) : null}
+            {isDriver ? (
+              <span className="rounded-md bg-violet-100 px-2 py-0.5 font-medium text-violet-900">
+                기사 · {driver.name}
+              </span>
+            ) : null}
+            {isHelper ? (
+              <span className="rounded-md bg-sky-100 px-2 py-0.5 font-medium text-sky-900">
+                동승 · {helper?.name ?? "—"}
               </span>
             ) : null}
           </div>
@@ -186,13 +241,34 @@ export function TripRunningView({
         </CardContent>
       </Card>
 
-      {/* 정류장 진행도 */}
+      {/* Helper picker — driver만 */}
+      {isDriver ? (
+        <HelperPicker
+          tripId={tripId}
+          current={helper}
+          options={helperCandidates}
+        />
+      ) : null}
+
+      {/* SafetyCheck — KIDS 모드만 */}
+      {isKidsMode ? (
+        <SafetyCheckCard
+          tripId={tripId}
+          phase="pre"
+          safetyCheck={safetyCheck}
+        />
+      ) : null}
+
+      {/* 정류장 진행도 + 학생 탑승·하차 토글 */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base">정류장 진행</CardTitle>
+          <CardTitle className="text-base">
+            정류장·{eventType === "BOARD" ? "탑승" : "하차"} 체크
+          </CardTitle>
           <CardDescription>
-            {stops.length}개 정류장 중 통과 {gps.passed.size}개. GPS가 정류장
-            반경 안에 들어오면 자동으로 통과 표시됩니다.
+            {stops.length}개 정류장 중 통과 {gps.passed.size}개. 정류장을 지나면
+            그 정류장 학생들의 {eventType === "BOARD" ? "탑승" : "하차"}을
+            체크하세요.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -200,35 +276,50 @@ export function TripRunningView({
             {stops.map((s) => {
               const isPassed = gps.passed.has(s.id);
               return (
-                <li
-                  key={s.id}
-                  className={
-                    isPassed
-                      ? "flex items-center gap-3 bg-emerald-50/60 px-4 py-3 text-sm"
-                      : "flex items-center gap-3 px-4 py-3 text-sm"
-                  }
-                >
-                  <span
-                    className={
-                      isPassed
-                        ? "flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 font-mono text-xs text-white"
-                        : "bg-muted text-muted-foreground flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs"
-                    }
-                  >
-                    {isPassed ? "✓" : s.order}
-                  </span>
-                  <span
-                    className={
-                      isPassed
-                        ? "flex-1 font-medium line-through"
-                        : "flex-1 font-medium"
-                    }
-                  >
-                    {s.name}
-                  </span>
-                  <span className="text-muted-foreground font-mono text-xs">
-                    {s.scheduledAt}
-                  </span>
+                <li key={s.id} className="px-4 py-3">
+                  <div className="flex items-center gap-3 text-sm">
+                    <span
+                      className={
+                        isPassed
+                          ? "flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 font-mono text-xs text-white"
+                          : "bg-muted text-muted-foreground flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs"
+                      }
+                    >
+                      {isPassed ? "✓" : s.order}
+                    </span>
+                    <span
+                      className={
+                        isPassed
+                          ? "flex-1 font-medium line-through"
+                          : "flex-1 font-medium"
+                      }
+                    >
+                      {s.name}
+                    </span>
+                    <span className="text-muted-foreground font-mono text-xs">
+                      {s.scheduledAt}
+                    </span>
+                  </div>
+                  {s.students.length > 0 ? (
+                    <ul className="mt-2 space-y-1 pl-11">
+                      {s.students.map((st) => (
+                        <BoardingRow
+                          key={st.id}
+                          tripId={tripId}
+                          studentId={st.id}
+                          studentName={st.name}
+                          type={eventType}
+                          checked={checkedSet.has(st.id)}
+                          gpsLat={gps.fix?.latitude ?? null}
+                          gpsLng={gps.fix?.longitude ?? null}
+                        />
+                      ))}
+                    </ul>
+                  ) : (
+                    <p className="text-muted-foreground mt-1 pl-11 text-xs">
+                      배정된 학생 없음
+                    </p>
+                  )}
                 </li>
               );
             })}
@@ -236,29 +327,295 @@ export function TripRunningView({
         </CardContent>
       </Card>
 
-      {/* 운행 종료 */}
-      <Card className="border-rose-200 bg-rose-50/40">
-        <CardContent className="pt-6">
-          <Button
-            type="button"
-            variant="destructive"
-            size="lg"
-            className="w-full"
-            disabled={endPending}
-            onClick={handleEnd}
-          >
-            {endPending ? "종료 중..." : "운행 종료"}
-          </Button>
-          {endError ? (
-            <p className="text-destructive mt-2 text-sm" role="alert">
-              {endError}
-            </p>
-          ) : null}
-        </CardContent>
-        <CardFooter className="text-muted-foreground text-xs">
-          종료를 누르면 GPS 송신이 멈추고 운행 기록이 마감됩니다.
-        </CardFooter>
-      </Card>
+      {/* 전원 하차 확인 — KIDS 모드 종료 전 */}
+      {isKidsMode ? (
+        <SafetyCheckCard
+          tripId={tripId}
+          phase="post"
+          safetyCheck={safetyCheck}
+        />
+      ) : null}
+
+      {/* 운행 종료 — driver만 */}
+      {isDriver ? (
+        <Card className="border-rose-200 bg-rose-50/40">
+          <CardContent className="pt-6">
+            <Button
+              type="button"
+              variant="destructive"
+              size="lg"
+              className="w-full"
+              disabled={endPending}
+              onClick={handleEnd}
+            >
+              {endPending ? "종료 중..." : "운행 종료"}
+            </Button>
+            {endError ? (
+              <p className="text-destructive mt-2 text-sm" role="alert">
+                {endError}
+              </p>
+            ) : null}
+          </CardContent>
+          <CardFooter className="text-muted-foreground text-xs">
+            종료를 누르면 GPS 송신이 멈추고 운행 기록이 마감됩니다.
+          </CardFooter>
+        </Card>
+      ) : null}
     </main>
+  );
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Sub-components
+// ────────────────────────────────────────────────────────────────────
+
+function SafetyCheckCard({
+  tripId,
+  phase,
+  safetyCheck,
+}: {
+  tripId: string;
+  phase: "pre" | "post";
+  safetyCheck: {
+    seatbeltAllOk: boolean;
+    helperPresent: boolean;
+    allAlightedOk: boolean;
+  } | null;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function toggle(field: keyof SafetyFieldsInput, current: boolean) {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await upsertSafetyCheckAction(tripId, { [field]: !current });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "저장 실패");
+      }
+    });
+  }
+
+  const seatbelt = safetyCheck?.seatbeltAllOk ?? false;
+  const helperPresent = safetyCheck?.helperPresent ?? false;
+  const alighted = safetyCheck?.allAlightedOk ?? false;
+
+  return (
+    <Card className="border-amber-200 bg-amber-50/40">
+      <CardHeader className="py-3">
+        <CardTitle className="text-sm text-amber-900">
+          {phase === "pre"
+            ? "출발 전 안전점검 (KIDS)"
+            : "종료 전 전원 하차 확인 (KIDS)"}
+        </CardTitle>
+        <CardDescription className="text-xs">
+          {phase === "pre"
+            ? "도교법 §53⑦ 안전운행기록 원천 데이터. 출발 전 반드시 확인."
+            : "운행 종료 전 전원 하차 여부를 확인하세요."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2 text-sm">
+        {phase === "pre" ? (
+          <>
+            <CheckboxRow
+              label="좌석 안전띠 전원 확인"
+              checked={seatbelt}
+              disabled={pending}
+              onClick={() => toggle("seatbeltAllOk", seatbelt)}
+            />
+            <CheckboxRow
+              label="동승보호자 동승 확인"
+              checked={helperPresent}
+              disabled={pending}
+              onClick={() => toggle("helperPresent", helperPresent)}
+            />
+          </>
+        ) : (
+          <CheckboxRow
+            label="전원 하차 확인"
+            checked={alighted}
+            disabled={pending}
+            onClick={() => toggle("allAlightedOk", alighted)}
+          />
+        )}
+        {error ? (
+          <p className="text-destructive text-xs" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
+  );
+}
+
+function CheckboxRow({
+  label,
+  checked,
+  disabled,
+  onClick,
+}: {
+  label: string;
+  checked: boolean;
+  disabled: boolean;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      disabled={disabled}
+      onClick={onClick}
+      className={
+        checked
+          ? "flex w-full items-center gap-3 rounded-md border border-emerald-300 bg-emerald-100/60 px-3 py-2 text-left text-sm font-medium text-emerald-900"
+          : "border-input bg-background hover:bg-accent flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm"
+      }
+    >
+      <span
+        className={
+          checked
+            ? "flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500 text-xs text-white"
+            : "border-input flex h-5 w-5 items-center justify-center rounded-md border"
+        }
+      >
+        {checked ? "✓" : ""}
+      </span>
+      <span className="flex-1">{label}</span>
+    </button>
+  );
+}
+
+function BoardingRow({
+  tripId,
+  studentId,
+  studentName,
+  type,
+  checked,
+  gpsLat,
+  gpsLng,
+}: {
+  tripId: string;
+  studentId: string;
+  studentName: string;
+  type: "BOARD" | "ALIGHT";
+  checked: boolean;
+  gpsLat: number | null;
+  gpsLng: number | null;
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+
+  function toggle() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await toggleBoardingEventAction({
+          tripId,
+          studentId,
+          type,
+          lat: gpsLat ?? undefined,
+          lng: gpsLng ?? undefined,
+        });
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "저장 실패");
+      }
+    });
+  }
+
+  return (
+    <li className="flex items-center gap-2 text-sm">
+      <button
+        type="button"
+        disabled={pending}
+        onClick={toggle}
+        className={
+          checked
+            ? "flex flex-1 items-center gap-2 rounded-md border border-emerald-300 bg-emerald-100/60 px-2 py-1.5 text-left text-sm font-medium text-emerald-900"
+            : "border-input bg-background hover:bg-accent flex flex-1 items-center gap-2 rounded-md border px-2 py-1.5 text-left text-sm"
+        }
+      >
+        <span
+          className={
+            checked
+              ? "flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500 text-xs text-white"
+              : "border-input flex h-5 w-5 items-center justify-center rounded-md border"
+          }
+        >
+          {checked ? "✓" : ""}
+        </span>
+        <span className="flex-1">{studentName}</span>
+        <span className="text-muted-foreground text-xs">
+          {type === "BOARD" ? "탑승" : "하차"}
+        </span>
+      </button>
+      {error ? <span className="text-destructive text-xs">{error}</span> : null}
+    </li>
+  );
+}
+
+function HelperPicker({
+  tripId,
+  current,
+  options,
+}: {
+  tripId: string;
+  current: StaffRef | null;
+  options: StaffRef[];
+}) {
+  const [pending, startTransition] = useTransition();
+  const [error, setError] = useState<string | null>(null);
+  const [value, setValue] = useState(current?.id ?? "");
+
+  function commit(newValue: string) {
+    setValue(newValue);
+    setError(null);
+    startTransition(async () => {
+      try {
+        await assignHelperAction(tripId, newValue || null);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "저장 실패");
+      }
+    });
+  }
+
+  if (options.length === 0) {
+    return (
+      <Card>
+        <CardHeader className="py-3">
+          <CardTitle className="text-sm">동승보호자</CardTitle>
+          <CardDescription className="text-xs">
+            등록된 동승자가 없습니다. 학원장·원장이 직원 페이지에서 초대 후
+            가입하면 여기 표시됩니다.
+          </CardDescription>
+        </CardHeader>
+      </Card>
+    );
+  }
+
+  return (
+    <Card>
+      <CardHeader className="py-3">
+        <CardTitle className="text-sm">동승보호자 지정</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        <select
+          value={value}
+          disabled={pending}
+          onChange={(e) => commit(e.target.value)}
+          className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
+        >
+          <option value="">— 동승자 없음 —</option>
+          {options.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+        </select>
+        {error ? (
+          <p className="text-destructive text-xs" role="alert">
+            {error}
+          </p>
+        ) : null}
+      </CardContent>
+    </Card>
   );
 }

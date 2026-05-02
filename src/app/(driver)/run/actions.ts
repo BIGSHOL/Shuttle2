@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { requireDriver } from "@/lib/auth/session";
+import { requireTripAccess } from "@/lib/auth/trip-access";
 
 // W3-3b: 기사 폰이 직접 좌표를 send. start/end 시 위치는 첫/마지막 ping에서 채워짐.
 
@@ -174,4 +175,143 @@ export async function recordPingAction(input: RecordPingInput): Promise<void> {
       data: { endLat: data.lat, endLng: data.lng },
     });
   }
+}
+
+// ────────────────────────────────────────────────────────────────────
+// SafetyCheck — KIDS 모드 운행마다 1건. 도교법 §53⑦ 안전운행기록 원천.
+// driver/helper 둘 다 토글 가능.
+// ────────────────────────────────────────────────────────────────────
+
+const SafetyFields = z.object({
+  seatbeltAllOk: z.boolean().optional(),
+  helperPresent: z.boolean().optional(),
+  allAlightedOk: z.boolean().optional(),
+});
+
+export type SafetyFieldsInput = z.infer<typeof SafetyFields>;
+
+export async function upsertSafetyCheckAction(
+  tripId: string,
+  fields: SafetyFieldsInput,
+): Promise<void> {
+  const parsed = SafetyFields.safeParse(fields);
+  if (!parsed.success) throw new Error("잘못된 안전점검 데이터");
+
+  await requireTripAccess(tripId);
+
+  const now = new Date();
+  const data: {
+    seatbeltAllOk?: boolean;
+    seatbeltCheckedAt?: Date | null;
+    helperPresent?: boolean;
+    allAlightedOk?: boolean;
+    alightCheckedAt?: Date | null;
+  } = {};
+  if (parsed.data.seatbeltAllOk !== undefined) {
+    data.seatbeltAllOk = parsed.data.seatbeltAllOk;
+    data.seatbeltCheckedAt = parsed.data.seatbeltAllOk ? now : null;
+  }
+  if (parsed.data.helperPresent !== undefined) {
+    data.helperPresent = parsed.data.helperPresent;
+  }
+  if (parsed.data.allAlightedOk !== undefined) {
+    data.allAlightedOk = parsed.data.allAlightedOk;
+    data.alightCheckedAt = parsed.data.allAlightedOk ? now : null;
+  }
+
+  await db.safetyCheck.upsert({
+    where: { tripId },
+    create: {
+      tripId,
+      seatbeltAllOk: parsed.data.seatbeltAllOk ?? false,
+      seatbeltCheckedAt: parsed.data.seatbeltAllOk ? now : null,
+      helperPresent: parsed.data.helperPresent ?? false,
+      allAlightedOk: parsed.data.allAlightedOk ?? false,
+      alightCheckedAt: parsed.data.allAlightedOk ? now : null,
+    },
+    update: data,
+  });
+
+  revalidatePath(`/trip/${tripId}`);
+}
+
+// ────────────────────────────────────────────────────────────────────
+// BoardingEvent — 학생 탑승·하차 (정류장에서)
+// 같은 trip + studentId + type이 이미 있으면 토글로 삭제, 없으면 추가.
+// ────────────────────────────────────────────────────────────────────
+
+const BoardingInput = z.object({
+  tripId: z.string().min(1),
+  studentId: z.string().min(1),
+  type: z.enum(["BOARD", "ALIGHT"]),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+  notes: z.string().max(200).optional(),
+});
+
+export type BoardingInputType = z.infer<typeof BoardingInput>;
+
+export async function toggleBoardingEventAction(
+  input: BoardingInputType,
+): Promise<void> {
+  const parsed = BoardingInput.safeParse(input);
+  if (!parsed.success) throw new Error("잘못된 탑승·하차 데이터");
+
+  await requireTripAccess(parsed.data.tripId);
+
+  // 이미 같은 type 이벤트가 있으면 가장 최근 것 삭제 (토글)
+  const existing = await db.boardingEvent.findFirst({
+    where: {
+      tripId: parsed.data.tripId,
+      studentId: parsed.data.studentId,
+      type: parsed.data.type,
+    },
+    orderBy: { at: "desc" },
+  });
+
+  if (existing) {
+    await db.boardingEvent.delete({ where: { id: existing.id } });
+  } else {
+    await db.boardingEvent.create({
+      data: {
+        tripId: parsed.data.tripId,
+        studentId: parsed.data.studentId,
+        type: parsed.data.type,
+        lat: parsed.data.lat ?? null,
+        lng: parsed.data.lng ?? null,
+        notes: parsed.data.notes ?? null,
+      },
+    });
+  }
+
+  revalidatePath(`/trip/${parsed.data.tripId}`);
+}
+
+// ────────────────────────────────────────────────────────────────────
+// Trip helper 지정 (driver만)
+// ────────────────────────────────────────────────────────────────────
+
+export async function assignHelperAction(
+  tripId: string,
+  helperId: string | null,
+): Promise<void> {
+  const me = await requireDriver();
+  const orgId = me.org.id;
+
+  // helper로 지정하려면 같은 org의 HELPER role 검증
+  if (helperId !== null) {
+    const helper = await db.staff.findFirst({
+      where: { id: helperId, orgId, role: "HELPER" },
+      select: { id: true },
+    });
+    if (!helper) throw new Error("선택한 동승자를 찾을 수 없습니다");
+  }
+
+  const result = await db.trip.updateMany({
+    where: { id: tripId, driverId: me.staff.id },
+    data: { helperId },
+  });
+  if (result.count === 0) throw new Error("운행을 찾을 수 없습니다");
+
+  revalidatePath(`/trip/${tripId}`);
 }
