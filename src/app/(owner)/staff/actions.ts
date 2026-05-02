@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
-import { getOrgId, requireOwner } from "@/lib/auth/session";
+import { getOrgId, homePathForRole, requireOwner } from "@/lib/auth/session";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
@@ -183,6 +183,7 @@ export type AcceptInviteState = {
   error?: string;
   fieldErrors?: Record<string, string[]>;
   success?: boolean;
+  redirectTo?: string;
 };
 
 // invite 정보 조회 — public 페이지에서 미리 표시할 용도.
@@ -267,5 +268,9 @@ export async function acceptInviteAction(
   const supabase = await createClient();
   await supabase.auth.signInWithPassword(parsed.data);
 
-  return { success: true };
+  // role 기반 redirect path를 클라이언트로 알려줌 (가입 직후 운행 화면으로)
+  return {
+    success: true,
+    redirectTo: homePathForRole(invite.role),
+  };
 }

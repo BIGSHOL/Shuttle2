@@ -65,6 +65,43 @@ export async function requireOwner(): Promise<CurrentUser> {
   return user;
 }
 
+// (driver) 라우트 진입 시 호출.
+export async function requireDriver(): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("UNAUTHENTICATED");
+  if (user.staff.role !== "DRIVER") {
+    throw new Error("FORBIDDEN: DRIVER role required");
+  }
+  return user;
+}
+
+// (helper) 라우트 진입 시 호출.
+export async function requireHelper(): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("UNAUTHENTICATED");
+  if (user.staff.role !== "HELPER") {
+    throw new Error("FORBIDDEN: HELPER role required");
+  }
+  return user;
+}
+
+// driver 또는 helper 진입 시 (공용 운행 화면).
+export async function requireDriverOrHelper(): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) throw new Error("UNAUTHENTICATED");
+  if (user.staff.role !== "DRIVER" && user.staff.role !== "HELPER") {
+    throw new Error("FORBIDDEN: DRIVER or HELPER required");
+  }
+  return user;
+}
+
+// 로그인·가입 직후 어디로 보낼지 결정 — 역할별 1차 화면.
+export function homePathForRole(role: StaffRole): string {
+  if (role === "DRIVER") return "/run";
+  if (role === "HELPER") return "/helper-run";
+  return "/dashboard";
+}
+
 // 멀티테넌시 가드: 모든 도메인 쿼리 시 orgId 필터에 사용. 세션 없으면 throw.
 export async function getOrgId(): Promise<string> {
   const user = await getCurrentUser();

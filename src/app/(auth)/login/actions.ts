@@ -3,6 +3,8 @@
 import { redirect } from "next/navigation";
 import { z } from "zod";
 
+import { db } from "@/lib/db";
+import { homePathForRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
 const LoginSchema = z.object({
@@ -28,18 +30,30 @@ export async function loginAction(
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.auth.signInWithPassword(parsed.data);
+  const { data: signInData, error } = await supabase.auth.signInWithPassword(
+    parsed.data,
+  );
 
   if (error) {
     return { error: "이메일 또는 비밀번호가 올바르지 않습니다" };
   }
 
+  // redirectTo가 명시되어 있으면 그대로, 아니면 role 기반 home으로.
   const redirectTo = formData.get("redirectTo");
-  redirect(
-    typeof redirectTo === "string" && redirectTo.startsWith("/")
-      ? redirectTo
-      : "/dashboard",
-  );
+  if (typeof redirectTo === "string" && redirectTo.startsWith("/")) {
+    redirect(redirectTo);
+  }
+
+  // role 기반 redirect — Staff 직접 조회 (getCurrentUser는 react cache로 stale일 수 있음).
+  const userId = signInData.user?.id;
+  if (userId) {
+    const staff = await db.staff.findFirst({
+      where: { userId },
+      select: { role: true },
+    });
+    if (staff) redirect(homePathForRole(staff.role));
+  }
+  redirect("/dashboard");
 }
 
 export async function logoutAction() {

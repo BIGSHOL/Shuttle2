@@ -42,12 +42,12 @@ export function AcceptForm({
     FormData
   >(boundAction, {});
 
-  // 가입 성공 시 곧장 dashboard으로 (W3-3에서 driver/helper 전용 라우트 도입되면 변경)
+  // 가입 성공 시 role별 home path로 이동 (DRIVER → /run, HELPER → /helper-run, OWNER → /dashboard).
   useEffect(() => {
-    if (state.success) {
-      window.location.href = "/dashboard";
+    if (state.success && state.redirectTo) {
+      window.location.href = state.redirectTo;
     }
-  }, [state.success]);
+  }, [state.success, state.redirectTo]);
 
   return (
     <Card className="w-full max-w-md">
