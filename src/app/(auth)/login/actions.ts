@@ -52,6 +52,13 @@ export async function loginAction(
       select: { role: true },
     });
     if (staff) redirect(homePathForRole(staff.role));
+
+    // Staff가 없으면 Guardian (학부모) 시도
+    const guardian = await db.guardian.findFirst({
+      where: { userId },
+      select: { id: true },
+    });
+    if (guardian) redirect("/home");
   }
   redirect("/dashboard");
 }

@@ -110,3 +110,56 @@ export async function getOrgId(): Promise<string> {
   }
   return user.org.id;
 }
+
+// ────────────────────────────────────────────────────────────────────
+// Guardian (학부모) — Staff와 별개 모델이라 별도 헬퍼.
+// Guardian은 orgId 없음 → 한 학부모가 여러 학원에 자녀 있을 수 있음.
+// ────────────────────────────────────────────────────────────────────
+
+export type CurrentGuardian = {
+  authUserId: string;
+  email: string;
+  guardian: { id: string; name: string; phone: string };
+  students: { id: string; name: string; orgId: string }[];
+};
+
+export const getCurrentGuardian = cache(
+  async (): Promise<CurrentGuardian | null> => {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return null;
+
+    const guardian = await db.guardian.findFirst({
+      where: { userId: user.id },
+      include: {
+        links: {
+          include: {
+            student: { select: { id: true, name: true, orgId: true } },
+          },
+        },
+      },
+    });
+    if (!guardian) return null;
+
+    return {
+      authUserId: user.id,
+      email: user.email ?? "",
+      guardian: {
+        id: guardian.id,
+        name: guardian.name,
+        phone: guardian.phone,
+      },
+      students: guardian.links.map((l) => l.student),
+    };
+  },
+);
+
+export async function requireGuardian(): Promise<CurrentGuardian> {
+  const g = await getCurrentGuardian();
+  if (!g) throw new Error("UNAUTHENTICATED: GUARDIAN required");
+  return g;
+}
+
+export const HOME_PATH_GUARDIAN = "/home";

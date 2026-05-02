@@ -18,11 +18,12 @@ model Organization {
   plan      Plan     @default(TRIAL)
   createdAt DateTime @default(now())
 
-  vehicles Vehicle[]
-  students Student[]
-  staffs   Staff[]
-  stops    Stop[]
-  invites  StaffInvite[]
+  vehicles        Vehicle[]
+  students        Student[]
+  staffs          Staff[]
+  stops           Stop[]
+  invites         StaffInvite[]
+  guardianInvites GuardianInvite[]
 }
 
 // 기사·동승자 초대 토큰 (1회용).
@@ -43,6 +44,40 @@ model StaffInvite {
   acceptedByStaffId String?
 
   @@index([orgId])
+}
+
+// 학부모(보호자) 초대 토큰 (1회용).
+// OWNER가 학생 1명 이상 + 보호자 정보(name·phone·relation·isPrimary)와 함께 발급.
+// 받은 사람이 /parent-invite/<token>로 들어가 본인 이메일·비밀번호를 정해 가입한다.
+// 가입 시 phone unique로 Guardian upsert + GuardianLink N건 생성.
+model GuardianInvite {
+  id                   String         @id @default(cuid())
+  orgId                String
+  org                  Organization   @relation(fields: [orgId], references: [id])
+  name                 String
+  phone                String
+  relation             String // "모", "부", "조부" 등
+  isPrimary            Boolean        @default(false)
+  token                String         @unique
+  createdAt            DateTime       @default(now())
+  expiresAt            DateTime
+  acceptedAt           DateTime?
+  acceptedByGuardianId String?
+
+  students GuardianInviteStudent[]
+
+  @@index([orgId])
+}
+
+// invite ↔ student N:M (한 초대로 자녀 여러 명 묶기)
+model GuardianInviteStudent {
+  id        String         @id @default(cuid())
+  inviteId  String
+  invite    GuardianInvite @relation(fields: [inviteId], references: [id], onDelete: Cascade)
+  studentId String
+  student   Student        @relation(fields: [studentId], references: [id])
+
+  @@unique([inviteId, studentId])
 }
 
 enum OrgType {
@@ -166,10 +201,11 @@ model Student {
   name      String
   birthYear Int // KIDS 모드 자동 판정용
 
-  guardians GuardianLink[]
-  routes    RouteStudent[]
-  events    BoardingEvent[]
-  absences  AbsenceRequest[]
+  guardians       GuardianLink[]
+  routes          RouteStudent[]
+  events          BoardingEvent[]
+  absences        AbsenceRequest[]
+  guardianInvites GuardianInviteStudent[]
 }
 
 model Guardian {
