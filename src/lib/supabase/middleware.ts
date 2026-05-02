@@ -37,13 +37,20 @@ export async function updateSession(request: NextRequest) {
   // 보호 경로 화이트리스트 방식: public path만 명시하고 나머지 전부 보호.
   // 새 owner 라우트(/vehicles, /stops, /routes, ...)가 추가되어도 자동 가드.
   const path = request.nextUrl.pathname;
-  const PUBLIC_PATHS = new Set(["/", "/login", "/signup"]);
+  const PUBLIC_PATHS = new Set([
+    "/",
+    "/login",
+    "/signup",
+    "/manifest.json", // PWA manifest (W4-3)
+    "/sw.js", // service worker (W4-3)
+    "/favicon.ico",
+  ]);
   const isPublic =
     PUBLIC_PATHS.has(path) ||
     path.startsWith("/_next/") ||
     path.startsWith("/invite/") || // 직원 초대 토큰 가입 (W3-2)
     path.startsWith("/parent-invite/") || // 학부모 초대 토큰 가입 (W4-1)
-    path === "/favicon.ico";
+    /\.(png|svg|ico|webmanifest|txt)$/.test(path); // 정적 자원 (icon 등)
 
   if (!isPublic && !user) {
     const url = request.nextUrl.clone();
