@@ -41,6 +41,7 @@ export async function updateSession(request: NextRequest) {
   const isPublic =
     PUBLIC_PATHS.has(path) ||
     path.startsWith("/_next/") ||
+    path.startsWith("/invite/") || // 직원 초대 토큰 가입 (W3-2)
     path === "/favicon.ico";
 
   if (!isPublic && !user) {

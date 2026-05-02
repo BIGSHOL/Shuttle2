@@ -22,6 +22,27 @@ model Organization {
   students Student[]
   staffs   Staff[]
   stops    Stop[]
+  invites  StaffInvite[]
+}
+
+// 기사·동승자 초대 토큰 (1회용).
+// OWNER가 미리 이름·전화·역할을 적어 토큰을 발급하면, 받은 사람이
+// /invite/<token> 링크로 들어가 본인 이메일·비밀번호를 정해 가입한다.
+// 가입이 끝나면 acceptedAt이 채워지고 동일 토큰으로 재가입 불가.
+model StaffInvite {
+  id                String       @id @default(cuid())
+  orgId             String
+  org               Organization @relation(fields: [orgId], references: [id])
+  role              StaffRole // OWNER 발급 거절 (server action에서 검증)
+  name              String
+  phone             String
+  token             String       @unique
+  createdAt         DateTime     @default(now())
+  expiresAt         DateTime
+  acceptedAt        DateTime?
+  acceptedByStaffId String?
+
+  @@index([orgId])
 }
 
 enum OrgType {
