@@ -39,20 +39,41 @@ export async function signupAction(
 
   const { orgName, orgType, email, password } = parsed.data;
 
-  // 1) Supabase Auth 사용자 생성
+  // 1) Supabase Auth 사용자 생성 — admin createUser로 email_confirm: true 강제.
+  //    이렇게 하면 Supabase 프로젝트의 "Confirm email" 설정이 켜져 있어도
+  //    바로 로그인 가능한 상태가 됨 (1차 MVP 정책: 이메일 인증 생략).
+  const admin = createSupabaseAdmin();
+  const { data: createdData, error: createError } =
+    await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+    });
+
+  if (createError || !createdData.user) {
+    return {
+      error: createError?.message ?? "가입 처리 중 오류가 발생했습니다",
+    };
+  }
+
+  const userId = createdData.user.id;
+
+  // 2) 세션 쿠키 수립 — 일반 client로 signInWithPassword 호출.
   const supabase = await createClient();
-  const { data: authData, error: authError } = await supabase.auth.signUp({
+  const { error: signInError } = await supabase.auth.signInWithPassword({
     email,
     password,
   });
 
-  if (authError || !authData.user) {
-    return { error: authError?.message ?? "가입 처리 중 오류가 발생했습니다" };
+  if (signInError) {
+    // 로그인 실패는 곧 좀비 Auth 사용자 → cleanup
+    await admin.auth.admin.deleteUser(userId).catch((cleanupErr) => {
+      console.error("Failed to cleanup orphaned auth user:", cleanupErr);
+    });
+    return { error: "가입 직후 세션 수립에 실패했습니다. 다시 시도해 주세요" };
   }
 
-  const userId = authData.user.id;
-
-  // 2) Organization + Staff(OWNER) 트랜잭션. 실패 시 Auth 사용자 cleanup.
+  // 3) Organization + Staff(OWNER) 트랜잭션. 실패 시 Auth 사용자 cleanup.
   try {
     await db.$transaction(async (tx) => {
       const org = await tx.organization.create({
@@ -76,7 +97,6 @@ export async function signupAction(
   } catch (err) {
     console.error("Signup transaction failed:", err);
     // 좀비 Auth 사용자 방지 — admin으로 삭제 시도
-    const admin = createSupabaseAdmin();
     await admin.auth.admin.deleteUser(userId).catch((cleanupErr) => {
       console.error("Failed to cleanup orphaned auth user:", cleanupErr);
     });
@@ -85,6 +105,6 @@ export async function signupAction(
     };
   }
 
-  // signUp이 세션 쿠키를 설정해줬으니 곧장 dashboard로
+  // 세션 쿠키는 2)에서 이미 설정됨 → 곧장 dashboard로
   redirect("/dashboard");
 }
