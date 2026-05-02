@@ -75,17 +75,19 @@ export default async function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
-          <CardHeader>
-            <CardDescription>등록된 정류장</CardDescription>
-            <CardTitle className="text-3xl">{stopCount}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-xs">
-              카카오맵 좌표 기반 (W2에서 추가·편집 UI)
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/stops" className="block">
+          <Card className="hover:border-primary transition-colors">
+            <CardHeader>
+              <CardDescription>등록된 정류장</CardDescription>
+              <CardTitle className="text-3xl">{stopCount}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground text-xs">
+                카카오맵 좌표 기반 · 클릭해서 관리
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
       </section>
 
       <section className="bg-background rounded-lg border p-6">

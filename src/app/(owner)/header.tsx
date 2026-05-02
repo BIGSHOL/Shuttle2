@@ -25,7 +25,7 @@ const ORG_TYPE_LABEL: Record<"ACADEMY" | "DAYCARE" | "KINDERGARTEN", string> = {
 const NAV = [
   { href: "/dashboard", label: "대시보드" },
   { href: "/vehicles", label: "차량" },
-  // W2-2: { href: "/stops", label: "정류장" },
+  { href: "/stops", label: "정류장" },
   // W2-3: { href: "/routes", label: "노선" },
 ];
 
