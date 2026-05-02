@@ -15,6 +15,12 @@
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:seed": "dotenv -e .env.local -- prisma db seed",
+    "sb": "supabase",
+    "sb:link": "supabase link --project-ref zlxmnenvkteybfgnsfdo",
+    "sb:status": "supabase status",
+    "vc:link": "vercel link",
+    "vc:env:pull": "vercel env pull .env.local",
+    "vc:deploy": "vercel deploy",
     "postinstall": "prisma generate"
   },
   "dependencies": {
@@ -55,6 +61,7 @@
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "prisma": "^7.8.0",
+    "supabase": "^2.98.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
     "typescript": "^5"
@@ -63,7 +70,8 @@
     "onlyBuiltDependencies": [
       "@prisma/client",
       "@prisma/engines",
-      "prisma"
+      "prisma",
+      "supabase"
     ]
   }
 }
