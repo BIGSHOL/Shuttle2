@@ -1,3 +1,5 @@
+import Link from "next/link";
+
 import {
   Card,
   CardContent,
@@ -47,17 +49,19 @@ export default async function DashboardPage() {
       </section>
 
       <section className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <CardHeader>
-            <CardDescription>등록된 차량</CardDescription>
-            <CardTitle className="text-3xl">{vehicleCount}</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-muted-foreground text-xs">
-              KIDS / GENERAL 모드 합계
-            </p>
-          </CardContent>
-        </Card>
+        <Link href="/vehicles" className="block">
+          <Card className="hover:border-primary transition-colors">
+            <CardHeader>
+              <CardDescription>등록된 차량</CardDescription>
+              <CardTitle className="text-3xl">{vehicleCount}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground text-xs">
+                KIDS / GENERAL 모드 합계 · 클릭해서 관리
+              </p>
+            </CardContent>
+          </Card>
+        </Link>
 
         <Card>
           <CardHeader>
