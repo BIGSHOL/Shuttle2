@@ -42,3 +42,6 @@ yarn-error.log*
 next-env.d.ts
 
 /src/generated/prisma
+
+# design 핸드오프 자료 (디자이너 zip — repo에 commit 안 함)
+/design_handoff_shuttlee/

@@ -385,3 +385,19 @@ model StaffPushSubscription {
 
   @@index([staffId])
 }
+
+// W8: 마케팅 랜딩 사전등록. 베타 런칭 전에 관심 학원·기관 모음.
+// orgType은 ACADEMY/DAYCARE/KINDERGARTEN. 한 이메일·전화 1회만.
+model PreRegistration {
+  id        String  @id @default(cuid())
+  orgName   String
+  orgType   OrgType
+  contact   String // 담당자 이름
+  email     String  @unique
+  phone     String
+  region    String? // "서울 강남구" 등 자유 입력
+  notes     String? // 자유 메모
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
