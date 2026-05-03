@@ -205,9 +205,10 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - W14: 학부모 invite + notification-toggle 디자인
 - W15-A: Owner-side trip 상세 view (`requireOwnerTripAccess` + `/dashboard/trip/[tripId]`)
 - W15-B: BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 학부모·학원장 푸시
+- W15-C: /terms · /privacy 페이지 + 가입 동의 체크박스 link
 
 ### 알려진 미해결 (다음 세션)
 - 학부모 폰 OTP 가입 + 푸시 권한 단계
-- 약관·개인정보처리방침 페이지
-- 비밀번호 재설정 흐름
+- 비밀번호 재설정 흐름 (`/forgot-password`)
 - Owner trip 상세 Realtime 자동 갱신 (현재 새로고침 필요)
+- 약관·개인정보처리방침 정식 법무 검토 (현재 베타 임시본)

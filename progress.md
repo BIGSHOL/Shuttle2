@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-04 (W15-B BoardingType NO_SHOW/NO_DROPOFF 확장)
+> 마지막 업데이트: 2026-05-04 (W15-C 약관·개인정보처리방침 + 가입 동의 link)
 
 ## 완료된 마일스톤
 
@@ -17,6 +17,7 @@
 | W14 | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화 | `7776d9b` | ✅ |
 | W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정 | `e71961f` | ✅ |
 | W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 | `a2bf51b` | ✅ |
+| W15-C | 약관·개인정보처리방침 + 가입 동의 link | (다음 commit) | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -137,16 +138,33 @@
    - sendToOwnersOfOrg(student.orgId) — 학원장 모두에게 (URL: /dashboard)
 3. 학부모·학원장 알림 인박스 + 푸시 동시 도착
 
-## 다음 우선순위 (W15-C, D, W16)
+## W15-C 완료 (약관·개인정보처리방침)
 
-### W15-C: 약관·개인정보처리방침
-- `/terms`, `/privacy` (marketing 그룹 + footer link)
-- 가입 시 동의 체크박스 → 약관 페이지 link
-- 학생 보호자 동의 흐름 명문화
+### 결과
+- `(marketing)/_components/legal-shell.tsx` 신규 — 공용 shell
+  - LegalShell (헤더 + Hero + 본문 + 푸터)
+  - LegalSection / LegalList helpers
+- `(marketing)/terms/page.tsx` 신규 — **이용약관** 12조
+  - 목적 / 용어 / 서비스 / 계약 성립 / 회원·회사 의무 / 요금 / 이용 제한 / 책임 한계 / 해지 / 분쟁 / 개정
+  - "베타 임시본 — 정식 출시 전 법무 검토 예정" 배지
+- `(marketing)/privacy/page.tsx` 신규 — **개인정보처리방침** 12항
+  - 처리 목적 / 수집 항목 / 위치정보 별도 고지 / 보유 기간 (운행 데이터 3년)
+  - 제3자 제공 / 처리 위탁 (Supabase·Vercel·Kakao·Web Push)
+  - 권리·의무 / 미성년자 / 안전성 조치 (RLS, 서비스 롤 키 서버 전용)
+  - 쿠키 / 보호책임자 / 변경
+- middleware: `/terms`, `/privacy` PUBLIC_PATHS 추가
+- footer: 랜딩·pricing 푸터에 이용약관·개인정보처리방침 link 추가
+- 가입 동의:
+  - `(auth)/signup`: 이용약관·개인정보처리방침 동의 체크박스 (필수, has-[:checked]:bg-bus-soft 강조)
+  - `parent-invite/[token]/accept-form`: 동의 문구에 두 페이지 link 추가
+
+## 다음 우선순위 (W15-D, W16)
 
 ### W15-D: 비밀번호 재설정
-- `/forgot-password` + Supabase password reset flow
-- 이메일 발송 → 토큰 검증 → 새 비밀번호 입력 → /login
+- `(auth)/forgot-password/page.tsx` — 이메일 입력 → 재설정 링크 발송
+- `(auth)/reset-password/page.tsx` — 토큰 검증 → 새 비밀번호 → /login
+- Supabase Auth `resetPasswordForEmail` API 사용
+- /login에 "비밀번호 찾기" link 복원
 
 ### W16: Realtime 실시간 갱신
 - Owner trip 상세에서 Realtime 구독 → BoardingEvent·LocationPing 자동 갱신

@@ -121,6 +121,33 @@ export function SignupForm() {
             ) : null}
           </div>
 
+          <label className="border-input bg-background hover:bg-muted/40 has-[:checked]:border-bus has-[:checked]:bg-bus-soft/40 flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-xs transition-colors">
+            <input
+              type="checkbox"
+              name="agreeTerms"
+              className="accent-bus mt-0.5 h-4 w-4"
+              required
+            />
+            <span className="font-medium">
+              <Link
+                href="/terms"
+                target="_blank"
+                className="text-primary font-bold underline-offset-2 hover:underline"
+              >
+                이용약관
+              </Link>{" "}
+              및{" "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="text-primary font-bold underline-offset-2 hover:underline"
+              >
+                개인정보처리방침
+              </Link>
+              에 동의합니다.
+            </span>
+          </label>
+
           {state.error ? (
             <div
               className="border-destructive/30 bg-destructive/5 text-destructive rounded-xl border p-2.5 text-xs font-medium"

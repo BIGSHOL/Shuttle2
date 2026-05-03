@@ -148,7 +148,22 @@ export function ParentAcceptForm({
             />
             <span className="text-xs font-medium">
               자녀(미성년자)의 운행 정보·정류장 위치·탑승·하차·안전점검 기록
-              열람 및 푸시 알림 수신에 동의합니다.
+              열람 및 푸시 알림 수신에 동의합니다.{" "}
+              <Link
+                href="/terms"
+                target="_blank"
+                className="text-primary font-bold underline-offset-2 hover:underline"
+              >
+                이용약관
+              </Link>
+              {" · "}
+              <Link
+                href="/privacy"
+                target="_blank"
+                className="text-primary font-bold underline-offset-2 hover:underline"
+              >
+                개인정보처리방침
+              </Link>
             </span>
           </label>
           {state.fieldErrors?.consentMinor ? (

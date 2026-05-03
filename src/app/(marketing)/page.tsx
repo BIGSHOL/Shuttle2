@@ -536,6 +536,12 @@ export default function MarketingPage() {
               <Link href="#pre-register" className="hover:text-foreground">
                 베타 신청
               </Link>
+              <Link href="/terms" className="hover:text-foreground">
+                이용약관
+              </Link>
+              <Link href="/privacy" className="hover:text-foreground">
+                개인정보처리방침
+              </Link>
             </div>
           </div>
           <p className="text-muted-foreground text-[11px] font-medium">

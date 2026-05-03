@@ -42,6 +42,8 @@ export async function updateSession(request: NextRequest) {
     "/login",
     "/signup",
     "/pricing", // W13 마케팅 페이지
+    "/terms", // W15-C 이용약관
+    "/privacy", // W15-C 개인정보처리방침
     "/manifest.json", // PWA manifest (W4-3)
     "/sw.js", // service worker (W4-3)
     "/favicon.ico",

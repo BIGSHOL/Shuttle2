@@ -116,6 +116,7 @@ vercel deploy --prod --yes
 | W14 | 학부모 invite 디자인 + notification-toggle 토큰화 |
 | W15-A | Owner-side trip 상세 view (`/dashboard/trip/[tripId]`) |
 | W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 |
+| W15-C | 약관·개인정보처리방침 + 가입 동의 link |
 
 자세한 진행 현황·결정사항·다음 우선순위는 [`progress.md`](./progress.md) 참고.
 
