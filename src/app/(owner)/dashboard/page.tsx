@@ -1,14 +1,17 @@
 import Link from "next/link";
-
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  Bus,
+  Calendar,
+  GraduationCap,
+  MapPin,
+  Route,
+  ShieldAlert,
+  Users,
+} from "lucide-react";
+
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
+import { todayUtcDateKst } from "@/lib/date/today";
 import { env } from "@/lib/env";
 
 import { StaffNotificationToggle } from "../notifications/staff-notification-toggle";
@@ -25,27 +28,93 @@ const PLAN_LABEL = {
   PRO: "프로",
 } as const;
 
+const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
+
+function fmtKstHHmm(d: Date): string {
+  return new Date(d.getTime() + 9 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(11, 16);
+}
+
 export default async function DashboardPage() {
   const user = await requireOwner();
   const orgId = await getOrgId();
+  const todayDate = todayUtcDateKst();
 
   // 멀티테넌시 1차 가드 — 모든 count는 반드시 orgId로 필터.
-  const [vehicleCount, studentCount, stopCount, routeCount] = await Promise.all(
-    [
-      db.vehicle.count({ where: { orgId } }),
-      db.student.count({ where: { orgId } }),
-      db.stop.count({ where: { orgId } }),
-      db.route.count({ where: { vehicle: { orgId } } }),
-    ],
-  );
+  const [
+    vehicleCount,
+    studentCount,
+    stopCount,
+    routeCount,
+    pendingAbsenceCount,
+    pendingStopChangeCount,
+  ] = await Promise.all([
+    db.vehicle.count({ where: { orgId } }),
+    db.student.count({ where: { orgId } }),
+    db.stop.count({ where: { orgId } }),
+    db.route.count({ where: { vehicle: { orgId } } }),
+    db.absenceRequest.count({
+      where: {
+        student: { orgId },
+        status: { in: ["PENDING", "NOTIFIED_DRIVER"] },
+      },
+    }),
+    db.stopChangeRequest.count({
+      where: { orgId, status: "PENDING" },
+    }),
+  ]);
 
   const org = await db.organization.findUnique({
     where: { id: orgId },
     select: { plan: true, createdAt: true },
   });
 
-  // 보험 만료 D-30 alert (KIDS 모드 차량 한정 — KIDS 의무).
-  // insuranceUntil이 오늘 + 30일 이내거나 이미 지났으면 alert.
+  // 오늘 운행 — 진행중·종료 모두 (orgId는 vehicle 통해 필터)
+  const todayTrips = await db.trip.findMany({
+    where: { vehicle: { orgId }, date: todayDate },
+    orderBy: [{ startedAt: "asc" }],
+    include: {
+      route: {
+        select: {
+          name: true,
+          direction: true,
+          _count: { select: { stops: true } },
+        },
+      },
+      vehicle: { select: { plate: true, mode: true } },
+      driver: { select: { name: true } },
+      _count: { select: { events: true } },
+    },
+  });
+
+  const runningTrips = todayTrips.filter(
+    (t) => t.startedAt !== null && t.endedAt === null,
+  );
+  const finishedTrips = todayTrips.filter((t) => t.endedAt !== null);
+  const scheduledCount = todayTrips.filter((t) => t.startedAt === null).length;
+
+  // 진행중 trip별 boarding 진행률 (BOARD/ALIGHT 카운트)
+  const runningTripIds = runningTrips.map((t) => t.id);
+  const runningBoardings =
+    runningTripIds.length > 0
+      ? await db.boardingEvent.findMany({
+          where: { tripId: { in: runningTripIds } },
+          select: { tripId: true, type: true },
+        })
+      : [];
+  const boardingsByTrip = new Map<string, { board: number; alight: number }>();
+  for (const tid of runningTripIds) {
+    boardingsByTrip.set(tid, { board: 0, alight: 0 });
+  }
+  for (const e of runningBoardings) {
+    const stat = boardingsByTrip.get(e.tripId);
+    if (!stat) continue;
+    if (e.type === "BOARD") stat.board++;
+    else stat.alight++;
+  }
+
+  // 보험 만료 D-30 alert (KIDS 모드 차량 한정)
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   const d30 = new Date(today);
@@ -54,17 +123,13 @@ export default async function DashboardPage() {
     where: {
       orgId,
       mode: "KIDS",
-      OR: [
-        { insuranceUntil: null },
-        { insuranceUntil: { lte: d30 } },
-      ],
+      OR: [{ insuranceUntil: null }, { insuranceUntil: { lte: d30 } }],
     },
     orderBy: [{ insuranceUntil: "asc" }],
     select: { id: true, plate: true, insuranceUntil: true },
   });
 
-  // 안전교육 D-30 alert. 직원별 가장 최근 record를 보고 만료 30일 이내거나
-  // 만료된/기록 없는 staff를 모음.
+  // 안전교육 D-30 alert
   const staffWithTraining = await db.staff.findMany({
     where: { orgId },
     select: {
@@ -90,12 +155,22 @@ export default async function DashboardPage() {
     })
     .filter((x): x is NonNullable<typeof x> => x !== null);
 
+  const studentLabel = user.org.type === "ACADEMY" ? "학생" : "원아";
+  const totalAlerts =
+    trainingAlerts.length +
+    expiringVehicles.length +
+    pendingAbsenceCount +
+    pendingStopChangeCount;
+
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <section className="flex items-start justify-between gap-3">
+    <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-6">
+      {/* 인사 + 푸시 토글 */}
+      <section className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold">{user.org.name}</h2>
-          <p className="text-muted-foreground text-sm">
+          <h2 className="text-2xl font-extrabold tracking-tight lg:text-3xl">
+            {user.org.name}
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm font-medium">
             {ORG_TYPE_LABEL[user.org.type]} · 요금제{" "}
             {org ? PLAN_LABEL[org.plan] : "-"}
           </p>
@@ -107,190 +182,491 @@ export default async function DashboardPage() {
         ) : null}
       </section>
 
+      {/* KPI 4 cards */}
+      <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <KpiCard
+          label="오늘 운행"
+          value={todayTrips.length}
+          subtext={
+            todayTrips.length > 0
+              ? `진행 ${runningTrips.length} · 예정 ${scheduledCount} · 완료 ${finishedTrips.length}`
+              : "운행 없음"
+          }
+          Icon={Bus}
+          tone="info"
+        />
+        <KpiCard
+          label="진행 중 차량"
+          value={runningTrips.length}
+          subtext={
+            runningTrips.length > 0
+              ? "지금 운행 중"
+              : "진행 중 운행 없음"
+          }
+          Icon={Route}
+          tone={runningTrips.length > 0 ? "bus" : "muted"}
+          pulse={runningTrips.length > 0}
+        />
+        <KpiCard
+          label="대기 요청"
+          value={pendingAbsenceCount + pendingStopChangeCount}
+          subtext={`결석 ${pendingAbsenceCount}건 / 정류장 ${pendingStopChangeCount}건`}
+          Icon={ShieldAlert}
+          tone={
+            pendingAbsenceCount + pendingStopChangeCount > 0
+              ? "warning"
+              : "muted"
+          }
+        />
+        <KpiCard
+          label="등록 자원"
+          value={studentCount}
+          subtext={`${studentLabel} · 차량 ${vehicleCount} · 노선 ${routeCount}`}
+          Icon={Users}
+          tone="muted"
+        />
+      </section>
+
+      {/* 오늘 운행 모니터 */}
+      <section className="space-y-3">
+        <div className="flex items-end justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-extrabold tracking-tight">
+              오늘 운행 모니터
+            </h3>
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+              지금 진행 중·예정·완료된 운행. 카드 클릭하면 실시간 화면으로
+              이동.
+            </p>
+          </div>
+          {totalAlerts === 0 ? (
+            <span className="bg-success-soft text-success rounded-full px-2.5 py-1 text-xs font-bold">
+              모든 운행 정상
+            </span>
+          ) : null}
+        </div>
+
+        {todayTrips.length === 0 ? (
+          <div className="bg-card rounded-2xl border p-6 text-center shadow-sm">
+            <Bus className="text-muted-foreground mx-auto h-8 w-8" />
+            <p className="mt-3 text-base font-bold">오늘 운행이 없어요</p>
+            <p className="text-muted-foreground mt-1 text-xs font-medium">
+              요일 비트마스크에 오늘이 켜진 노선이 없거나 기사가 운행을 시작하지
+              않았습니다.
+            </p>
+          </div>
+        ) : (
+          <ul className="grid gap-3 lg:grid-cols-2">
+            {[
+              ...runningTrips,
+              ...todayTrips.filter((t) => t.startedAt === null),
+              ...finishedTrips,
+            ].map((t) => {
+              const stats = boardingsByTrip.get(t.id);
+              const total = t.route._count.stops;
+              const passedKind =
+                t.startedAt && !t.endedAt
+                  ? "running"
+                  : t.endedAt
+                    ? "finished"
+                    : "scheduled";
+              return (
+                <TripMonitorCard
+                  key={t.id}
+                  tripId={t.id}
+                  routeName={t.route.name}
+                  direction={t.route.direction}
+                  vehiclePlate={t.vehicle.plate}
+                  isKids={t.vehicle.mode === "KIDS"}
+                  driverName={t.driver?.name ?? "—"}
+                  startedAt={t.startedAt}
+                  endedAt={t.endedAt}
+                  totalEvents={t._count.events}
+                  totalStops={total}
+                  boarded={stats ? stats.board + stats.alight : 0}
+                  kind={passedKind}
+                />
+              );
+            })}
+          </ul>
+        )}
+      </section>
+
+      {/* 미해결 알림 */}
       {trainingAlerts.length > 0 ? (
-        <section className="space-y-2">
-          <Card className="border-amber-300 bg-amber-50/60">
-            <CardHeader>
-              <CardTitle className="text-amber-900">
-                ⚠️ 안전교육 만료 임박·미입력 직원 ({trainingAlerts.length})
-              </CardTitle>
-              <CardDescription>
-                도교법상 운영자·기사·동승보호자는 2년마다 안전교육 이수
-                의무가 있습니다.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ul className="divide-y text-sm">
-                {trainingAlerts.map((s) => {
-                  const tone =
-                    s.kind === "expired"
-                      ? "bg-rose-100 text-rose-900"
-                      : s.kind === "soon"
-                        ? "bg-amber-100 text-amber-900"
-                        : "bg-zinc-100 text-zinc-700";
-                  const label =
-                    s.kind === "expired"
-                      ? `만료됨 (${s.expiresOn.toISOString().slice(0, 10)})`
-                      : s.kind === "soon"
-                        ? `30일 이내 만료 (${s.expiresOn.toISOString().slice(0, 10)})`
-                        : "기록 없음";
-                  return (
-                    <li
-                      key={s.id}
-                      className="flex items-center justify-between gap-3 px-4 py-2"
+        <section>
+          <div className="border-warning bg-warning-soft/40 rounded-2xl border p-4 shadow-sm">
+            <div className="flex items-start gap-2">
+              <span className="bg-warning text-warning-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+                <GraduationCap className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-extrabold tracking-tight">
+                  안전교육 만료 임박·미입력 ({trainingAlerts.length}명)
+                </h3>
+                <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+                  도교법상 운영자·기사·동승보호자는 2년마다 이수 의무.
+                </p>
+              </div>
+            </div>
+            <ul className="mt-3 space-y-1.5">
+              {trainingAlerts.map((s) => {
+                const expired = s.kind === "expired";
+                const tone = expired
+                  ? "bg-destructive/10 text-destructive"
+                  : s.kind === "soon"
+                    ? "bg-warning text-warning-foreground"
+                    : "bg-muted text-muted-foreground";
+                const label = expired
+                  ? `만료됨 (${s.expiresOn.toISOString().slice(0, 10)})`
+                  : s.kind === "soon"
+                    ? `30일 이내 (${s.expiresOn.toISOString().slice(0, 10)})`
+                    : "기록 없음";
+                return (
+                  <li key={s.id}>
+                    <Link
+                      href="/training"
+                      className="bg-background hover:bg-muted/40 flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-colors"
                     >
-                      <Link
-                        href="/training"
-                        className="hover:underline"
-                      >
-                        <span className="font-medium">{s.name}</span>
-                        <span className="text-muted-foreground ml-2 text-xs">
+                      <span className="flex items-center gap-2 text-sm font-bold">
+                        {s.name}
+                        <span className="text-muted-foreground text-[11px] font-medium">
+                          ·{" "}
                           {s.role === "OWNER"
                             ? "학원장·원장"
                             : s.role === "DRIVER"
                               ? "기사"
                               : "동승보호자"}
                         </span>
-                      </Link>
+                      </span>
                       <span
-                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${tone}`}
+                        className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${tone}`}
                       >
                         {label}
                       </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </CardContent>
-          </Card>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </section>
       ) : null}
 
       {expiringVehicles.length > 0 ? (
-        <section className="space-y-2">
-          <Card className="border-amber-300 bg-amber-50/60">
-            <CardHeader>
-              <CardTitle className="text-amber-900">
-                ⚠️ 보험 만료 임박·미입력 차량 ({expiringVehicles.length})
-              </CardTitle>
-              <CardDescription>
-                어린이통학버스(KIDS) 보험은 도교법상 필수입니다. 만료 30일
-                전부터 갱신을 진행하세요.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ul className="divide-y text-sm">
-                {expiringVehicles.map((v) => {
-                  const expired =
-                    v.insuranceUntil && v.insuranceUntil < today;
-                  const dateLabel = v.insuranceUntil
-                    ? v.insuranceUntil.toISOString().slice(0, 10)
-                    : "미입력";
-                  const tone = expired
-                    ? "bg-rose-100 text-rose-900"
-                    : v.insuranceUntil
-                      ? "bg-amber-100 text-amber-900"
-                      : "bg-zinc-100 text-zinc-700";
-                  return (
-                    <li
-                      key={v.id}
-                      className="flex items-center justify-between gap-3 px-4 py-2"
+        <section>
+          <div className="border-warning bg-warning-soft/40 rounded-2xl border p-4 shadow-sm">
+            <div className="flex items-start gap-2">
+              <span className="bg-warning text-warning-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+                <ShieldAlert className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-extrabold tracking-tight">
+                  보험 만료 임박·미입력 차량 ({expiringVehicles.length})
+                </h3>
+                <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+                  어린이통학버스(KIDS) 보험은 도교법상 필수.
+                </p>
+              </div>
+            </div>
+            <ul className="mt-3 space-y-1.5">
+              {expiringVehicles.map((v) => {
+                const expired = v.insuranceUntil && v.insuranceUntil < today;
+                const dateLabel = v.insuranceUntil
+                  ? v.insuranceUntil.toISOString().slice(0, 10)
+                  : "미입력";
+                const tone = expired
+                  ? "bg-destructive/10 text-destructive"
+                  : v.insuranceUntil
+                    ? "bg-warning text-warning-foreground"
+                    : "bg-muted text-muted-foreground";
+                return (
+                  <li key={v.id}>
+                    <Link
+                      href={`/vehicles/${v.id}/edit`}
+                      className="bg-background hover:bg-muted/40 flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-colors"
                     >
-                      <Link
-                        href={`/vehicles/${v.id}/edit`}
-                        className="hover:underline"
-                      >
-                        <span className="font-medium">{v.plate}</span>
-                        <span className="text-muted-foreground ml-2 text-xs">
+                      <span className="flex items-center gap-2 text-sm font-bold font-mono">
+                        {v.plate}
+                        <span className="text-muted-foreground text-[11px] font-medium">
                           만료 {dateLabel}
                         </span>
-                      </Link>
+                      </span>
                       <span
-                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${tone}`}
+                        className={`rounded-md px-2 py-0.5 text-[11px] font-bold ${tone}`}
                       >
                         {expired
                           ? "만료됨"
                           : v.insuranceUntil
-                            ? "30일 이내 만료"
+                            ? "30일 이내"
                             : "미입력"}
                       </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            </CardContent>
-          </Card>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
         </section>
       ) : null}
 
-      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link href="/vehicles" className="block">
-          <Card className="hover:border-primary transition-colors">
-            <CardHeader>
-              <CardDescription>등록된 차량</CardDescription>
-              <CardTitle className="text-3xl">{vehicleCount}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-xs">
-                KIDS / GENERAL · 클릭해서 관리
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/stops" className="block">
-          <Card className="hover:border-primary transition-colors">
-            <CardHeader>
-              <CardDescription>등록된 정류장</CardDescription>
-              <CardTitle className="text-3xl">{stopCount}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-xs">
-                카카오맵 좌표 · 클릭해서 관리
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/routes" className="block">
-          <Card className="hover:border-primary transition-colors">
-            <CardHeader>
-              <CardDescription>등록된 노선</CardDescription>
-              <CardTitle className="text-3xl">{routeCount}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-xs">
-                등원·하원 · 클릭해서 관리
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-
-        <Link href="/students" className="block">
-          <Card className="hover:border-primary transition-colors">
-            <CardHeader>
-              <CardDescription>
-                등록된 {user.org.type === "ACADEMY" ? "학생" : "원아"}
-              </CardDescription>
-              <CardTitle className="text-3xl">{studentCount}</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground text-xs">
-                노선·정류장 배정 · 클릭해서 관리
-              </p>
-            </CardContent>
-          </Card>
-        </Link>
-      </section>
-
-      <section className="bg-background rounded-lg border p-6">
-        <h3 className="text-base font-semibold">다음 단계</h3>
-        <ul className="text-muted-foreground mt-2 space-y-1 text-sm">
-          <li>• W2: 차량·노선·정류장 등록 UI + 카카오맵 통합</li>
-          <li>• W3: 기사·동승자 초대, 운행 시작·종료 흐름</li>
-          <li>• W4: 학부모 가입·자녀 연결, 실시간 위치 지도</li>
-        </ul>
+      {/* 빠른 이동 (작은 KPI grid) */}
+      <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+        <QuickLink href="/vehicles" label="차량" value={vehicleCount} Icon={Bus} />
+        <QuickLink
+          href="/stops"
+          label="정류장"
+          value={stopCount}
+          Icon={MapPin}
+        />
+        <QuickLink
+          href="/routes"
+          label="노선"
+          value={routeCount}
+          Icon={Route}
+        />
+        <QuickLink
+          href="/students"
+          label={studentLabel}
+          value={studentCount}
+          Icon={Users}
+        />
       </section>
     </main>
+  );
+
+  // ────────────────────────────────────────────────────────────────────
+  // Helpers (sub-components)
+  // ────────────────────────────────────────────────────────────────────
+}
+
+type Tone = "info" | "bus" | "warning" | "destructive" | "muted";
+
+const TONE_CLS: Record<Tone, { bg: string; text: string }> = {
+  info: { bg: "bg-info-soft", text: "text-info" },
+  bus: { bg: "bg-bus-soft", text: "text-bus-foreground" },
+  warning: { bg: "bg-warning-soft", text: "text-warning" },
+  destructive: { bg: "bg-destructive/10", text: "text-destructive" },
+  muted: { bg: "bg-muted", text: "text-muted-foreground" },
+};
+
+function KpiCard({
+  label,
+  value,
+  subtext,
+  Icon,
+  tone,
+  pulse,
+}: {
+  label: string;
+  value: number;
+  subtext: string;
+  Icon: React.ComponentType<{ className?: string }>;
+  tone: Tone;
+  pulse?: boolean;
+}) {
+  const t = TONE_CLS[tone];
+  return (
+    <div className="bg-card rounded-2xl border p-4 shadow-sm">
+      <div className="flex items-center gap-2">
+        <span
+          className={`flex h-8 w-8 items-center justify-center rounded-full ${t.bg} ${t.text}`}
+        >
+          <Icon className="h-4 w-4" />
+        </span>
+        <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
+          {label}
+        </p>
+        {pulse ? (
+          <span className="bg-bus ml-auto inline-block h-2 w-2 animate-pulse rounded-full" />
+        ) : null}
+      </div>
+      <p className="mt-3 text-3xl font-extrabold tracking-tight">{value}</p>
+      <p className="text-muted-foreground mt-1 text-[11px] font-medium">
+        {subtext}
+      </p>
+    </div>
+  );
+}
+
+function TripMonitorCard({
+  routeName,
+  direction,
+  vehiclePlate,
+  isKids,
+  driverName,
+  startedAt,
+  endedAt,
+  totalEvents,
+  totalStops,
+  kind,
+  boarded,
+}: {
+  tripId: string;
+  routeName: string;
+  direction: "PICKUP" | "DROPOFF";
+  vehiclePlate: string;
+  isKids: boolean;
+  driverName: string;
+  startedAt: Date | null;
+  endedAt: Date | null;
+  totalEvents: number;
+  totalStops: number;
+  kind: "running" | "scheduled" | "finished";
+  boarded: number;
+}) {
+  const dirCls =
+    direction === "PICKUP"
+      ? "bg-success-soft text-success"
+      : "bg-info-soft text-info";
+
+  if (kind === "running") {
+    // dark gradient + 노란 stripe (parent live card 스타일)
+    // TODO: W13+ 실시간 owner 모니터 상세 페이지 — 현재는 카드만
+    return (
+      <li>
+        <div
+          className="relative overflow-hidden rounded-2xl p-4 text-white shadow-md"
+          style={{
+            background: "linear-gradient(155deg, #1a1c22, #0f1014)",
+          }}
+        >
+          <div className="bg-bus absolute inset-x-0 top-0 h-[3px]" />
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="bg-bus text-bus-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                  <span className="bg-bus-foreground inline-block h-1.5 w-1.5 animate-pulse rounded-full" />
+                  진행 중
+                </span>
+                <span
+                  className={`rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase ${dirCls}`}
+                >
+                  {DIRECTION_LABEL[direction]}
+                </span>
+                {isKids ? (
+                  <span className="bg-white/15 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                    KIDS
+                  </span>
+                ) : null}
+              </div>
+              <p className="mt-1.5 truncate text-base font-extrabold tracking-tight">
+                {routeName}
+              </p>
+              <p className="mt-0.5 text-xs font-medium opacity-70">
+                {driverName} · {vehiclePlate}
+              </p>
+            </div>
+            {startedAt ? (
+              <div className="text-right">
+                <p className="text-[10px] font-extrabold tracking-wide uppercase opacity-60">
+                  시작
+                </p>
+                <p className="font-mono text-base font-extrabold">
+                  {fmtKstHHmm(startedAt)}
+                </p>
+              </div>
+            ) : null}
+          </div>
+          <div className="mt-3 flex items-center gap-1.5 text-[11px] font-medium">
+            <span className="bg-white/10 rounded-md px-1.5 py-0.5 font-bold">
+              정류장 {totalStops}
+            </span>
+            <span className="bg-white/10 rounded-md px-1.5 py-0.5 font-bold">
+              탑승·하차 {boarded}
+            </span>
+          </div>
+        </div>
+      </li>
+    );
+  }
+
+  // scheduled / finished — white card
+  const tone =
+    kind === "finished"
+      ? { bg: "bg-success-soft", text: "text-success", label: "완료" }
+      : { bg: "bg-muted", text: "text-muted-foreground", label: "예정" };
+
+  return (
+    <li>
+      <div className="bg-card rounded-2xl border p-4 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase ${tone.bg} ${tone.text}`}
+              >
+                {tone.label}
+              </span>
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase ${dirCls}`}
+              >
+                {DIRECTION_LABEL[direction]}
+              </span>
+              {isKids ? (
+                <span className="bg-bus text-bus-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                  KIDS
+                </span>
+              ) : null}
+            </div>
+            <p className="mt-1.5 truncate text-sm font-extrabold tracking-tight">
+              {routeName}
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+              {driverName} · {vehiclePlate}
+            </p>
+          </div>
+          {endedAt ? (
+            <div className="text-right">
+              <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+                종료
+              </p>
+              <p className="font-mono text-sm font-extrabold">
+                {fmtKstHHmm(endedAt)}
+              </p>
+            </div>
+          ) : null}
+        </div>
+        <div className="text-muted-foreground mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px] font-medium">
+          <span className="inline-flex items-center gap-1">
+            <MapPin className="h-3 w-3" />
+            정류장 {totalStops}
+          </span>
+          {kind === "finished" ? (
+            <span className="inline-flex items-center gap-1">
+              <Calendar className="h-3 w-3" />
+              이벤트 {totalEvents}
+            </span>
+          ) : null}
+        </div>
+      </div>
+    </li>
+  );
+}
+
+function QuickLink({
+  href,
+  label,
+  value,
+  Icon,
+}: {
+  href: string;
+  label: string;
+  value: number;
+  Icon: React.ComponentType<{ className?: string }>;
+}) {
+  return (
+    <Link
+      href={href}
+      className="bg-card hover:border-primary hover:bg-muted/40 flex items-center justify-between rounded-2xl border p-4 shadow-sm transition-colors"
+    >
+      <div>
+        <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
+          {label}
+        </p>
+        <p className="mt-1 text-2xl font-extrabold tracking-tight">{value}</p>
+      </div>
+      <Icon className="text-muted-foreground h-6 w-6" />
+    </Link>
   );
 }

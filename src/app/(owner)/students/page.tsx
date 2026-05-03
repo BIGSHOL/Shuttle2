@@ -94,8 +94,8 @@ export default async function StudentsPage() {
                         <span
                           className={
                             isKids
-                              ? "rounded-md bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-900"
-                              : "rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700"
+                              ? "bg-bus text-bus-foreground rounded-md px-2 py-0.5 text-xs font-bold"
+                              : "bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-medium"
                           }
                         >
                           {age}세 {isKids ? "· KIDS" : ""}

@@ -54,9 +54,9 @@ export default async function SafetyReportPage() {
       </div>
 
       {kidsVehicleCount === 0 ? (
-        <Card className="border-amber-300 bg-amber-50/60">
+        <Card className="border-warning/40 bg-warning-soft/40">
           <CardHeader>
-            <CardTitle className="text-amber-900">
+            <CardTitle className="text-warning">
               KIDS 모드 차량이 없어요
             </CardTitle>
             <CardDescription>

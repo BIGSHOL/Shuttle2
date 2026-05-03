@@ -29,11 +29,10 @@ const ROLE_LABEL = {
 } as const;
 
 const ROLE_BADGE: Record<keyof typeof ROLE_LABEL, string> = {
-  OWNER:
-    "rounded-md bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-900",
+  OWNER: "bg-primary/10 text-primary rounded-md px-2 py-0.5 text-xs font-bold",
   DRIVER:
-    "rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-900",
-  HELPER: "rounded-md bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900",
+    "bg-success-soft text-success rounded-md px-2 py-0.5 text-xs font-bold",
+  HELPER: "bg-info-soft text-info rounded-md px-2 py-0.5 text-xs font-bold",
 };
 
 function formatDate(d: Date) {

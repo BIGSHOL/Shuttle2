@@ -86,8 +86,8 @@ export default async function RoutesPage() {
                       <span
                         className={
                           r.direction === "PICKUP"
-                            ? "rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-900"
-                            : "rounded-md bg-sky-100 px-2 py-0.5 text-xs font-medium text-sky-900"
+                            ? "bg-success-soft text-success rounded-md px-2 py-0.5 text-xs font-bold"
+                            : "bg-info-soft text-info rounded-md px-2 py-0.5 text-xs font-bold"
                         }
                       >
                         {formatDirection(r.direction)}

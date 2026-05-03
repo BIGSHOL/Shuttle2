@@ -127,9 +127,9 @@ export function InviteForm({ origin }: { origin: string }) {
       </Card>
 
       {inviteUrl ? (
-        <Card className="w-full max-w-2xl border-emerald-200 bg-emerald-50/40">
+        <Card className="border-success/30 bg-success-soft/40 w-full max-w-2xl">
           <CardHeader>
-            <CardTitle className="text-emerald-900">
+            <CardTitle className="text-success">
               초대 링크가 발급되었습니다
             </CardTitle>
             <CardDescription>

@@ -85,9 +85,9 @@ export default async function TrainingPage() {
                 key={s.id}
                 className={
                   empty
-                    ? "border-zinc-200"
+                    ? ""
                     : expired
-                      ? "border-rose-300 bg-rose-50/40"
+                      ? "border-destructive/30 bg-destructive/5"
                       : ""
                 }
               >
@@ -100,15 +100,15 @@ export default async function TrainingPage() {
                       </CardDescription>
                     </div>
                     {empty ? (
-                      <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-xs font-medium text-zinc-700">
+                      <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-bold">
                         기록 없음
                       </span>
                     ) : expired ? (
-                      <span className="rounded-md bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-900">
+                      <span className="bg-destructive/10 text-destructive rounded-md px-2 py-0.5 text-xs font-bold">
                         만료됨
                       </span>
                     ) : (
-                      <span className="rounded-md bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-900">
+                      <span className="bg-success-soft text-success rounded-md px-2 py-0.5 text-xs font-bold">
                         유효 ({latest.expiresOn.toISOString().slice(0, 10)})
                       </span>
                     )}
