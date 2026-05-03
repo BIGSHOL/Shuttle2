@@ -23,7 +23,10 @@ export function TripLiveMap(props: TripLiveMapProps) {
 
   if (!Inner) {
     return (
-      <div className="bg-muted/30 text-muted-foreground flex h-[60vh] w-full items-center justify-center rounded-md border text-sm">
+      <div
+        className="bg-muted/30 text-muted-foreground flex w-full items-center justify-center text-sm"
+        style={{ height: props.height ?? "60vh" }}
+      >
         지도 로딩 중...
       </div>
     );

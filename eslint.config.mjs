@@ -14,6 +14,10 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // 디자이너 핸드오프 자료 — repo에 commit 안 함, lint 안 검사
+    "design_handoff_shuttlee/**",
+    // Prisma 생성 클라이언트
+    "src/generated/**",
   ]),
 ]);
 
