@@ -16,7 +16,7 @@
 | W13 | 마케팅 랜딩 디자인 + /pricing 신규 + login/signup 디자인 | `dc75d7a`, `a1b41a4` | ✅ |
 | W14 | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화 | `7776d9b` | ✅ |
 | W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정 | `e71961f` | ✅ |
-| W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 | (다음 commit) | ✅ |
+| W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 | `a2bf51b` | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
