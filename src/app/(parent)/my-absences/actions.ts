@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
 import { todayUtcDateKst } from "@/lib/date/today";
+import { sendToOwnersOfOrg } from "@/lib/push/server";
 
 // 학부모가 자녀의 결석을 신청. 마감 정책 (MVP):
 // - 오늘 또는 미래 날짜만 허용 (과거 X).
@@ -94,6 +95,24 @@ export async function createAbsenceRequestAction(
       // status PENDING (default)
     },
   });
+
+  // 학부모의 자녀 → 그 자녀의 orgId → 그 org의 OWNER에게 push.
+  // 발송 실패는 결석 신청 자체를 깨뜨리지 않음 (에러 swallow + 로그).
+  const child = me.students.find((s) => s.id === studentId);
+  if (child) {
+    const dateLabel = targetDate.toISOString().slice(0, 10);
+    const typeLabel =
+      type === "ABSENT_BOTH"
+        ? "등·하원"
+        : type === "ABSENT_PICKUP"
+          ? "등원"
+          : "하원";
+    await sendToOwnersOfOrg(child.orgId, {
+      title: "새 결석 신청",
+      body: `${child.name} · ${dateLabel} · ${typeLabel}`,
+      url: "/absences",
+    }).catch((e) => console.warn("absence push failed:", e));
+  }
 
   revalidatePath("/my-absences");
   revalidatePath("/home");

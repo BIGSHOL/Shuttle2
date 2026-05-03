@@ -8,6 +8,8 @@ import { db } from "@/lib/db";
 import { requireDriver } from "@/lib/auth/session";
 import { requireTripAccess } from "@/lib/auth/trip-access";
 import { todayUtcDateKst } from "@/lib/date/today";
+import { haversineMeters } from "@/lib/geo/distance";
+import { sendToGuardian } from "@/lib/push/server";
 
 // W3-3b: 기사 폰이 직접 좌표를 send. start/end 시 위치는 첫/마지막 ping에서 채워짐.
 
@@ -141,7 +143,7 @@ export async function recordPingAction(input: RecordPingInput): Promise<void> {
       driverId: me.staff.id,
       vehicle: { orgId },
     },
-    select: { id: true, endedAt: true, startLat: true },
+    select: { id: true, routeId: true, endedAt: true, startLat: true },
   });
   if (!trip) throw new Error("운행을 찾을 수 없습니다");
   if (trip.endedAt) {
@@ -175,6 +177,72 @@ export async function recordPingAction(input: RecordPingInput): Promise<void> {
       data: { endLat: data.lat, endLng: data.lng },
     });
   }
+
+  // STOP_PASS: 가장 가까운 RouteStop 매칭 → 그 stop을 정류장으로 가진
+  // 자녀들의 학부모에게 push. driver측 useGpsTracker가 같은 stop 1번만
+  // 보내므로 서버 측 중복 차단 불필요.
+  if (data.source === "STOP_PASS") {
+    await notifyGuardiansOfStopPass(trip.routeId, data.lat, data.lng).catch(
+      (e) => console.warn("stop-pass push failed:", e),
+    );
+  }
+}
+
+const STOP_MATCH_RADIUS_M = 200; // 매칭 임계값
+
+async function notifyGuardiansOfStopPass(
+  routeId: string,
+  lat: number,
+  lng: number,
+): Promise<void> {
+  const stops = await db.routeStop.findMany({
+    where: { routeId },
+    include: { stop: { select: { id: true, name: true, lat: true, lng: true } } },
+  });
+
+  let bestStopId: string | null = null;
+  let bestName = "";
+  let bestDist = Infinity;
+  for (const rs of stops) {
+    const d = haversineMeters(lat, lng, rs.stop.lat, rs.stop.lng);
+    if (d < bestDist) {
+      bestDist = d;
+      bestStopId = rs.stop.id;
+      bestName = rs.stop.name;
+    }
+  }
+  if (!bestStopId || bestDist > STOP_MATCH_RADIUS_M) return;
+
+  // 이 stop을 자기 stop으로 가진 학생 + 그들의 보호자
+  const links = await db.guardianLink.findMany({
+    where: {
+      student: { routes: { some: { stopId: bestStopId, routeId } } },
+    },
+    select: {
+      guardianId: true,
+      student: { select: { name: true } },
+    },
+  });
+
+  if (links.length === 0) return;
+
+  // 같은 guardian이 여러 자녀를 가질 수 있어 dedupe
+  const byGuardian = new Map<string, string[]>(); // guardianId → [학생명...]
+  for (const l of links) {
+    const arr = byGuardian.get(l.guardianId) ?? [];
+    if (!arr.includes(l.student.name)) arr.push(l.student.name);
+    byGuardian.set(l.guardianId, arr);
+  }
+
+  await Promise.all(
+    Array.from(byGuardian.entries()).map(([gid, names]) =>
+      sendToGuardian(gid, {
+        title: "셔틀 도착",
+        body: `${names.join(", ")} 자녀의 정류장 (${bestName})에 셔틀이 도착했어요.`,
+        url: "/home",
+      }),
+    ),
+  );
 }
 
 // ────────────────────────────────────────────────────────────────────

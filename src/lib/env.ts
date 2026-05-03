@@ -11,6 +11,7 @@ const envSchema = z.object({
   NEXT_PUBLIC_KAKAO_MAP_KEY: z.string().min(1),
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
+  VAPID_SUBJECT: z.string().optional(),
 });
 
 type Env = z.infer<typeof envSchema>;

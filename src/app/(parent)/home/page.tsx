@@ -11,7 +11,10 @@ import {
 import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
 import { todayUtcDateKst } from "@/lib/date/today";
+import { env } from "@/lib/env";
 import { ORG_TYPE_LABEL } from "@/lib/i18n/org-terms";
+
+import { GuardianNotificationToggle } from "../notifications/guardian-notification-toggle";
 import {
   getTodayChildTrips,
   type ChildTripCard,
@@ -149,13 +152,18 @@ export default async function ParentHomePage() {
 
   return (
     <main className="mx-auto max-w-3xl space-y-6 p-4 sm:p-6">
-      <section>
+      <section className="space-y-2">
         <h2 className="text-xl font-semibold">
           {me.guardian.name}님, 안녕하세요
         </h2>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="text-muted-foreground text-sm">
           연결된 자녀 {todayCards.length}명의 셔틀 운행을 확인할 수 있어요.
         </p>
+        {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
+          <GuardianNotificationToggle
+            vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+          />
+        ) : null}
       </section>
 
       {todayCards.length === 0 ? (

@@ -9,6 +9,9 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
+import { env } from "@/lib/env";
+
+import { StaffNotificationToggle } from "../notifications/staff-notification-toggle";
 
 const ORG_TYPE_LABEL: Record<"ACADEMY" | "DAYCARE" | "KINDERGARTEN", string> = {
   ACADEMY: "학원·교습소",
@@ -43,12 +46,19 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <section>
-        <h2 className="text-2xl font-semibold">{user.org.name}</h2>
-        <p className="text-muted-foreground text-sm">
-          {ORG_TYPE_LABEL[user.org.type]} · 요금제{" "}
-          {org ? PLAN_LABEL[org.plan] : "-"}
-        </p>
+      <section className="flex items-start justify-between gap-3">
+        <div>
+          <h2 className="text-2xl font-semibold">{user.org.name}</h2>
+          <p className="text-muted-foreground text-sm">
+            {ORG_TYPE_LABEL[user.org.type]} · 요금제{" "}
+            {org ? PLAN_LABEL[org.plan] : "-"}
+          </p>
+        </div>
+        {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
+          <StaffNotificationToggle
+            vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+          />
+        ) : null}
       </section>
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
