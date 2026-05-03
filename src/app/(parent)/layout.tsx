@@ -1,6 +1,7 @@
 import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
 
+import { ParentBottomTabs } from "./parent-bottom-tabs";
 import { ParentHeader } from "./parent-header";
 import { SwRegister } from "./sw-register";
 
@@ -29,6 +30,7 @@ export default async function ParentLayout({
       />
       <SwRegister />
       <div className="flex-1">{children}</div>
+      <ParentBottomTabs unreadCount={unreadCount} />
     </div>
   );
 }

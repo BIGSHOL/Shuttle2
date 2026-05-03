@@ -22,6 +22,7 @@
 | W16 | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh) | _이번_ | ⏳ |
 | W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용) | _이번_ | ⏳ |
 | W17-A | Supabase 비밀번호 재설정 메일 한국어 템플릿 (`supabase/templates/recovery.html`) | _이번_ | ⏳ |
+| W17-C | 학부모 BottomTabBar (홈·알림·결석·정류장 4탭) | _이번_ | ⏳ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -277,6 +278,23 @@
 - 가입 confirmation은 `admin.createUser({ email_confirm: true })`로 bypass
   중이므로 confirmation.html은 W17-B로 미룸.
 - magic_link, invite는 우리가 자체 토큰 흐름 사용 → 템플릿 불필요.
+
+## W17-C 완료 (학부모 BottomTabBar)
+
+### 결과
+- `(parent)/parent-bottom-tabs.tsx` 신규 — client. usePathname으로 active
+  tab 강조. 4탭: 홈 / 알림 (unread 뱃지) / 결석 / 정류장.
+  - 자식 path도 active 처리 (예: `/my-absences/new`도 결석 active)
+  - 활성 tab 위에 bus 토큰 underline 작은 라인
+  - safe-area-inset-bottom 패딩 (iPhone Home indicator 대응)
+  - z-30 — trip-live 풀스크린(z-50)이 가림 (의도)
+- `(parent)/layout.tsx` — `<ParentBottomTabs unreadCount={..} />` 마운트.
+  layout이 이미 `flex-col` + `min-h-[100dvh]` 이라 sticky bottom으로 자연스럽게.
+
+### 디자인 결정
+- "설정" 별도 라우트 없음 → 기존 헤더 dropdown 유지 (W14 디자인).
+  4탭으로 축약하는 게 모바일 가독성 우선.
+- 홈은 `/home` exact match가 아닌 prefix 매칭 — `/home/anything` 도 active.
 
 ## 다음 우선순위 (W17-B+)
 
