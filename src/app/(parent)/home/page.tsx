@@ -42,7 +42,7 @@ export default async function ParentHomePage() {
     where: {
       studentId: { in: studentIds },
       date: { gte: today },
-      status: { not: "ACKNOWLEDGED" },
+      status: { notIn: ["ACKNOWLEDGED", "REJECTED"] },
     },
     orderBy: { date: "asc" },
     take: 5,

@@ -1,3 +1,4 @@
+import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
 
 import { ParentHeader } from "./parent-header";
@@ -13,12 +14,18 @@ export default async function ParentLayout({
 }) {
   const me = await requireGuardian();
 
+  // 안 읽은 알림 카운트 (헤더 벨 뱃지)
+  const unreadCount = await db.notification.count({
+    where: { userId: me.authUserId, readAt: null },
+  });
+
   return (
     <div className="bg-muted/40 mx-auto flex min-h-[100dvh] max-w-md flex-col">
       <ParentHeader
         name={me.guardian.name}
         email={me.email}
         childCount={me.students.length}
+        unreadCount={unreadCount}
       />
       <SwRegister />
       <div className="flex-1">{children}</div>

@@ -240,6 +240,7 @@ async function notifyGuardiansOfStopPass(
         title: "셔틀 도착",
         body: `${names.join(", ")} 자녀의 정류장 (${bestName})에 셔틀이 도착했어요.`,
         url: "/home",
+        category: "ANNOUNCEMENT", // TODO: 다음 세션에서 SHUTTLE_NEAR_CHILD 카테고리 추가
       }),
     ),
   );

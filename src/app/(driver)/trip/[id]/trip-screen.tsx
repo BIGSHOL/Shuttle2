@@ -135,11 +135,19 @@ export async function TripScreen({ tripId }: { tripId: string }) {
     trip.route.direction === "PICKUP"
       ? ["ABSENT_BOTH", "ABSENT_PICKUP"]
       : ["ABSENT_BOTH", "ABSENT_DROPOFF"];
+  // REJECTED는 driver에 안 보이게 (반려된 결석은 의미상 결석 아님)
   const absences = await db.absenceRequest.findMany({
     where: {
       studentId: { in: allStudentIds },
       date: trip.date,
-      type: { in: directionTypes as ("ABSENT_BOTH" | "ABSENT_PICKUP" | "ABSENT_DROPOFF")[] },
+      type: {
+        in: directionTypes as (
+          | "ABSENT_BOTH"
+          | "ABSENT_PICKUP"
+          | "ABSENT_DROPOFF"
+        )[],
+      },
+      status: { not: "REJECTED" },
     },
     select: { studentId: true, status: true, reason: true },
   });

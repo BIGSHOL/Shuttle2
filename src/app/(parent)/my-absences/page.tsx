@@ -20,12 +20,14 @@ const STATUS_LABEL = {
   PENDING: "대기 중",
   NOTIFIED_DRIVER: "기사에게 알림",
   ACKNOWLEDGED: "확인 완료",
+  REJECTED: "반려",
 } as const;
 
 const STATUS_COLOR = {
   PENDING: "bg-amber-100 text-amber-900",
   NOTIFIED_DRIVER: "bg-sky-100 text-sky-900",
   ACKNOWLEDGED: "bg-emerald-100 text-emerald-900",
+  REJECTED: "bg-rose-100 text-rose-900",
 } as const;
 
 function fmtKstDate(d: Date): string {
@@ -78,9 +80,16 @@ export default async function ParentAbsencesPage() {
                     <CardTitle className="text-base">
                       {a.student.name} · {fmtKstDate(a.date)}
                     </CardTitle>
-                    <CardDescription className="mt-1">
-                      {ABSENCE_TYPE_LABEL[a.type]}
-                      {a.reason ? ` · ${a.reason}` : ""}
+                    <CardDescription className="mt-1 space-y-1">
+                      <span className="block">
+                        {ABSENCE_TYPE_LABEL[a.type]}
+                        {a.reason ? ` · ${a.reason}` : ""}
+                      </span>
+                      {a.status === "REJECTED" && a.rejectReason ? (
+                        <span className="text-destructive block text-xs">
+                          반려 사유: {a.rejectReason}
+                        </span>
+                      ) : null}
                     </CardDescription>
                   </div>
                   <span

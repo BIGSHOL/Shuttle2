@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { useTransition } from "react";
 
@@ -14,17 +15,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-// 학부모용 모바일 헤더. docs/02 spec:
-// 좌측 셔틀이 로고 + 자녀 N명 sub, 우측 알림 벨(준비 중) + 사용자 메뉴.
-// /notifications 라우트는 다음 세션 — 이번엔 벨 disabled.
+// 학부모용 모바일 헤더. 알림 벨에 unread count 점.
 export function ParentHeader({
   name,
   email,
   childCount,
+  unreadCount,
 }: {
   name: string;
   email: string;
   childCount: number;
+  unreadCount: number;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -39,13 +40,20 @@ export function ParentHeader({
         </div>
         <div className="flex items-center gap-1">
           <Button
+            asChild
             variant="ghost"
             size="icon"
-            disabled
-            aria-label="알림 (준비 중)"
-            className="text-muted-foreground"
+            aria-label={`알림 (${unreadCount}건 안 읽음)`}
+            className="relative"
           >
-            <Bell className="h-4 w-4" />
+            <Link href="/notifications">
+              <Bell className="h-4 w-4" />
+              {unreadCount > 0 ? (
+                <span className="bg-destructive text-destructive-foreground absolute top-1.5 right-1.5 inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              ) : null}
+            </Link>
           </Button>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>

@@ -18,12 +18,13 @@ model Organization {
   plan      Plan     @default(TRIAL)
   createdAt DateTime @default(now())
 
-  vehicles        Vehicle[]
-  students        Student[]
-  staffs          Staff[]
-  stops           Stop[]
-  invites         StaffInvite[]
-  guardianInvites GuardianInvite[]
+  vehicles           Vehicle[]
+  students           Student[]
+  staffs             Staff[]
+  stops              Stop[]
+  invites            StaffInvite[]
+  guardianInvites    GuardianInvite[]
+  stopChangeRequests StopChangeRequest[]
 }
 
 // 기사·동승자 초대 토큰 (1회용).
@@ -178,8 +179,10 @@ model Stop {
   lng     Float
   radiusM Int          @default(50) // 도착 판정 반경 (미터)
 
-  routes   RouteStop[]
-  students RouteStudent[]
+  routes              RouteStop[]
+  students            RouteStudent[]
+  changeRequestsFrom  StopChangeRequest[] @relation("StopChangeFrom")
+  changeRequestsResult StopChangeRequest[] @relation("StopChangeResult")
 }
 
 model RouteStop {
@@ -202,11 +205,12 @@ model Student {
   name      String
   birthYear Int // KIDS 모드 자동 판정용
 
-  guardians       GuardianLink[]
-  routes          RouteStudent[]
-  events          BoardingEvent[]
-  absences        AbsenceRequest[]
-  guardianInvites GuardianInviteStudent[]
+  guardians          GuardianLink[]
+  routes             RouteStudent[]
+  events             BoardingEvent[]
+  absences           AbsenceRequest[]
+  guardianInvites    GuardianInviteStudent[]
+  stopChangeRequests StopChangeRequest[]
 }
 
 model Guardian {
@@ -215,9 +219,10 @@ model Guardian {
   name   String
   phone  String  @unique
 
-  links             GuardianLink[]
-  absences          AbsenceRequest[]
-  pushSubscriptions PushSubscription[]
+  links              GuardianLink[]
+  absences           AbsenceRequest[]
+  pushSubscriptions  PushSubscription[]
+  stopChangeRequests StopChangeRequest[]
 }
 
 model GuardianLink {
@@ -329,16 +334,20 @@ model SafetyCheck {
 
 // 결석·일시 불승차 신청
 model AbsenceRequest {
-  id        String        @id @default(cuid())
-  studentId String
-  student   Student       @relation(fields: [studentId], references: [id])
-  date      DateTime      @db.Date
-  type      AbsenceType
-  reason    String?
-  status    AbsenceStatus @default(PENDING)
-  createdBy String // guardianId
-  guardian  Guardian      @relation(fields: [createdBy], references: [id])
-  createdAt DateTime      @default(now())
+  id           String        @id @default(cuid())
+  studentId    String
+  student      Student       @relation(fields: [studentId], references: [id])
+  date         DateTime      @db.Date
+  type         AbsenceType
+  reason       String?
+  status       AbsenceStatus @default(PENDING)
+  createdBy    String // guardianId
+  guardian     Guardian      @relation(fields: [createdBy], references: [id])
+  createdAt    DateTime      @default(now())
+  // W10 보강 — OWNER 결정 트래킹
+  decidedBy    String? // staffId (OWNER)
+  decidedAt    DateTime?
+  rejectReason String? // status REJECTED일 때만
 
   @@index([studentId, date])
   @@index([createdBy])
@@ -354,6 +363,7 @@ enum AbsenceStatus {
   PENDING
   NOTIFIED_DRIVER
   ACKNOWLEDGED
+  REJECTED
 }
 
 // 학부모 브라우저 push 구독 정보. W6 web-push 발송 대상.
@@ -400,4 +410,80 @@ model PreRegistration {
   createdAt DateTime @default(now())
 
   @@index([createdAt])
+}
+
+// W10: 인앱 알림 미러. Web Push와 별개로 항상 DB에 행 생성
+// (푸시 권한 없거나 발송 실패해도 인앱 list에서 확인 가능).
+// userId는 Supabase auth.users id. Guardian/Staff 누구나 수신 가능.
+model Notification {
+  id          String               @id @default(cuid())
+  userId      String // auth.users.id
+  category    NotificationCategory
+  title       String
+  body        String
+  payload     Json?
+  url         String? // 클릭 시 이동 경로
+  readAt      DateTime?
+  createdAt   DateTime             @default(now())
+
+  @@index([userId, createdAt])
+  @@index([userId, readAt])
+}
+
+enum NotificationCategory {
+  TRIP_STARTED
+  STUDENT_BOARDED
+  STUDENT_DROPPED_OFF
+  STUDENT_NO_SHOW
+  STUDENT_NO_DROPOFF
+  TRIP_DELAYED
+  TRIP_ENDED
+  ABSENCE_REQUESTED // OWNER에게: 새 결석 신청
+  ABSENCE_APPROVED
+  ABSENCE_REJECTED
+  STOP_CHANGE_REQUESTED // OWNER에게: 새 정류장 변경 요청
+  STOP_CHANGE_APPROVED
+  STOP_CHANGE_REJECTED
+  ANNOUNCEMENT
+  EMERGENCY
+}
+
+// W10: 정류장 변경 요청. 학부모가 새 위치를 카카오맵 picker로 선택 →
+// OWNER 승인 시 자녀의 RouteStudent.stopId 갱신 (effectiveAt 이후 trip부터).
+// Stop은 새로 만들지 않고 기존 stop 매핑 또는 신규 stop 별도 생성하는 흐름은
+// 1차 단순화 — OWNER가 승인 시 toLat/toLng로 새 Stop 만들어 매핑.
+model StopChangeRequest {
+  id          String        @id @default(cuid())
+  orgId       String
+  org         Organization  @relation(fields: [orgId], references: [id])
+  studentId   String
+  student     Student       @relation(fields: [studentId], references: [id])
+  fromStopId  String
+  fromStop    Stop          @relation("StopChangeFrom", fields: [fromStopId], references: [id])
+  toLat       Float
+  toLng       Float
+  toAddress   String? // 역지오코딩 결과 (선택)
+  reason      String?
+  effectiveAt DateTime      @db.Date
+  status      RequestStatus @default(PENDING)
+  createdBy   String // guardianId
+  guardian    Guardian      @relation(fields: [createdBy], references: [id])
+  createdAt   DateTime      @default(now())
+
+  // OWNER 결정 트래킹
+  decidedBy    String? // staffId
+  decidedAt    DateTime?
+  rejectReason String?
+  resultStopId String? // 승인 시 매핑·생성된 새 Stop.id
+  resultStop   Stop?   @relation("StopChangeResult", fields: [resultStopId], references: [id])
+
+  @@index([orgId, status])
+  @@index([studentId])
+  @@index([createdBy])
+}
+
+enum RequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }

@@ -36,7 +36,10 @@ type StopRow = {
     id: string;
     name: string;
     absence:
-      | { status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED"; reason: string | null }
+      | {
+          status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED" | "REJECTED";
+          reason: string | null;
+        }
       | null;
   }[];
 };
@@ -526,7 +529,10 @@ function BoardingRow({
   gpsLat: number | null;
   gpsLng: number | null;
   absence:
-    | { status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED"; reason: string | null }
+    | {
+        status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED" | "REJECTED";
+        reason: string | null;
+      }
     | null;
 }) {
   const [pending, startTransition] = useTransition();

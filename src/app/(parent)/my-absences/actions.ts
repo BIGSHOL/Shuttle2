@@ -111,6 +111,7 @@ export async function createAbsenceRequestAction(
       title: "새 결석 신청",
       body: `${child.name} · ${dateLabel} · ${typeLabel}`,
       url: "/absences",
+      category: "ABSENCE_REQUESTED",
     }).catch((e) => console.warn("absence push failed:", e));
   }
 

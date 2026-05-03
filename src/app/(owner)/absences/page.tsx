@@ -11,6 +11,7 @@ import { todayUtcDateKst } from "@/lib/date/today";
 import { studentTerm } from "@/lib/i18n/org-terms";
 
 import { AckAbsenceButton } from "./_components/ack-absence-button";
+import { RejectAbsenceButton } from "./_components/reject-absence-button";
 
 const ABSENCE_TYPE_LABEL = {
   ABSENT_BOTH: "등·하원 모두",
@@ -22,12 +23,14 @@ const STATUS_COLOR = {
   PENDING: "bg-amber-100 text-amber-900",
   NOTIFIED_DRIVER: "bg-sky-100 text-sky-900",
   ACKNOWLEDGED: "bg-emerald-100 text-emerald-900",
+  REJECTED: "bg-rose-100 text-rose-900",
 } as const;
 
 const STATUS_LABEL = {
   PENDING: "대기",
   NOTIFIED_DRIVER: "기사 전달",
   ACKNOWLEDGED: "확인 완료",
+  REJECTED: "반려",
 } as const;
 
 export default async function OwnerAbsencesPage() {
@@ -37,12 +40,11 @@ export default async function OwnerAbsencesPage() {
 
   const today = todayUtcDateKst();
 
-  // 본인 org 학생의 결석. 오늘 이후 + 최근 30일 ACKNOWLEDGED 함께.
   const pending = await db.absenceRequest.findMany({
     where: {
       student: { orgId },
       date: { gte: today },
-      status: { not: "ACKNOWLEDGED" },
+      status: { notIn: ["ACKNOWLEDGED", "REJECTED"] },
     },
     orderBy: [{ date: "asc" }, { createdAt: "asc" }],
     include: {
@@ -54,9 +56,9 @@ export default async function OwnerAbsencesPage() {
   const recent = await db.absenceRequest.findMany({
     where: {
       student: { orgId },
-      status: "ACKNOWLEDGED",
+      status: { in: ["ACKNOWLEDGED", "REJECTED"] },
     },
-    orderBy: { date: "desc" },
+    orderBy: { decidedAt: "desc" },
     take: 20,
     include: {
       student: { select: { id: true, name: true } },
@@ -69,7 +71,8 @@ export default async function OwnerAbsencesPage() {
       <div>
         <h2 className="text-2xl font-semibold">결석 신청</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          학부모가 보낸 {term} 결석 신청을 확인하고 처리하세요.
+          학부모가 보낸 {term} 결석 신청을 확인하고 처리하세요. 반려는 사유
+          입력이 필요합니다.
         </p>
       </div>
 
@@ -101,7 +104,10 @@ export default async function OwnerAbsencesPage() {
                         </span>
                         <span className="text-muted-foreground block text-xs">
                           신청 {a.guardian.name} ({a.guardian.phone}) ·{" "}
-                          {a.createdAt.toISOString().slice(0, 16).replace("T", " ")}
+                          {a.createdAt
+                            .toISOString()
+                            .slice(0, 16)
+                            .replace("T", " ")}
                         </span>
                       </CardDescription>
                     </div>
@@ -111,7 +117,10 @@ export default async function OwnerAbsencesPage() {
                       >
                         {STATUS_LABEL[a.status]}
                       </span>
-                      <AckAbsenceButton id={a.id} />
+                      <div className="flex gap-1.5">
+                        <RejectAbsenceButton id={a.id} />
+                        <AckAbsenceButton id={a.id} />
+                      </div>
                     </div>
                   </div>
                 </CardHeader>
@@ -123,7 +132,7 @@ export default async function OwnerAbsencesPage() {
 
       <section className="space-y-3">
         <h3 className="text-base font-medium">
-          최근 처리 완료 (최근 20건)
+          최근 처리 (최근 20건)
         </h3>
         {recent.length === 0 ? (
           <Card>
@@ -140,7 +149,7 @@ export default async function OwnerAbsencesPage() {
                 {recent.map((a) => (
                   <li
                     key={a.id}
-                    className="flex items-center justify-between px-4 py-2"
+                    className="flex items-start justify-between gap-3 px-4 py-2"
                   >
                     <span>
                       <span className="font-medium">{a.student.name}</span>{" "}
@@ -148,9 +157,14 @@ export default async function OwnerAbsencesPage() {
                         · {a.date.toISOString().slice(0, 10)} ·{" "}
                         {ABSENCE_TYPE_LABEL[a.type]} · 신청 {a.guardian.name}
                       </span>
+                      {a.status === "REJECTED" && a.rejectReason ? (
+                        <span className="text-muted-foreground mt-0.5 block text-xs">
+                          반려 사유: {a.rejectReason}
+                        </span>
+                      ) : null}
                     </span>
                     <span
-                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[a.status]}`}
+                      className={`rounded-md px-2 py-0.5 text-xs font-medium shrink-0 ${STATUS_COLOR[a.status]}`}
                     >
                       {STATUS_LABEL[a.status]}
                     </span>

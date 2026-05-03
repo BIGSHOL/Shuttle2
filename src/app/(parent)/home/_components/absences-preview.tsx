@@ -11,7 +11,7 @@ type Item = {
   studentName: string;
   dateISO: string; // YYYY-MM-DD
   type: "ABSENT_BOTH" | "ABSENT_PICKUP" | "ABSENT_DROPOFF";
-  status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED";
+  status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED" | "REJECTED";
 };
 
 // 다가오는 결석 신청 미리보기. /my-absences로 이어짐.
