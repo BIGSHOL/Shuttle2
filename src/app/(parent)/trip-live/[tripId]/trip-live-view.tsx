@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -58,14 +58,60 @@ export function TripLiveView({
       .find((s) => !passedSet.has(s.id));
   }, [stops, passedSet]);
 
-  // ETA — 다음 stop까지 셔틀 직선거리 / 평균 속도
-  const etaMin = useMemo(() => {
+  // ETA — 두 단계 중첩:
+  // (1) ping 들어올 때마다 직선거리/평균속도로 즉시 계산 (always-on, 빠름)
+  // (2) 30초 throttle로 /api/route-eta 호출 → 카카오 길찾기 정밀 ETA로 덮어씀
+  //     (카카오 키 없으면 서버 측에서도 직선 폴백 — 동일한 응답 형식)
+  const haversineEtaMin = useMemo(() => {
     if (!ping || !nextStop) return null;
     return estimateEtaMinutes(
       { lat: ping.lat, lng: ping.lng },
       { lat: nextStop.lat, lng: nextStop.lng },
     );
   }, [ping, nextStop]);
+
+  const [preciseEta, setPreciseEta] = useState<{
+    min: number;
+    source: "kakao" | "haversine";
+  } | null>(null);
+  const lastFetchRef = useRef(0);
+
+  useEffect(() => {
+    if (!ping || !nextStop) return;
+    const now = Date.now();
+    if (now - lastFetchRef.current < 30_000) return; // 30초 throttle
+    lastFetchRef.current = now;
+
+    const params = new URLSearchParams({
+      fromLat: String(ping.lat),
+      fromLng: String(ping.lng),
+      toLat: String(nextStop.lat),
+      toLng: String(nextStop.lng),
+    });
+    let cancelled = false;
+    fetch(`/api/route-eta?${params}`, { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => {
+        if (cancelled || !data) return;
+        const min = Number(data.etaMinutes);
+        const source = data.source === "kakao" ? "kakao" : "haversine";
+        if (Number.isFinite(min)) setPreciseEta({ min, source });
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [ping, nextStop]);
+
+  // 우선순위: 정밀 ETA(있으면) > 직선 ETA. 다음 stop이 바뀌면 정밀값 무효화.
+  // microtask로 lift — react-hooks/set-state-in-effect 회피 (코드베이스 패턴).
+  useEffect(() => {
+    queueMicrotask(() => setPreciseEta(null));
+    lastFetchRef.current = 0;
+  }, [nextStop?.id]);
+
+  const etaMin = preciseEta?.min ?? haversineEtaMin;
+  const etaSource = preciseEta?.source ?? (haversineEtaMin ? "haversine" : null);
 
   // 자녀 stop이 통과됐는지
   const childRouteStop = stops.find((s) => s.stopId === childStudent.stopId);
@@ -139,7 +185,9 @@ export function TripLiveView({
             {childPassed
               ? "자녀가 타고 내리는 정류장을 셔틀이 지났습니다."
               : ping && etaMin !== null
-                ? `약 ${etaMin}분 후 도착 (직선거리 기준 추정)`
+                ? `약 ${etaMin}분 후 도착 (${
+                    etaSource === "kakao" ? "카카오 길찾기" : "직선거리 추정"
+                  })`
                 : ping
                   ? "남은 정류장 정보를 계산 중..."
                   : "셔틀 신호를 기다리고 있어요."}

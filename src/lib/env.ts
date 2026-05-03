@@ -9,6 +9,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().url(),
   DIRECT_URL: z.string().url(),
   NEXT_PUBLIC_KAKAO_MAP_KEY: z.string().min(1),
+  KAKAO_REST_API_KEY: z.string().optional(), // 길찾기 ETA용 (W6-2)
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
