@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-04 (W13 완료 → W14 디자인 마무리·확장 단계 검토)
+> 마지막 업데이트: 2026-05-04 (W14 학부모 가입 + notification-toggle 디자인 완료)
 
 ## 완료된 마일스톤
 
@@ -14,6 +14,7 @@
 | W11 | 기사 화면 디자인 (mobile-first + dark gradient running header + tokens) | `b4cb872` | ✅ |
 | W12 | 학원장 dashboard 재구성 + 실시간 운행 모니터 + owner 토큰 마이그레이션 | `f87e566` | ✅ |
 | W13 | 마케팅 랜딩 디자인 + /pricing 신규 + login/signup 디자인 | `dc75d7a`, `a1b41a4` | ✅ |
+| W14 | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화 | (다음 commit) | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -64,23 +65,46 @@
 - 폰 OTP 로그인 (Tabs로 분기)는 다음 세션
 - 약관·개인정보처리방침 페이지
 
-## 다음: W14 — 옵션 1) 학부모 가입 흐름 보강 또는 옵션 2) Owner-side trip 상세 view
+## W14 완료 (학부모 가입 흐름 디자인 + notification-toggle)
 
-### 옵션 1) 학부모 가입 흐름 (실서비스 출시 직전 필수)
-- `/parent-invite/[token]` 디자인 보강
-- 폰 OTP 인증 흐름
-- 푸시 권한 요청 단계
-- 자녀 정보 확인 카드
+### 결과
+- `parent-invite/[token]/page.tsx`: 에러 카드 3종 (유효하지 않음/이미 사용/만료) 디자인 토큰
+  - Logo + 둥근 카드 + 아이콘 + "로그인 페이지로" 버튼
+- `parent-invite/[token]/accept-form.tsx` 풀 재설계:
+  - 셔틀이 로고 헤더
+  - 초대 정보 카드 (기관·보호자·자녀 3 row, 토큰 색상 구분)
+  - 가입 폼 (이메일·비밀번호·동의 체크) — `has-[:checked]:border-bus` 시각 강조
+  - "가입하고 자녀 운행 보기" 큰 버튼 (Check 아이콘)
+- `components/notification-toggle.tsx` 풀 재설계:
+  - 5종 상태별 카드 (loading / unsupported / denied / subscribed / unsubscribed)
+  - 각 상태 토큰화 (success-soft / warning-soft / bus-soft / muted)
+  - Bell·BellOff·Check·Info 아이콘
+  - subscribed 상태에서 success-soft + Check + 해제 버튼 inline
+  - unsubscribed에서 bus-soft + 큰 "알림 켜기" 버튼
 
-### 옵션 2) Owner-side trip 모니터 (W12 미해결분)
+### W14에서 의도적으로 미수행 (다음 단계)
+- 폰 OTP 인증 — Supabase phone auth + SMS provider (BlueMs/Toast/Twilio) 설정 필요
+- 비밀번호 재설정 흐름 — `(auth)/forgot-password`
+- 약관·개인정보처리방침 페이지 — `(marketing)/(legal)/terms`, `/privacy`
+
+## 다음 우선순위 (W15+)
+
+### W15-A: Owner-side trip 상세 view (W12 미해결)
 - `(owner)/trip/[id]` 신규 — 진행 중 trip 상세 (학생별 탑승 상태, 정류장 timeline, 안전점검)
 - `requireOwnerTripAccess` 헬퍼 (orgId 검증)
 - 실시간 broadcast subscribe (Realtime channel)
+- Dashboard running card → 이 페이지로 link 복원
 
-### 옵션 3) Notification 카테고리 SHUTTLE_NEAR_CHILD 추가
-- BoardingType 확장 (NO_SHOW/NO_DROPOFF)
-- 미탑승·미하차 BottomSheet UI
-- 학부모·학원에 즉시 푸시
+### W15-B: BoardingType NO_SHOW/NO_DROPOFF 확장
+- prisma migration: enum 확장
+- 미탑승·미하차 BottomSheet UI (driver/trip)
+- 학부모·학원에 즉시 푸시 (NotificationCategory 매핑)
+
+### W15-C: 약관·개인정보처리방침
+- `/terms`, `/privacy` (marketing 그룹 + footer link)
+
+### W15-D: 비밀번호 재설정
+- `/forgot-password` + Supabase password reset flow
 
 ## 다음 우선순위 (이번 세션 또는 다음)
 

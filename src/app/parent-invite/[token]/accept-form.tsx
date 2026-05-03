@@ -1,16 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { Bus, Check, ShieldCheck, Users } from "lucide-react";
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -37,24 +31,80 @@ export function ParentAcceptForm({
     FormData
   >(boundAction, {});
 
-  const childNames = invite.students.map((s) => s.name).join(", ");
-
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>셔틀이 학부모 가입</CardTitle>
-        <CardDescription>
-          <span className="font-medium">{invite.org.name}</span>의{" "}
-          <span className="font-medium">{invite.relation}</span>{" "}
-          <span className="font-medium">{invite.name}</span>님으로 가입합니다.
-          <br />
-          자녀: <span className="font-medium">{childNames}</span>
-        </CardDescription>
-      </CardHeader>
-      <form action={formAction}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">이메일</Label>
+    <div className="w-full max-w-md space-y-6">
+      <Link href="/" className="flex items-center justify-center gap-2">
+        <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-xl shadow-sm">
+          <Bus className="h-5 w-5" />
+        </span>
+        <span className="text-lg font-extrabold tracking-tight">셔틀이</span>
+      </Link>
+
+      {/* 초대 정보 카드 */}
+      <div className="bg-card rounded-2xl border p-5 shadow-sm">
+        <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+          초대 정보
+        </p>
+        <div className="mt-2 space-y-2">
+          <div className="flex items-start gap-2">
+            <span className="bg-bus-soft text-bus-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+              <Bus className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold tracking-wide uppercase text-muted-foreground">
+                기관
+              </p>
+              <p className="truncate text-sm font-extrabold">
+                {invite.org.name}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="bg-info-soft text-info mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+              <ShieldCheck className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold tracking-wide uppercase text-muted-foreground">
+                보호자
+              </p>
+              <p className="text-sm font-extrabold">
+                {invite.name}{" "}
+                <span className="text-muted-foreground text-xs font-medium">
+                  ({invite.relation})
+                </span>
+              </p>
+            </div>
+          </div>
+          <div className="flex items-start gap-2">
+            <span className="bg-success-soft text-success mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+              <Users className="h-3.5 w-3.5" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-[10px] font-bold tracking-wide uppercase text-muted-foreground">
+                자녀
+              </p>
+              <p className="text-sm font-extrabold">
+                {invite.students.map((s) => s.name).join(", ")}
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 가입 폼 */}
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight">학부모 가입</h2>
+          <p className="text-muted-foreground mt-1 text-sm font-medium">
+            로그인용 이메일·비밀번호를 설정하세요. 자녀 운행 정보·푸시 알림에
+            접근할 수 있게 됩니다.
+          </p>
+        </div>
+        <form action={formAction} className="mt-5 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs font-bold">
+              이메일
+            </Label>
             <Input
               id="email"
               name="email"
@@ -64,13 +114,15 @@ export function ParentAcceptForm({
               required
             />
             {state.fieldErrors?.email ? (
-              <p className="text-destructive text-sm">
+              <p className="text-destructive text-xs font-medium">
                 {state.fieldErrors.email[0]}
               </p>
             ) : null}
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">비밀번호</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-xs font-bold">
+              비밀번호
+            </Label>
             <Input
               id="password"
               name="password"
@@ -81,42 +133,68 @@ export function ParentAcceptForm({
               required
             />
             {state.fieldErrors?.password ? (
-              <p className="text-destructive text-sm">
+              <p className="text-destructive text-xs font-medium">
                 {state.fieldErrors.password[0]}
               </p>
             ) : null}
           </div>
 
-          <label className="border-input bg-background hover:bg-accent flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm">
+          <label className="border-input bg-background hover:bg-muted/40 has-[:checked]:border-bus has-[:checked]:bg-bus-soft/40 flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm transition-colors">
             <input
               type="checkbox"
               name="consentMinor"
-              className="mt-0.5 h-4 w-4"
+              className="accent-bus mt-0.5 h-4 w-4"
               required
             />
-            <span className="text-xs">
+            <span className="text-xs font-medium">
               자녀(미성년자)의 운행 정보·정류장 위치·탑승·하차·안전점검 기록
               열람 및 푸시 알림 수신에 동의합니다.
             </span>
           </label>
           {state.fieldErrors?.consentMinor ? (
-            <p className="text-destructive text-sm">
+            <p className="text-destructive text-xs font-medium">
               {state.fieldErrors.consentMinor[0]}
             </p>
           ) : null}
 
           {state.error ? (
-            <p className="text-destructive text-sm" role="alert">
+            <div
+              className="border-destructive/30 bg-destructive/5 text-destructive rounded-xl border p-2.5 text-xs font-medium"
+              role="alert"
+            >
               {state.error}
-            </p>
+            </div>
           ) : null}
-        </CardContent>
-        <CardFooter>
-          <Button type="submit" className="w-full" disabled={pending}>
+
+          <Button
+            type="submit"
+            className="w-full text-base font-extrabold"
+            size="lg"
+            disabled={pending}
+          >
+            <Check className="mr-1 h-4 w-4" />
             {pending ? "가입 중..." : "가입하고 자녀 운행 보기"}
           </Button>
-        </CardFooter>
-      </form>
-    </Card>
+        </form>
+
+        <p className="text-muted-foreground mt-4 text-center text-xs font-medium">
+          이미 계정이 있다면{" "}
+          <Link
+            href="/login"
+            className="text-primary font-bold underline-offset-2 hover:underline"
+          >
+            로그인
+          </Link>
+        </p>
+      </div>
+
+      <p className="text-muted-foreground text-center text-[11px] font-medium">
+        © 셔틀이 · 가입 정보는{" "}
+        <Link href="/" className="hover:underline">
+          기관과만 공유
+        </Link>
+        됩니다
+      </p>
+    </div>
   );
 }

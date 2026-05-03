@@ -1,5 +1,6 @@
 "use client";
 
+import { Bell, BellOff, Check, Info } from "lucide-react";
 import { useEffect, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -154,35 +155,63 @@ export function NotificationToggle({
     });
   };
 
+  // 기본 카드 wrapper — 상태별 다른 톤
+  const wrapper = "bg-card flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm";
+
   if (status.kind === "loading") {
     return (
-      <div className="text-muted-foreground text-xs">알림 상태 확인 중...</div>
+      <div className={wrapper}>
+        <span className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+          <Bell className="h-4 w-4" />
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-bold">알림 상태 확인 중...</p>
+        </div>
+      </div>
     );
   }
 
   if (status.kind === "unsupported") {
     return (
-      <div className="text-muted-foreground text-xs">
-        이 브라우저는 푸시 알림을 지원하지 않습니다 (iOS는 PWA 설치 후 가능).
+      <div className={wrapper}>
+        <span className="bg-muted text-muted-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+          <BellOff className="h-4 w-4" />
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-bold">알림 미지원 브라우저</p>
+          <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+            iOS는 홈 화면에 추가 (PWA 설치) 후 가능합니다.
+          </p>
+        </div>
       </div>
     );
   }
 
   if (status.kind === "denied") {
     return (
-      <div className="text-amber-700 text-xs">
-        알림 권한이 차단됐습니다. 브라우저 설정에서 허용으로 바꿔주세요.
+      <div className="border-warning/30 bg-warning-soft/40 flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm">
+        <span className="bg-warning text-warning-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+          <BellOff className="h-4 w-4" />
+        </span>
+        <div className="flex-1">
+          <p className="text-sm font-bold">알림 권한 차단됨</p>
+          <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+            브라우저 설정에서 “알림 → 허용”으로 바꿔주세요.
+          </p>
+        </div>
       </div>
     );
   }
 
-  return (
-    <div className="space-y-1">
-      <div className="flex items-center gap-2">
-        {status.kind === "subscribed" ? (
-          <>
-            <span className="inline-block h-2 w-2 rounded-full bg-emerald-500" />
-            <span className="text-xs">알림 받는 중</span>
+  if (status.kind === "subscribed") {
+    return (
+      <div className="border-success/30 bg-success-soft/40 flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm">
+        <span className="bg-success text-success-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+          <Check className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-sm font-extrabold">알림 받는 중</p>
             <Button
               type="button"
               size="sm"
@@ -193,24 +222,46 @@ export function NotificationToggle({
             >
               {pending ? "..." : "해제"}
             </Button>
-          </>
-        ) : (
-          <Button
-            type="button"
-            size="sm"
-            onClick={subscribe}
-            disabled={pending}
-          >
-            {pending ? "구독 중..." : `🔔 ${label}`}
-          </Button>
-        )}
+          </div>
+          <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+            자녀 정류장 도착 전 푸시가 옵니다.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // unsubscribed (또는 error)
+  return (
+    <div className="border-bus/40 bg-bus-soft/40 flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm">
+      <span className="bg-bus text-bus-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+        <Bell className="h-4 w-4" />
+      </span>
+      <div className="min-w-0 flex-1 space-y-2">
+        <div>
+          <p className="text-sm font-extrabold">{label}</p>
+          {helpText ? (
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+              {helpText}
+            </p>
+          ) : null}
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          className="bg-bus text-bus-foreground hover:bg-bus/90 font-extrabold"
+          onClick={subscribe}
+          disabled={pending}
+        >
+          {pending ? "구독 중..." : "알림 켜기"}
+        </Button>
         {status.kind === "error" ? (
-          <span className="text-destructive text-xs">{status.message}</span>
+          <p className="text-destructive inline-flex items-center gap-1 text-xs font-medium">
+            <Info className="h-3 w-3" />
+            {status.message}
+          </p>
         ) : null}
       </div>
-      {helpText && status.kind !== "subscribed" ? (
-        <p className="text-muted-foreground text-xs">{helpText}</p>
-      ) : null}
     </div>
   );
 }
