@@ -44,6 +44,52 @@ export default async function DashboardPage() {
     select: { plan: true, createdAt: true },
   });
 
+  // 보험 만료 D-30 alert (KIDS 모드 차량 한정 — KIDS 의무).
+  // insuranceUntil이 오늘 + 30일 이내거나 이미 지났으면 alert.
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const d30 = new Date(today);
+  d30.setUTCDate(d30.getUTCDate() + 30);
+  const expiringVehicles = await db.vehicle.findMany({
+    where: {
+      orgId,
+      mode: "KIDS",
+      OR: [
+        { insuranceUntil: null },
+        { insuranceUntil: { lte: d30 } },
+      ],
+    },
+    orderBy: [{ insuranceUntil: "asc" }],
+    select: { id: true, plate: true, insuranceUntil: true },
+  });
+
+  // 안전교육 D-30 alert. 직원별 가장 최근 record를 보고 만료 30일 이내거나
+  // 만료된/기록 없는 staff를 모음.
+  const staffWithTraining = await db.staff.findMany({
+    where: { orgId },
+    select: {
+      id: true,
+      name: true,
+      role: true,
+      trainings: {
+        orderBy: { completedOn: "desc" },
+        take: 1,
+        select: { expiresOn: true },
+      },
+    },
+  });
+  const trainingAlerts = staffWithTraining
+    .map((s) => {
+      const latest = s.trainings[0];
+      if (!latest) return { ...s, kind: "none" as const };
+      if (latest.expiresOn < today)
+        return { ...s, kind: "expired" as const, expiresOn: latest.expiresOn };
+      if (latest.expiresOn <= d30)
+        return { ...s, kind: "soon" as const, expiresOn: latest.expiresOn };
+      return null;
+    })
+    .filter((x): x is NonNullable<typeof x> => x !== null);
+
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-6">
       <section className="flex items-start justify-between gap-3">
@@ -60,6 +106,122 @@ export default async function DashboardPage() {
           />
         ) : null}
       </section>
+
+      {trainingAlerts.length > 0 ? (
+        <section className="space-y-2">
+          <Card className="border-amber-300 bg-amber-50/60">
+            <CardHeader>
+              <CardTitle className="text-amber-900">
+                ⚠️ 안전교육 만료 임박·미입력 직원 ({trainingAlerts.length})
+              </CardTitle>
+              <CardDescription>
+                도교법상 운영자·기사·동승보호자는 2년마다 안전교육 이수
+                의무가 있습니다.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ul className="divide-y text-sm">
+                {trainingAlerts.map((s) => {
+                  const tone =
+                    s.kind === "expired"
+                      ? "bg-rose-100 text-rose-900"
+                      : s.kind === "soon"
+                        ? "bg-amber-100 text-amber-900"
+                        : "bg-zinc-100 text-zinc-700";
+                  const label =
+                    s.kind === "expired"
+                      ? `만료됨 (${s.expiresOn.toISOString().slice(0, 10)})`
+                      : s.kind === "soon"
+                        ? `30일 이내 만료 (${s.expiresOn.toISOString().slice(0, 10)})`
+                        : "기록 없음";
+                  return (
+                    <li
+                      key={s.id}
+                      className="flex items-center justify-between gap-3 px-4 py-2"
+                    >
+                      <Link
+                        href="/training"
+                        className="hover:underline"
+                      >
+                        <span className="font-medium">{s.name}</span>
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          {s.role === "OWNER"
+                            ? "학원장·원장"
+                            : s.role === "DRIVER"
+                              ? "기사"
+                              : "동승보호자"}
+                        </span>
+                      </Link>
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${tone}`}
+                      >
+                        {label}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
+
+      {expiringVehicles.length > 0 ? (
+        <section className="space-y-2">
+          <Card className="border-amber-300 bg-amber-50/60">
+            <CardHeader>
+              <CardTitle className="text-amber-900">
+                ⚠️ 보험 만료 임박·미입력 차량 ({expiringVehicles.length})
+              </CardTitle>
+              <CardDescription>
+                어린이통학버스(KIDS) 보험은 도교법상 필수입니다. 만료 30일
+                전부터 갱신을 진행하세요.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ul className="divide-y text-sm">
+                {expiringVehicles.map((v) => {
+                  const expired =
+                    v.insuranceUntil && v.insuranceUntil < today;
+                  const dateLabel = v.insuranceUntil
+                    ? v.insuranceUntil.toISOString().slice(0, 10)
+                    : "미입력";
+                  const tone = expired
+                    ? "bg-rose-100 text-rose-900"
+                    : v.insuranceUntil
+                      ? "bg-amber-100 text-amber-900"
+                      : "bg-zinc-100 text-zinc-700";
+                  return (
+                    <li
+                      key={v.id}
+                      className="flex items-center justify-between gap-3 px-4 py-2"
+                    >
+                      <Link
+                        href={`/vehicles/${v.id}/edit`}
+                        className="hover:underline"
+                      >
+                        <span className="font-medium">{v.plate}</span>
+                        <span className="text-muted-foreground ml-2 text-xs">
+                          만료 {dateLabel}
+                        </span>
+                      </Link>
+                      <span
+                        className={`rounded-md px-2 py-0.5 text-xs font-medium ${tone}`}
+                      >
+                        {expired
+                          ? "만료됨"
+                          : v.insuranceUntil
+                            ? "30일 이내 만료"
+                            : "미입력"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
 
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/vehicles" className="block">
