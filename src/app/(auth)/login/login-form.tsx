@@ -1,16 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { Bus } from "lucide-react";
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -23,18 +17,29 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
   );
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>로그인</CardTitle>
-        <CardDescription>학원장·원장 계정으로 로그인하세요</CardDescription>
-      </CardHeader>
-      <form action={action}>
-        {redirectTo ? (
-          <input type="hidden" name="redirectTo" value={redirectTo} />
-        ) : null}
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="email">이메일</Label>
+    <div className="w-full max-w-md space-y-6">
+      <Link href="/" className="flex items-center justify-center gap-2">
+        <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-xl shadow-sm">
+          <Bus className="h-5 w-5" />
+        </span>
+        <span className="text-lg font-extrabold tracking-tight">셔틀이</span>
+      </Link>
+
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight">로그인</h2>
+          <p className="text-muted-foreground mt-1 text-sm font-medium">
+            학원장·기사·동승보호자·학부모 모두 사용하는 계정.
+          </p>
+        </div>
+        <form action={action} className="mt-5 space-y-4">
+          {redirectTo ? (
+            <input type="hidden" name="redirectTo" value={redirectTo} />
+          ) : null}
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs font-bold">
+              이메일
+            </Label>
             <Input
               id="email"
               name="email"
@@ -44,8 +49,10 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
               required
             />
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="password">비밀번호</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-xs font-bold">
+              비밀번호
+            </Label>
             <Input
               id="password"
               name="password"
@@ -55,23 +62,40 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
             />
           </div>
           {state.error ? (
-            <p className="text-destructive text-sm" role="alert">
+            <div
+              className="border-destructive/30 bg-destructive/5 text-destructive rounded-xl border p-2.5 text-xs font-medium"
+              role="alert"
+            >
               {state.error}
-            </p>
+            </div>
           ) : null}
-        </CardContent>
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={pending}>
+          <Button
+            type="submit"
+            className="w-full text-base font-extrabold"
+            size="lg"
+            disabled={pending}
+          >
             {pending ? "로그인 중..." : "로그인"}
           </Button>
-          <p className="text-muted-foreground text-center text-sm">
-            계정이 없다면{" "}
-            <a href="/signup" className="text-primary font-medium underline">
-              가입
-            </a>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+        </form>
+        <p className="text-muted-foreground mt-4 text-center text-xs font-medium">
+          계정이 없다면{" "}
+          <Link
+            href="/signup"
+            className="text-primary font-bold underline-offset-2 hover:underline"
+          >
+            가입하기
+          </Link>
+        </p>
+      </div>
+
+      <p className="text-muted-foreground text-center text-[11px] font-medium">
+        ©{" "}
+        <Link href="/" className="hover:underline">
+          셔틀이
+        </Link>{" "}
+        · 도로교통법 §53⑦ 안전운행기록 자동화
+      </p>
+    </div>
   );
 }

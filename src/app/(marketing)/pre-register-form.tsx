@@ -17,12 +17,12 @@ export function PreRegisterForm() {
 
   if (state.ok) {
     return (
-      <Card className="border-emerald-300 bg-emerald-50/60">
+      <Card className="border-success/40 bg-success-soft/40">
         <CardContent className="space-y-2 p-6 text-center">
-          <p className="text-lg font-semibold text-emerald-900">
+          <p className="text-success text-lg font-extrabold">
             사전등록이 접수되었어요
           </p>
-          <p className="text-sm text-emerald-900/80">
+          <p className="text-success/80 text-sm font-medium">
             기재해주신 연락처로 베타 안내를 드릴게요. 감사합니다.
           </p>
         </CardContent>

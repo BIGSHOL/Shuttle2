@@ -1,16 +1,10 @@
 "use client";
 
+import Link from "next/link";
+import { Bus } from "lucide-react";
 import { useActionState } from "react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -29,17 +23,30 @@ export function SignupForm() {
   );
 
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader>
-        <CardTitle>셔틀이 가입</CardTitle>
-        <CardDescription>
-          학원·교습소·어린이집·유치원 셔틀버스 운영을 시작하세요
-        </CardDescription>
-      </CardHeader>
-      <form action={action}>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="orgName">기관명</Label>
+    <div className="w-full max-w-md space-y-6">
+      <Link href="/" className="flex items-center justify-center gap-2">
+        <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-xl shadow-sm">
+          <Bus className="h-5 w-5" />
+        </span>
+        <span className="text-lg font-extrabold tracking-tight">셔틀이</span>
+      </Link>
+
+      <div className="bg-card rounded-2xl border p-6 shadow-sm">
+        <div>
+          <h2 className="text-2xl font-extrabold tracking-tight">
+            학원·기관 가입
+          </h2>
+          <p className="text-muted-foreground mt-1 text-sm font-medium">
+            학원장·원장이 기관을 등록하세요. 학부모는 기관에서 받은 초대
+            링크로 가입합니다.
+          </p>
+        </div>
+
+        <form action={action} className="mt-5 space-y-4">
+          <div className="space-y-1.5">
+            <Label htmlFor="orgName" className="text-xs font-bold">
+              기관명
+            </Label>
             <Input
               id="orgName"
               name="orgName"
@@ -48,19 +55,19 @@ export function SignupForm() {
               maxLength={100}
             />
             {state.fieldErrors?.orgName ? (
-              <p className="text-destructive text-sm">
+              <p className="text-destructive text-xs font-medium">
                 {state.fieldErrors.orgName[0]}
               </p>
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label>기관 유형</Label>
+          <div className="space-y-1.5">
+            <Label className="text-xs font-bold">기관 유형</Label>
             <div className="grid grid-cols-3 gap-2">
               {ORG_TYPE_OPTIONS.map((opt, idx) => (
                 <label
                   key={opt.value}
-                  className="border-input bg-background hover:bg-accent has-[:checked]:border-primary has-[:checked]:bg-primary/5 flex cursor-pointer items-center justify-center rounded-md border p-3 text-sm"
+                  className="border-input bg-background hover:bg-muted has-[:checked]:border-bus has-[:checked]:bg-bus-soft has-[:checked]:text-bus-foreground flex cursor-pointer items-center justify-center rounded-xl border p-3 text-xs font-bold transition-colors has-[:checked]:font-extrabold"
                 >
                   <input
                     type="radio"
@@ -75,8 +82,10 @@ export function SignupForm() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="email">이메일</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="email" className="text-xs font-bold">
+              이메일
+            </Label>
             <Input
               id="email"
               name="email"
@@ -86,14 +95,16 @@ export function SignupForm() {
               required
             />
             {state.fieldErrors?.email ? (
-              <p className="text-destructive text-sm">
+              <p className="text-destructive text-xs font-medium">
                 {state.fieldErrors.email[0]}
               </p>
             ) : null}
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="password">비밀번호</Label>
+          <div className="space-y-1.5">
+            <Label htmlFor="password" className="text-xs font-bold">
+              비밀번호
+            </Label>
             <Input
               id="password"
               name="password"
@@ -104,31 +115,48 @@ export function SignupForm() {
               required
             />
             {state.fieldErrors?.password ? (
-              <p className="text-destructive text-sm">
+              <p className="text-destructive text-xs font-medium">
                 {state.fieldErrors.password[0]}
               </p>
             ) : null}
           </div>
 
           {state.error ? (
-            <p className="text-destructive text-sm" role="alert">
+            <div
+              className="border-destructive/30 bg-destructive/5 text-destructive rounded-xl border p-2.5 text-xs font-medium"
+              role="alert"
+            >
               {state.error}
-            </p>
+            </div>
           ) : null}
-        </CardContent>
 
-        <CardFooter className="flex flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={pending}>
-            {pending ? "가입 중..." : "가입하기"}
+          <Button
+            type="submit"
+            className="w-full text-base font-extrabold"
+            size="lg"
+            disabled={pending}
+          >
+            {pending ? "가입 중..." : "기관 등록하고 시작"}
           </Button>
-          <p className="text-muted-foreground text-center text-sm">
-            이미 계정이 있다면{" "}
-            <a href="/login" className="text-primary font-medium underline">
-              로그인
-            </a>
-          </p>
-        </CardFooter>
-      </form>
-    </Card>
+        </form>
+
+        <p className="text-muted-foreground mt-4 text-center text-xs font-medium">
+          이미 계정이 있다면{" "}
+          <Link
+            href="/login"
+            className="text-primary font-bold underline-offset-2 hover:underline"
+          >
+            로그인
+          </Link>
+        </p>
+      </div>
+
+      <div className="bg-card rounded-2xl border p-4 text-center shadow-sm">
+        <p className="text-xs font-bold">학부모이신가요?</p>
+        <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
+          기관에서 받은 초대 링크로 자녀를 연결하세요. 별도 가입 불필요.
+        </p>
+      </div>
+    </div>
   );
 }
