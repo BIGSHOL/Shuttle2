@@ -113,6 +113,8 @@ vercel deploy --prod --yes
 | W11 | 기사 화면 디자인 (dark gradient running header) |
 | W12 | 학원장 dashboard 재구성 + 실시간 운행 모니터 + 토큰 마이그레이션 |
 | W13 | 마케팅 랜딩 + /pricing + login/signup 디자인 |
+| W14 | 학부모 invite 디자인 + notification-toggle 토큰화 |
+| W15-A | Owner-side trip 상세 view (`/dashboard/trip/[tripId]`) |
 
 자세한 진행 현황·결정사항·다음 우선순위는 [`progress.md`](./progress.md) 참고.
 

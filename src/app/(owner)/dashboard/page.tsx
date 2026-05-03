@@ -490,6 +490,7 @@ function KpiCard({
 }
 
 function TripMonitorCard({
+  tripId,
   routeName,
   direction,
   vehiclePlate,
@@ -522,11 +523,12 @@ function TripMonitorCard({
 
   if (kind === "running") {
     // dark gradient + 노란 stripe (parent live card 스타일)
-    // TODO: W13+ 실시간 owner 모니터 상세 페이지 — 현재는 카드만
+    // W15-A: owner trip 상세 view link 복원
     return (
       <li>
-        <div
-          className="relative overflow-hidden rounded-2xl p-4 text-white shadow-md"
+        <Link
+          href={`/dashboard/trip/${tripId}`}
+          className="relative block overflow-hidden rounded-2xl p-4 text-white shadow-md transition-opacity hover:opacity-95"
           style={{
             background: "linear-gradient(155deg, #1a1c22, #0f1014)",
           }}
@@ -568,15 +570,20 @@ function TripMonitorCard({
               </div>
             ) : null}
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[11px] font-medium">
-            <span className="bg-white/10 rounded-md px-1.5 py-0.5 font-bold">
-              정류장 {totalStops}
-            </span>
-            <span className="bg-white/10 rounded-md px-1.5 py-0.5 font-bold">
-              탑승·하차 {boarded}
+          <div className="mt-3 flex items-center justify-between gap-3">
+            <div className="flex items-center gap-1.5 text-[11px] font-medium">
+              <span className="bg-white/10 rounded-md px-1.5 py-0.5 font-bold">
+                정류장 {totalStops}
+              </span>
+              <span className="bg-white/10 rounded-md px-1.5 py-0.5 font-bold">
+                탑승·하차 {boarded}
+              </span>
+            </div>
+            <span className="text-[11px] font-bold opacity-70">
+              상세 보기 →
             </span>
           </div>
-        </div>
+        </Link>
       </li>
     );
   }
@@ -587,9 +594,20 @@ function TripMonitorCard({
       ? { bg: "bg-success-soft", text: "text-success", label: "완료" }
       : { bg: "bg-muted", text: "text-muted-foreground", label: "예정" };
 
+  // 완료된 trip은 상세 view 클릭 가능 (요약·안전점검 확인용)
+  const Wrapper = kind === "finished" ? Link : "div";
+  const wrapperProps =
+    kind === "finished"
+      ? {
+          href: `/dashboard/trip/${tripId}`,
+          className:
+            "bg-card hover:bg-muted/40 block rounded-2xl border p-4 shadow-sm transition-colors",
+        }
+      : { className: "bg-card rounded-2xl border p-4 shadow-sm" };
+
   return (
     <li>
-      <div className="bg-card rounded-2xl border p-4 shadow-sm">
+      <Wrapper {...(wrapperProps as { href: string; className: string })}>
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -639,7 +657,7 @@ function TripMonitorCard({
             </span>
           ) : null}
         </div>
-      </div>
+      </Wrapper>
     </li>
   );
 }

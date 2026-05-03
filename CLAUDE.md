@@ -107,6 +107,7 @@ route group 다른 그룹이 같은 path를 만들면 빌드 실패. 우리 패�
 - `/notifications` (parent) ↔ `/run/notifications` (driver) ↔ `/dashboard/notifications` (owner)
 - `/absences` (owner) ↔ `/my-absences` (parent)
 - `/stop-change-requests` (owner) ↔ `/my-stop-changes` (parent)
+- `/trip/[id]` (driver·helper) ↔ `/trip-live/[tripId]` (parent) ↔ `/dashboard/trip/[tripId]` (owner)
 
 ## 코딩 규약
 
@@ -201,10 +202,12 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - W11: 기사 화면 디자인 (mobile-first + dark gradient running header)
 - W12: 학원장 dashboard 재구성 + 실시간 운행 모니터 + 토큰 마이그레이션
 - W13: 마케팅 랜딩 + /pricing + login/signup 디자인
+- W14: 학부모 invite + notification-toggle 디자인
+- W15-A: Owner-side trip 상세 view (`requireOwnerTripAccess` + `/dashboard/trip/[tripId]`)
 
 ### 알려진 미해결 (다음 세션)
 - 학부모 폰 OTP 가입 + 푸시 권한 단계
-- Owner-side trip 상세 view (`requireOwnerTripAccess`)
 - BoardingType NO_SHOW/NO_DROPOFF 확장 + 미탑승 시트 UI
 - 약관·개인정보처리방침 페이지
 - 비밀번호 재설정 흐름
+- Owner trip 상세 Realtime 자동 갱신 (현재 새로고침 필요)

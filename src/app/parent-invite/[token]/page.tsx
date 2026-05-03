@@ -28,7 +28,7 @@ function ErrorCard({
 }: {
   Icon: React.ComponentType<{ className?: string }>;
   title: string;
-  body: string;
+  body: React.ReactNode;
 }) {
   return (
     <div className="w-full max-w-md space-y-6">
@@ -38,7 +38,9 @@ function ErrorCard({
           <Icon className="h-6 w-6" />
         </span>
         <h2 className="mt-4 text-xl font-extrabold tracking-tight">{title}</h2>
-        <p className="text-muted-foreground mt-2 text-sm font-medium">{body}</p>
+        <p className="text-muted-foreground mt-2 text-sm font-medium leading-relaxed">
+          {body}
+        </p>
         <div className="mt-5">
           <Button asChild variant="outline" size="sm">
             <Link href="/login">로그인 페이지로</Link>
@@ -63,7 +65,13 @@ export default async function ParentInvitePage({
         <ErrorCard
           Icon={Link2Off}
           title="유효하지 않은 초대 링크"
-          body="링크가 잘못되었거나 만료되었습니다. 학원장·원장님께 다시 발급해 달라고 요청하세요."
+          body={
+            <>
+              링크가 잘못되었거나 만료되었습니다.
+              <br />
+              학원장·원장님께 다시 발급해 달라고 요청하세요.
+            </>
+          }
         />
       </main>
     );
@@ -75,7 +83,13 @@ export default async function ParentInvitePage({
         <ErrorCard
           Icon={ShieldCheck}
           title="이미 사용된 초대"
-          body="이 링크는 이미 가입에 사용되었습니다. 로그인 페이지에서 본인 계정으로 로그인하세요."
+          body={
+            <>
+              이 링크는 이미 가입에 사용되었습니다.
+              <br />
+              로그인 페이지에서 본인 계정으로 로그인하세요.
+            </>
+          }
         />
       </main>
     );
@@ -87,7 +101,13 @@ export default async function ParentInvitePage({
         <ErrorCard
           Icon={Clock}
           title="만료된 초대"
-          body="초대 링크의 유효기간(7일)이 지났습니다. 학원장·원장님께 새 초대를 요청하세요."
+          body={
+            <>
+              초대 링크의 유효기간(7일)이 지났습니다.
+              <br />
+              학원장·원장님께 새 초대를 요청하세요.
+            </>
+          }
         />
       </main>
     );

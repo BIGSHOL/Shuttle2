@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-04 (W14 학부모 가입 + notification-toggle 디자인 완료)
+> 마지막 업데이트: 2026-05-04 (W15-A Owner trip 상세 view + parent-invite 줄바꿈 수정)
 
 ## 완료된 마일스톤
 
@@ -14,7 +14,8 @@
 | W11 | 기사 화면 디자인 (mobile-first + dark gradient running header + tokens) | `b4cb872` | ✅ |
 | W12 | 학원장 dashboard 재구성 + 실시간 운행 모니터 + owner 토큰 마이그레이션 | `f87e566` | ✅ |
 | W13 | 마케팅 랜딩 디자인 + /pricing 신규 + login/signup 디자인 | `dc75d7a`, `a1b41a4` | ✅ |
-| W14 | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화 | (다음 commit) | ✅ |
+| W14 | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화 | `7776d9b` | ✅ |
+| W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정 | (다음 commit) | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -87,13 +88,29 @@
 - 비밀번호 재설정 흐름 — `(auth)/forgot-password`
 - 약관·개인정보처리방침 페이지 — `(marketing)/(legal)/terms`, `/privacy`
 
-## 다음 우선순위 (W15+)
+## W15-A 완료 (Owner trip 상세 view)
 
-### W15-A: Owner-side trip 상세 view (W12 미해결)
-- `(owner)/trip/[id]` 신규 — 진행 중 trip 상세 (학생별 탑승 상태, 정류장 timeline, 안전점검)
-- `requireOwnerTripAccess` 헬퍼 (orgId 검증)
-- 실시간 broadcast subscribe (Realtime channel)
-- Dashboard running card → 이 페이지로 link 복원
+### 결과
+- `lib/auth/owner-trip-access.ts` 신규 — `requireOwnerTripAccess(tripId)` 헬퍼
+  - vehicle.orgId 비교로 다른 학원 trip 차단
+- `(owner)/dashboard/trip/[tripId]/page.tsx` 신규 — read-only 운행 상세
+  - 헤드 카드: running=dark gradient + LIVE / scheduled·finished=white
+  - 진행 통계 grid (탑승·하차 / 결석 / 남은 인원) — running 강조 dark/white 분기
+  - 운행자 카드 (기사 + 동승보호자, tel: link, KIDS 모드 동승 미지정 경고)
+  - 안전점검 (KIDS 모드만, 3개 항목 ✓/✗)
+  - 정류장 timeline (border-l-2 left rail + 학생별 처리 상태 + 시각 표시)
+- dashboard running card link 복원 — `/dashboard/trip/${tripId}`로 이동 + "상세 보기 →"
+- finished 카드도 link화 (요약·안전점검 확인용)
+
+### 부가 수정 (사용자 요청)
+- parent-invite 에러 카드 body 줄바꿈 2줄로 (ReactNode + `<br />`)
+- ErrorCard `body` 타입 string → React.ReactNode
+
+### 미수행 (다음 단계)
+- 실시간 자동 갱신 (Realtime broadcast subscribe) — 현재는 페이지 새로고침 필요
+- 운행 종료 후 LocationPing 경로 시각화 (안전운행기록 면책 자료)
+
+## 다음 우선순위 (W15-B, C, D)
 
 ### W15-B: BoardingType NO_SHOW/NO_DROPOFF 확장
 - prisma migration: enum 확장
@@ -105,6 +122,10 @@
 
 ### W15-D: 비밀번호 재설정
 - `/forgot-password` + Supabase password reset flow
+
+### W16+: Realtime 실시간 갱신
+- Owner trip 상세에서 Realtime 구독 → BoardingEvent·LocationPing 자동 갱신
+- 현재 페이지 새로고침 필요 → SWR or Realtime 5초 폴링
 
 ## 다음 우선순위 (이번 세션 또는 다음)
 
