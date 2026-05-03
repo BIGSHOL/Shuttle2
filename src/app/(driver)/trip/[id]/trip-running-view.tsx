@@ -1,16 +1,16 @@
 "use client";
 
 import { useEffect, useState, useTransition } from "react";
+import {
+  AlertTriangle,
+  Check,
+  CircleAlert,
+  Clock,
+  MapPin,
+  Square,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { useWakeLock } from "@/lib/wake-lock/use-wake-lock";
 
 import {
@@ -150,122 +150,135 @@ export function TripRunningView({
   }
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-4">
+    <main className="space-y-4 px-4 pt-4 pb-6">
+      {/* Wake Lock 미지원 — sticky 경고 */}
       {!wakeLock.supported ? (
-        <Card className="border-amber-300 bg-amber-50/60">
-          <CardHeader className="py-3">
-            <CardTitle className="text-sm text-amber-900">
-              ⚠️ 화면 자동 꺼짐 방지가 지원되지 않습니다
-            </CardTitle>
-            <CardDescription className="text-xs">
-              iOS Safari는 Wake Lock 미지원. 안드로이드 폰을 거치대에 두고
-              화면을 켜둔 채 운행하세요.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="border-warning bg-warning-soft text-warning-foreground rounded-2xl border p-3 text-xs font-medium">
+          <p className="text-warning inline-flex items-center gap-1.5 text-sm font-extrabold">
+            <AlertTriangle className="h-4 w-4" />
+            화면 자동 꺼짐 방지가 지원되지 않습니다
+          </p>
+          <p className="mt-1">
+            iOS Safari는 Wake Lock 미지원. 안드로이드 폰을 거치대에 두고 화면을
+            켜둔 채 운행하세요.
+          </p>
+        </div>
       ) : null}
 
-      {/* KIDS 모드 동승보호자 미선택 경고 — 도교법 §53⑦ */}
+      {/* KIDS 모드 동승자 미선택 — 도교법 §53⑦ */}
       {isKidsMode &&
       !helper &&
       stops.reduce((acc, s) => acc + s.students.length, 0) >= 1 ? (
-        <Card className="border-destructive bg-destructive/10">
-          <CardHeader>
-            <CardTitle className="text-destructive">
-              ⚠️ 동승보호자가 지정되지 않았어요
-            </CardTitle>
-            <CardDescription>
-              도교법 §53⑦에 따라 어린이통학버스 운행에는 동승보호자가 함께
-              타야 합니다. 아래에서 동승자를 지정한 후 운행을 진행해 주세요.
-            </CardDescription>
-          </CardHeader>
-        </Card>
+        <div className="border-destructive bg-destructive/10 rounded-2xl border p-3">
+          <p className="text-destructive inline-flex items-center gap-1.5 text-sm font-extrabold">
+            <CircleAlert className="h-4 w-4" />
+            동승보호자가 지정되지 않았어요
+          </p>
+          <p className="text-foreground/80 mt-1 text-xs font-medium">
+            도교법 §53⑦에 따라 어린이통학버스 운행에는 동승보호자가 함께 타야
+            합니다. 아래에서 동승자를 지정한 후 운행을 진행해 주세요.
+          </p>
+        </div>
       ) : null}
 
-      {/* 운행 헤드 */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <CardTitle className="text-lg">{route.name}</CardTitle>
-              <CardDescription className="mt-1 flex flex-wrap gap-2 text-xs">
-                <span
-                  className={
-                    route.direction === "PICKUP"
-                      ? "rounded-md bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900"
-                      : "rounded-md bg-sky-100 px-2 py-0.5 font-medium text-sky-900"
-                  }
-                >
-                  {DIRECTION_LABEL[route.direction]}
+      {/* 운행 헤드 — dark gradient + 노란 accent stripe */}
+      <div
+        className="relative overflow-hidden rounded-2xl p-4 text-white shadow-md"
+        style={{
+          background: "linear-gradient(155deg, #1a1c22, #0f1014)",
+        }}
+      >
+        <div className="bg-bus absolute inset-x-0 top-0 h-[3px]" />
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase ${
+                  route.direction === "PICKUP"
+                    ? "bg-success-soft text-success"
+                    : "bg-info-soft text-info"
+                }`}
+              >
+                {DIRECTION_LABEL[route.direction]}
+              </span>
+              {isKidsMode ? (
+                <span className="bg-bus text-bus-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                  <span className="bg-bus-foreground inline-block h-1.5 w-1.5 animate-pulse rounded-full" />
+                  KIDS
                 </span>
-                <span className="text-muted-foreground">
-                  [{vehicle.mode}] {vehicle.plate}
+              ) : (
+                <span className="bg-white/15 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                  일반
                 </span>
-              </CardDescription>
+              )}
             </div>
-            <div className="text-right">
-              <div className="text-muted-foreground text-xs">경과</div>
-              <div className="font-mono text-2xl font-semibold">{elapsed}</div>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2 text-xs">
-          <div className="flex flex-wrap items-center gap-2">
-            <span
-              className={
-                wakeLock.active
-                  ? "rounded-md bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900"
-                  : "rounded-md bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700"
-              }
-            >
-              화면 잠금 방지: {wakeLock.active ? "ON" : "OFF"}
-            </span>
-            <span
-              className={
-                gps.fix
-                  ? "rounded-md bg-emerald-100 px-2 py-0.5 font-medium text-emerald-900"
-                  : gps.error
-                    ? "rounded-md bg-rose-100 px-2 py-0.5 font-medium text-rose-900"
-                    : "rounded-md bg-zinc-100 px-2 py-0.5 font-medium text-zinc-700"
-              }
-            >
-              GPS:{" "}
-              {gps.fix
-                ? `±${Math.round(gps.fix.accuracy)}m`
-                : gps.error
-                  ? "오류"
-                  : "수신 대기"}
-            </span>
-            {isKidsMode ? (
-              <span className="rounded-md bg-amber-100 px-2 py-0.5 font-medium text-amber-900">
-                KIDS 모드
-              </span>
-            ) : null}
-            {isDriver ? (
-              <span className="rounded-md bg-violet-100 px-2 py-0.5 font-medium text-violet-900">
-                기사 · {driver.name}
-              </span>
-            ) : null}
-            {isHelper ? (
-              <span className="rounded-md bg-sky-100 px-2 py-0.5 font-medium text-sky-900">
-                동승 · {helper?.name ?? "—"}
-              </span>
-            ) : null}
-          </div>
-          {wakeLock.error ? (
-            <p className="text-destructive">{wakeLock.error}</p>
-          ) : null}
-          {gps.error ? (
-            <p className="text-destructive">GPS: {gps.error}</p>
-          ) : null}
-          {gps.fix ? (
-            <p className="text-muted-foreground font-mono">
-              위도 {gps.fix.latitude.toFixed(6)}, 경도{" "}
-              {gps.fix.longitude.toFixed(6)}
+            <p className="mt-1.5 truncate text-lg font-extrabold tracking-tight">
+              {route.name}
             </p>
+            <p className="mt-0.5 text-xs font-medium opacity-70">
+              {vehicle.plate}
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-extrabold tracking-wide uppercase opacity-60">
+              경과
+            </p>
+            <p className="font-mono text-3xl font-extrabold tracking-tight">
+              {elapsed}
+            </p>
+          </div>
+        </div>
+        {/* 상태 칩 */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
+          <span
+            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold ${
+              wakeLock.active
+                ? "bg-success/20 text-success"
+                : "bg-white/10 text-white/70"
+            }`}
+          >
+            <span
+              className={`inline-block h-1.5 w-1.5 rounded-full ${
+                wakeLock.active ? "bg-success animate-pulse" : "bg-white/40"
+              }`}
+            />
+            화면잠금 {wakeLock.active ? "ON" : "OFF"}
+          </span>
+          <span
+            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold ${
+              gps.fix
+                ? "bg-success/20 text-success"
+                : gps.error
+                  ? "bg-destructive/20 text-destructive"
+                  : "bg-white/10 text-white/70"
+            }`}
+          >
+            <MapPin className="h-3 w-3" />
+            GPS{" "}
+            {gps.fix
+              ? `±${Math.round(gps.fix.accuracy)}m`
+              : gps.error
+                ? "오류"
+                : "수신중"}
+          </span>
+          {isDriver ? (
+            <span className="bg-white/10 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold opacity-90">
+              기사 · {driver.name}
+            </span>
           ) : null}
-        </CardContent>
-      </Card>
+          {helper ? (
+            <span className="bg-white/10 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold opacity-90">
+              동승 · {helper.name}
+            </span>
+          ) : null}
+        </div>
+        {wakeLock.error ? (
+          <p className="text-destructive mt-2 text-xs">{wakeLock.error}</p>
+        ) : null}
+        {gps.error ? (
+          <p className="text-destructive mt-2 text-xs">GPS: {gps.error}</p>
+        ) : null}
+      </div>
 
       {/* Helper picker — driver만 */}
       {isDriver ? (
@@ -286,73 +299,80 @@ export function TripRunningView({
       ) : null}
 
       {/* 정류장 진행도 + 학생 탑승·하차 토글 */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">
-            정류장·{eventType === "BOARD" ? "탑승" : "하차"} 체크
-          </CardTitle>
-          <CardDescription>
-            {stops.length}개 정류장 중 통과 {gps.passed.size}개. 정류장을 지나면
-            그 정류장 학생들의 {eventType === "BOARD" ? "탑승" : "하차"}을
-            체크하세요.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-0">
-          <ol className="divide-y">
-            {stops.map((s) => {
-              const isPassed = gps.passed.has(s.id);
-              return (
-                <li key={s.id} className="px-4 py-3">
-                  <div className="flex items-center gap-3 text-sm">
-                    <span
-                      className={
-                        isPassed
-                          ? "flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 font-mono text-xs text-white"
-                          : "bg-muted text-muted-foreground flex h-8 w-8 items-center justify-center rounded-full font-mono text-xs"
-                      }
-                    >
-                      {isPassed ? "✓" : s.order}
-                    </span>
-                    <span
-                      className={
-                        isPassed
-                          ? "flex-1 font-medium line-through"
-                          : "flex-1 font-medium"
-                      }
-                    >
-                      {s.name}
-                    </span>
-                    <span className="text-muted-foreground font-mono text-xs">
-                      {s.scheduledAt}
-                    </span>
-                  </div>
-                  {s.students.length > 0 ? (
-                    <ul className="mt-2 space-y-1 pl-11">
-                      {s.students.map((st) => (
-                        <BoardingRow
-                          key={st.id}
-                          tripId={tripId}
-                          studentId={st.id}
-                          studentName={st.name}
-                          type={eventType}
-                          checked={checkedSet.has(st.id)}
-                          gpsLat={gps.fix?.latitude ?? null}
-                          gpsLng={gps.fix?.longitude ?? null}
-                          absence={st.absence}
-                        />
-                      ))}
-                    </ul>
-                  ) : (
-                    <p className="text-muted-foreground mt-1 pl-11 text-xs">
-                      배정된 학생 없음
-                    </p>
-                  )}
-                </li>
-              );
-            })}
-          </ol>
-        </CardContent>
-      </Card>
+      <section className="bg-card rounded-2xl border p-4 shadow-sm">
+        <div className="mb-3 flex items-end justify-between gap-3">
+          <div>
+            <h3 className="text-base font-extrabold tracking-tight">
+              정류장·{eventType === "BOARD" ? "탑승" : "하차"} 체크
+            </h3>
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+              {stops.length}개 중 통과 {gps.passed.size}개
+            </p>
+          </div>
+          <div className="text-right">
+            <p className="text-[10px] font-extrabold tracking-wide uppercase text-muted-foreground">
+              진행
+            </p>
+            <p className="font-mono text-lg font-extrabold tracking-tight">
+              {gps.passed.size}/{stops.length}
+            </p>
+          </div>
+        </div>
+        <ol className="space-y-3">
+          {stops.map((s) => {
+            const isPassed = gps.passed.has(s.id);
+            return (
+              <li key={s.id}>
+                <div className="flex items-center gap-3 text-sm">
+                  <span
+                    className={
+                      isPassed
+                        ? "bg-success text-success-foreground flex h-9 w-9 items-center justify-center rounded-full font-bold shadow-sm"
+                        : "bg-muted text-muted-foreground flex h-9 w-9 items-center justify-center rounded-full text-sm font-extrabold"
+                    }
+                  >
+                    {isPassed ? <Check className="h-4 w-4" /> : s.order}
+                  </span>
+                  <span
+                    className={
+                      isPassed
+                        ? "text-muted-foreground flex-1 truncate text-sm font-bold line-through"
+                        : "flex-1 truncate text-sm font-bold"
+                    }
+                  >
+                    {s.name}
+                  </span>
+                  <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium font-mono">
+                    <Clock className="h-3 w-3" />
+                    {s.scheduledAt}
+                  </span>
+                </div>
+                {s.students.length > 0 ? (
+                  <ul className="mt-2 space-y-1.5 pl-12">
+                    {s.students.map((st) => (
+                      <BoardingRow
+                        key={st.id}
+                        tripId={tripId}
+                        studentId={st.id}
+                        studentName={st.name}
+                        type={eventType}
+                        checked={checkedSet.has(st.id)}
+                        gpsLat={gps.fix?.latitude ?? null}
+                        gpsLng={gps.fix?.longitude ?? null}
+                        absence={st.absence}
+                      />
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-muted-foreground mt-1 pl-12 text-xs font-medium">
+                    배정된 학생 없음
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ol>
+      </section>
 
       {/* 전원 하차 확인 — KIDS 모드 종료 전 */}
       {isKidsMode ? (
@@ -365,28 +385,33 @@ export function TripRunningView({
 
       {/* 운행 종료 — driver만 */}
       {isDriver ? (
-        <Card className="border-rose-200 bg-rose-50/40">
-          <CardContent className="pt-6">
-            <Button
-              type="button"
-              variant="destructive"
-              size="lg"
-              className="w-full"
-              disabled={endPending}
-              onClick={handleEnd}
-            >
-              {endPending ? "종료 중..." : "운행 종료"}
-            </Button>
-            {endError ? (
-              <p className="text-destructive mt-2 text-sm" role="alert">
-                {endError}
-              </p>
-            ) : null}
-          </CardContent>
-          <CardFooter className="text-muted-foreground text-xs">
+        <div className="border-destructive/30 bg-destructive/5 space-y-2 rounded-2xl border p-4">
+          <Button
+            type="button"
+            variant="destructive"
+            size="lg"
+            className="w-full text-base font-extrabold"
+            disabled={endPending}
+            onClick={handleEnd}
+          >
+            <Square className="mr-1 h-4 w-4 fill-current" />
+            {endPending ? "종료 중..." : "운행 종료"}
+          </Button>
+          {endError ? (
+            <p className="text-destructive text-xs font-medium" role="alert">
+              {endError}
+            </p>
+          ) : null}
+          <p className="text-muted-foreground text-[11px] font-medium">
             종료를 누르면 GPS 송신이 멈추고 운행 기록이 마감됩니다.
-          </CardFooter>
-        </Card>
+          </p>
+        </div>
+      ) : null}
+
+      {!isDriver && isHelper ? (
+        <p className="text-muted-foreground pt-2 text-center text-xs font-medium">
+          동승보호자는 종료할 수 없습니다. 기사님만 운행 종료 가능.
+        </p>
       ) : null}
     </main>
   );
@@ -428,20 +453,25 @@ function SafetyCheckCard({
   const alighted = safetyCheck?.allAlightedOk ?? false;
 
   return (
-    <Card className="border-amber-200 bg-amber-50/40">
-      <CardHeader className="py-3">
-        <CardTitle className="text-sm text-amber-900">
-          {phase === "pre"
-            ? "출발 전 안전점검 (KIDS)"
-            : "종료 전 전원 하차 확인 (KIDS)"}
-        </CardTitle>
-        <CardDescription className="text-xs">
-          {phase === "pre"
-            ? "도교법 §53⑦ 안전운행기록 원천 데이터. 출발 전 반드시 확인."
-            : "운행 종료 전 전원 하차 여부를 확인하세요."}
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-2 text-sm">
+    <section className="border-warning/30 bg-warning-soft/40 rounded-2xl border p-4">
+      <div className="flex items-start gap-2">
+        <span className="bg-warning text-warning-foreground mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
+          <AlertTriangle className="h-3.5 w-3.5" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <h3 className="text-sm font-extrabold tracking-tight">
+            {phase === "pre"
+              ? "출발 전 안전점검 (KIDS)"
+              : "종료 전 전원 하차 확인 (KIDS)"}
+          </h3>
+          <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+            {phase === "pre"
+              ? "도교법 §53⑦ 안전운행기록 데이터. 출발 전 반드시 확인."
+              : "운행 종료 전 전원 하차 여부를 확인하세요."}
+          </p>
+        </div>
+      </div>
+      <div className="mt-3 space-y-1.5">
         {phase === "pre" ? (
           <>
             <CheckboxRow
@@ -466,12 +496,12 @@ function SafetyCheckCard({
           />
         )}
         {error ? (
-          <p className="text-destructive text-xs" role="alert">
+          <p className="text-destructive text-xs font-medium" role="alert">
             {error}
           </p>
         ) : null}
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   );
 }
 
@@ -493,18 +523,18 @@ function CheckboxRow({
       onClick={onClick}
       className={
         checked
-          ? "flex w-full items-center gap-3 rounded-md border border-emerald-300 bg-emerald-100/60 px-3 py-2 text-left text-sm font-medium text-emerald-900"
-          : "border-input bg-background hover:bg-accent flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left text-sm"
+          ? "border-success bg-success-soft text-success flex w-full items-center gap-3 rounded-xl border-2 px-3.5 py-3 text-left text-sm font-extrabold disabled:opacity-60"
+          : "border-input bg-background hover:bg-muted active:bg-muted flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm font-bold disabled:opacity-60"
       }
     >
       <span
         className={
           checked
-            ? "flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500 text-xs text-white"
-            : "border-input flex h-5 w-5 items-center justify-center rounded-md border"
+            ? "bg-success text-success-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-md"
+            : "border-input flex h-6 w-6 shrink-0 items-center justify-center rounded-md border"
         }
       >
-        {checked ? "✓" : ""}
+        {checked ? <Check className="h-4 w-4" /> : null}
       </span>
       <span className="flex-1">{label}</span>
     </button>
@@ -555,6 +585,8 @@ function BoardingRow({
     });
   }
 
+  const action = type === "BOARD" ? "탑승" : "하차";
+
   // 결석 신청된 학생: 회색 배경 + "결석" 뱃지 + 사유 (있으면). 탑승 토글
   // 자체는 막지 않음 — driver가 학부모 사정 변경됐을 수 있음.
   if (absence) {
@@ -565,71 +597,76 @@ function BoardingRow({
           ? "결석 (전달됨)"
           : "결석 (대기)";
     return (
-      <li className="flex items-center gap-2 text-sm">
+      <li>
         <button
           type="button"
           disabled={pending}
           onClick={toggle}
           className={
             checked
-              ? "flex flex-1 items-center gap-2 rounded-md border border-emerald-300 bg-emerald-100/60 px-2 py-1.5 text-left text-sm font-medium text-emerald-900"
-              : "border-muted-foreground/20 bg-muted/40 text-muted-foreground hover:bg-muted flex flex-1 items-center gap-2 rounded-md border px-2 py-1.5 text-left text-sm line-through decoration-slate-400"
+              ? "border-success bg-success-soft text-success flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
+              : "border-warning/40 bg-warning-soft/50 text-muted-foreground hover:bg-warning-soft/80 flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium line-through disabled:opacity-60"
           }
         >
           <span
             className={
               checked
-                ? "flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500 text-xs text-white"
-                : "border-muted-foreground/30 flex h-5 w-5 items-center justify-center rounded-md border"
+                ? "bg-success text-success-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
+                : "border-warning/60 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
             }
           >
-            {checked ? "✓" : ""}
+            {checked ? <Check className="h-3.5 w-3.5" /> : null}
           </span>
-          <span className="flex-1">{studentName}</span>
-          <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
+          <span className="min-w-0 flex-1 truncate">{studentName}</span>
+          <span className="bg-warning text-warning-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide whitespace-nowrap">
             {ackLabel}
-          </span>
-          <span className="text-muted-foreground text-xs">
-            {type === "BOARD" ? "탑승" : "하차"}
           </span>
         </button>
         {absence.reason ? (
-          <span className="text-muted-foreground text-[10px]">
-            ({absence.reason})
-          </span>
+          <p className="text-muted-foreground mt-0.5 px-3 text-[10px] font-medium">
+            사유: {absence.reason}
+          </p>
         ) : null}
-        {error ? <span className="text-destructive text-xs">{error}</span> : null}
+        {error ? (
+          <p className="text-destructive mt-0.5 px-3 text-[10px] font-medium">
+            {error}
+          </p>
+        ) : null}
       </li>
     );
   }
 
   return (
-    <li className="flex items-center gap-2 text-sm">
+    <li>
       <button
         type="button"
         disabled={pending}
         onClick={toggle}
         className={
           checked
-            ? "flex flex-1 items-center gap-2 rounded-md border border-emerald-300 bg-emerald-100/60 px-2 py-1.5 text-left text-sm font-medium text-emerald-900"
-            : "border-input bg-background hover:bg-accent flex flex-1 items-center gap-2 rounded-md border px-2 py-1.5 text-left text-sm"
+            ? "border-success bg-success-soft text-success flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
+            : "border-input bg-background hover:bg-muted active:bg-muted flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
         }
       >
         <span
           className={
             checked
-              ? "flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500 text-xs text-white"
-              : "border-input flex h-5 w-5 items-center justify-center rounded-md border"
+              ? "bg-success text-success-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
+              : "border-input flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
           }
         >
-          {checked ? "✓" : ""}
+          {checked ? <Check className="h-3.5 w-3.5" /> : null}
         </span>
-        <span className="flex-1">{studentName}</span>
-        <span className="text-muted-foreground text-xs">
-          {type === "BOARD" ? "탑승" : "하차"}
+        <span className="min-w-0 flex-1 truncate">{studentName}</span>
+        <span className="text-muted-foreground text-xs font-bold whitespace-nowrap">
+          {action}
         </span>
       </button>
-      {error ? <span className="text-destructive text-xs">{error}</span> : null}
+      {error ? (
+        <p className="text-destructive mt-0.5 px-3 text-[10px] font-medium">
+          {error}
+        </p>
+      ) : null}
     </li>
   );
 }
@@ -661,43 +698,37 @@ function HelperPicker({
 
   if (options.length === 0) {
     return (
-      <Card>
-        <CardHeader className="py-3">
-          <CardTitle className="text-sm">동승보호자</CardTitle>
-          <CardDescription className="text-xs">
-            등록된 동승자가 없습니다. 학원장·원장이 직원 페이지에서 초대 후
-            가입하면 여기 표시됩니다.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <section className="bg-card rounded-2xl border p-4 shadow-sm">
+        <h3 className="text-sm font-extrabold tracking-tight">동승보호자</h3>
+        <p className="text-muted-foreground mt-1 text-xs font-medium">
+          등록된 동승자가 없습니다. 학원장·원장이 직원 페이지에서 초대 후
+          가입하면 여기 표시됩니다.
+        </p>
+      </section>
     );
   }
 
   return (
-    <Card>
-      <CardHeader className="py-3">
-        <CardTitle className="text-sm">동승보호자 지정</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-2">
-        <select
-          value={value}
-          disabled={pending}
-          onChange={(e) => commit(e.target.value)}
-          className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
-        >
-          <option value="">— 동승자 없음 —</option>
-          {options.map((o) => (
-            <option key={o.id} value={o.id}>
-              {o.name}
-            </option>
-          ))}
-        </select>
-        {error ? (
-          <p className="text-destructive text-xs" role="alert">
-            {error}
-          </p>
-        ) : null}
-      </CardContent>
-    </Card>
+    <section className="bg-card rounded-2xl border p-4 shadow-sm">
+      <h3 className="text-sm font-extrabold tracking-tight">동승보호자 지정</h3>
+      <select
+        value={value}
+        disabled={pending}
+        onChange={(e) => commit(e.target.value)}
+        className="border-input bg-background mt-2 flex h-10 w-full rounded-xl border px-3 py-1 text-sm font-medium shadow-xs"
+      >
+        <option value="">— 동승자 없음 —</option>
+        {options.map((o) => (
+          <option key={o.id} value={o.id}>
+            {o.name}
+          </option>
+        ))}
+      </select>
+      {error ? (
+        <p className="text-destructive mt-1.5 text-xs font-medium" role="alert">
+          {error}
+        </p>
+      ) : null}
+    </section>
   );
 }

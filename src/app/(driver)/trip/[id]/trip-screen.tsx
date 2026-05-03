@@ -1,12 +1,6 @@
 import { notFound } from "next/navigation";
+import { Check } from "lucide-react";
 
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { requireTripAccess } from "@/lib/auth/trip-access";
 
@@ -61,42 +55,85 @@ export async function TripScreen({ tripId }: { tripId: string }) {
   // 종료된 trip이면 요약 카드만
   if (trip.endedAt) {
     const sc = trip.safetyCheck;
+    // KST = UTC + 9. ISO slice(11,16) = UTC HH:MM. KST 변환:
+    const fmtKstHHmm = (d: Date) =>
+      new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16);
     return (
-      <main className="mx-auto max-w-3xl p-4">
-        <Card>
-          <CardHeader>
-            <CardTitle>운행 종료</CardTitle>
-            <CardDescription>
-              <span className="font-medium">{trip.route.name}</span> 운행이
-              종료되었습니다.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-1 text-sm">
-            <p>
-              시작:{" "}
-              <span className="font-mono">
-                {trip.startedAt?.toISOString().slice(11, 16) ?? "—"}
-              </span>
-            </p>
-            <p>
-              종료:{" "}
-              <span className="font-mono">
-                {trip.endedAt.toISOString().slice(11, 16)}
-              </span>
-            </p>
-            <p>
-              탑승·하차 이벤트:{" "}
-              <span className="font-mono">{trip.events.length}건</span>
-            </p>
-            {trip.vehicle.mode === "KIDS" && sc ? (
-              <p>
-                안전점검: 안전띠 {sc.seatbeltAllOk ? "✓" : "✗"} · 동승{" "}
-                {sc.helperPresent ? "✓" : "✗"} · 전원하차{" "}
-                {sc.allAlightedOk ? "✓" : "✗"}
+      <main className="space-y-4 px-4 pt-4 pb-6">
+        <div className="bg-card rounded-2xl border p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="bg-success-soft text-success flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+              <Check className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-lg font-extrabold tracking-tight">
+                운행 종료
+              </h2>
+              <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+                {trip.route.name}
               </p>
-            ) : null}
-          </CardContent>
-        </Card>
+            </div>
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+                시작
+              </dt>
+              <dd className="mt-0.5 font-mono text-base font-extrabold">
+                {trip.startedAt ? fmtKstHHmm(trip.startedAt) : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+                종료
+              </dt>
+              <dd className="mt-0.5 font-mono text-base font-extrabold">
+                {fmtKstHHmm(trip.endedAt)}
+              </dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+                탑승·하차 이벤트
+              </dt>
+              <dd className="mt-0.5 font-mono text-base font-extrabold">
+                {trip.events.length}건
+              </dd>
+            </div>
+          </dl>
+          {trip.vehicle.mode === "KIDS" && sc ? (
+            <div className="border-warning/30 bg-warning-soft/40 mt-4 rounded-xl border p-3 text-xs font-medium">
+              <p className="text-foreground/80 mb-1.5 text-[10px] font-extrabold tracking-wide uppercase">
+                안전점검 (KIDS)
+              </p>
+              <ul className="space-y-1">
+                <li className="flex items-center gap-2">
+                  {sc.seatbeltAllOk ? (
+                    <Check className="text-success h-3.5 w-3.5" />
+                  ) : (
+                    <span className="text-destructive">✗</span>
+                  )}
+                  좌석 안전띠
+                </li>
+                <li className="flex items-center gap-2">
+                  {sc.helperPresent ? (
+                    <Check className="text-success h-3.5 w-3.5" />
+                  ) : (
+                    <span className="text-destructive">✗</span>
+                  )}
+                  동승보호자
+                </li>
+                <li className="flex items-center gap-2">
+                  {sc.allAlightedOk ? (
+                    <Check className="text-success h-3.5 w-3.5" />
+                  ) : (
+                    <span className="text-destructive">✗</span>
+                  )}
+                  전원 하차
+                </li>
+              </ul>
+            </div>
+          ) : null}
+        </div>
       </main>
     );
   }

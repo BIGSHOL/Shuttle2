@@ -1,5 +1,6 @@
 "use client";
 
+import { Play } from "lucide-react";
 import { useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -19,10 +20,11 @@ export function StartTripButton({
   const [error, setError] = useState<string | null>(null);
 
   return (
-    <div className="flex flex-col items-end gap-1">
+    <div className="space-y-1.5">
       <Button
         type="button"
-        size="sm"
+        size="lg"
+        className="bg-bus text-bus-foreground hover:bg-bus/90 w-full text-base font-extrabold"
         disabled={pending || disabled}
         onClick={() => {
           setError(null);
@@ -35,9 +37,14 @@ export function StartTripButton({
           });
         }}
       >
+        <Play className="mr-1 h-4 w-4 fill-current" />
         {pending ? "시작 중..." : "운행 시작"}
       </Button>
-      {error ? <span className="text-destructive text-xs">{error}</span> : null}
+      {error ? (
+        <p className="text-destructive text-xs font-medium" role="alert">
+          {error}
+        </p>
+      ) : null}
     </div>
   );
 }
