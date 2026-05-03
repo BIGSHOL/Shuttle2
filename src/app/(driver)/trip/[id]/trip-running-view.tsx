@@ -162,6 +162,23 @@ export function TripRunningView({
         </Card>
       ) : null}
 
+      {/* KIDS 모드 동승보호자 미선택 경고 — 도교법 §53⑦ */}
+      {isKidsMode &&
+      !helper &&
+      stops.reduce((acc, s) => acc + s.students.length, 0) >= 1 ? (
+        <Card className="border-destructive bg-destructive/10">
+          <CardHeader>
+            <CardTitle className="text-destructive">
+              ⚠️ 동승보호자가 지정되지 않았어요
+            </CardTitle>
+            <CardDescription>
+              도교법 §53⑦에 따라 어린이통학버스 운행에는 동승보호자가 함께
+              타야 합니다. 아래에서 동승자를 지정한 후 운행을 진행해 주세요.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      ) : null}
+
       {/* 운행 헤드 */}
       <Card>
         <CardHeader>

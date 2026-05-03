@@ -79,6 +79,34 @@ export default async function RunPage() {
         ) : null}
       </div>
 
+      <details className="bg-background rounded-md border px-3 py-2 text-sm">
+        <summary className="text-muted-foreground cursor-pointer font-medium">
+          운행 전 확인사항 (한 번 펼쳐 보세요)
+        </summary>
+        <ul className="text-muted-foreground mt-2 list-disc space-y-1 pl-5 text-xs">
+          <li>
+            <strong>거치대 + 충전기</strong>를 차량에 고정하세요. 운행 중 폰을
+            만지면 위험합니다.
+          </li>
+          <li>
+            폰은 <strong>안드로이드 권장</strong> — iOS Safari는 백그라운드
+            GPS·화면 잠금 방지가 약해 셔틀 위치가 끊길 수 있습니다.
+          </li>
+          <li>
+            iOS를 쓴다면 <strong>운행 화면을 항상 켠 상태</strong>로 두세요
+            (자동 화면 잠금이 GPS를 멈춥니다).
+          </li>
+          <li>
+            처음 진입 시 브라우저가 묻는{" "}
+            <strong>위치 권한·알림 권한을 허용</strong>해 주세요.
+          </li>
+          <li>
+            KIDS 모드 차량은 <strong>동승보호자</strong>가 함께 타야 합니다
+            (도교법 §53⑦).
+          </li>
+        </ul>
+      </details>
+
       {todaysRoutes.length === 0 ? (
         <Card>
           <CardHeader>
