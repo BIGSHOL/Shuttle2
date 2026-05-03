@@ -14,7 +14,9 @@ import {
 
 import { db } from "@/lib/db";
 import { requireOwnerTripAccess } from "@/lib/auth/owner-trip-access";
+import type { TripLiveMapStop } from "@/lib/map/trip-live-map-inner";
 
+import { OwnerTripLiveMap } from "./_components/owner-trip-live-map";
 import { TripRealtimeRefresher } from "./_components/trip-realtime-refresher";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
@@ -161,6 +163,23 @@ export default async function OwnerTripDetailPage({
     allStudentIds.includes(sid),
   ).length;
   const remaining = totalStudents - absentCount - checkedCount - issueCount;
+
+  // 라이브 지도용 stop 데이터 — 학원장은 child-stop 강조 없이 모든 정류장 동등.
+  // isPassed: 그 정류장의 학생 1명이라도 처리됐으면 통과 처리(회색).
+  const liveMapStops: TripLiveMapStop[] = trip.route.stops.map((rs) => {
+    const stopStudents = studentsByStop.get(rs.stop.id) ?? [];
+    const isPassed = stopStudents.some((st) => checkedMap.has(st.id));
+    return {
+      id: rs.id,
+      stopId: rs.stop.id,
+      name: rs.stop.name,
+      lat: rs.stop.lat,
+      lng: rs.stop.lng,
+      order: rs.order,
+      isChildStop: false,
+      isPassed,
+    };
+  });
 
   return (
     <main className="mx-auto max-w-4xl space-y-4 px-4 py-6 lg:px-6">
@@ -351,6 +370,31 @@ export default async function OwnerTripDetailPage({
           </div>
         ) : null}
       </section>
+
+      {/* 라이브 GPS 지도 (운행 중일 때만) */}
+      {isRunning ? (
+        <section className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+          <div className="border-b px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-extrabold tracking-tight">
+                실시간 위치
+              </h3>
+              <span className="bg-bus-soft text-bus inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                <span className="bg-bus inline-block h-1.5 w-1.5 animate-pulse rounded-full" />
+                LIVE
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
+              기사 폰 GPS · 약 5초마다 갱신
+            </p>
+          </div>
+          <OwnerTripLiveMap
+            tripId={tripId}
+            stops={liveMapStops}
+            direction={trip.route.direction}
+          />
+        </section>
+      ) : null}
 
       {/* 운행자 정보 */}
       <section className="bg-card rounded-2xl border p-4 shadow-sm">

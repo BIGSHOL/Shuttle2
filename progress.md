@@ -20,6 +20,7 @@
 | W15-C | 약관·개인정보처리방침 + 가입 동의 link | `3c41c2a` | ✅ |
 | W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정 | `684315a` | ✅ |
 | W16 | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh) | _이번_ | ⏳ |
+| W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용) | _이번_ | ⏳ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -236,11 +237,24 @@
   fetch 가 실패 → 사용자는 새로고침해야 갱신. 운영 시 Supabase 대시보드에서
   Realtime 설정 확인 필요.
 
-## 다음 우선순위 (W16-B+)
+## W16-B 완료 (학원장 trip 상세 실시간 GPS 지도)
 
-### W16-B: Owner trip 상세 실시간 GPS 지도
-- 기존 `useTripBroadcast` (ping, 5초)로 셔틀 마커 표시
-- LocationPing 영구 저장은 그대로 두고, 화면 표시만 추가
+### 결과
+- `(owner)/dashboard/trip/[tripId]/_components/owner-trip-live-map.tsx`
+  신규 — `useTripBroadcast(tripId)`로 5초마다 ping 받아 `TripLiveMap` 재사용.
+  학원장은 child-stop 강조 없이 모든 정류장 동등.
+- `(owner)/dashboard/trip/[tripId]/page.tsx`:
+  - 운행 중일 때만 라이브 지도 카드 마운트 (head 카드 바로 아래)
+  - LIVE 뱃지 + "기사 폰 GPS · 약 5초마다 갱신" 캡션
+  - `liveMapStops` server-side derive: `isPassed` = 학생 1명이라도 처리됐으면 회색
+  - height 48vh — 운행자·안전점검·timeline은 스크롤로 도달
+
+### 디자인 결정
+- **`TripLiveMap` 100% 재사용** — 학부모용으로 만든 컴포넌트가 props로
+  child-stop 플래그를 받게 돼 있어 그대로 사용 가능. 학원장은 전부 false.
+- **운행 중에만 표시** — 종료된 trip의 정적 경로 시각화는 W16-C로 미룸.
+
+## 다음 우선순위 (W17+)
 
 ### W17: 인증·기능 보강
 - 학부모 폰 OTP 가입 (Supabase phone auth + SMS provider)
