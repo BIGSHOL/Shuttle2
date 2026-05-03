@@ -32,6 +32,11 @@ export type TripLiveMapProps = {
   showCaption?: boolean;
   /** 정류장 라벨 표시. 미니맵에서는 false 권장. */
   showStopLabels?: boolean;
+  /**
+   * 운행 종료 후 LocationPing 경로 재생용. 시간순 정렬된 좌표.
+   * 전달되면 노선 polyline 위에 추가로 실주행 trail을 연한 노란색으로 그림.
+   */
+  trail?: { lat: number; lng: number }[];
 };
 
 export function TripLiveMapInner({
@@ -41,6 +46,7 @@ export function TripLiveMapInner({
   height = "60vh",
   showCaption = true,
   showStopLabels = true,
+  trail,
 }: TripLiveMapProps) {
   const [loading, error] = useKakaoLoader({
     appkey: env.NEXT_PUBLIC_KAKAO_MAP_KEY,
@@ -94,6 +100,16 @@ export function TripLiveMapInner({
             strokeWeight={3}
             strokeColor={polylineColor}
             strokeOpacity={0.5}
+            strokeStyle="solid"
+          />
+        ) : null}
+
+        {trail && trail.length >= 2 ? (
+          <Polyline
+            path={trail}
+            strokeWeight={5}
+            strokeColor="#f5c518"
+            strokeOpacity={0.85}
             strokeStyle="solid"
           />
         ) : null}
@@ -155,9 +171,11 @@ export function TripLiveMapInner({
 
       {showCaption ? (
         <p className="bg-muted/30 text-muted-foreground border-t px-3 py-2 text-xs font-medium">
-          {shuttle
-            ? "셔틀 위치는 약 5초마다 갱신됩니다."
-            : "셔틀이 운행을 시작하면 위치가 표시됩니다."}
+          {trail && trail.length >= 2
+            ? `운행 경로 ${trail.length}개 좌표 (안전운행기록 면책 자료).`
+            : shuttle
+              ? "셔틀 위치는 약 5초마다 갱신됩니다."
+              : "셔틀이 운행을 시작하면 위치가 표시됩니다."}
         </p>
       ) : null}
     </div>

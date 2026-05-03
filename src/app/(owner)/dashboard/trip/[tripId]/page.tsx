@@ -12,12 +12,13 @@ import {
   X,
 } from "lucide-react";
 
+import { TripRealtimeRefresher } from "@/components/trip-realtime-refresher";
 import { db } from "@/lib/db";
 import { requireOwnerTripAccess } from "@/lib/auth/owner-trip-access";
+import { TripLiveMap } from "@/lib/map/trip-live-map";
 import type { TripLiveMapStop } from "@/lib/map/trip-live-map-inner";
 
 import { OwnerTripLiveMap } from "./_components/owner-trip-live-map";
-import { TripRealtimeRefresher } from "./_components/trip-realtime-refresher";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
@@ -152,6 +153,16 @@ export default async function OwnerTripDetailPage({
   const isRunning = trip.startedAt !== null && trip.endedAt === null;
   const isFinished = trip.endedAt !== null;
   const isScheduled = trip.startedAt === null;
+
+  // 종료된 운행만 GPS trail 추가 fetch (안전운행기록 면책 자료).
+  // 진행 중 운행은 broadcast로 이미 보고 있으니 중복 fetch 안 함.
+  const trail = isFinished
+    ? await db.locationPing.findMany({
+        where: { tripId },
+        orderBy: { recordedAt: "asc" },
+        select: { lat: true, lng: true },
+      })
+    : [];
 
   const eventType: "BOARD" | "ALIGHT" =
     trip.route.direction === "PICKUP" ? "BOARD" : "ALIGHT";
@@ -392,6 +403,35 @@ export default async function OwnerTripDetailPage({
             tripId={tripId}
             stops={liveMapStops}
             direction={trip.route.direction}
+          />
+        </section>
+      ) : null}
+
+      {/* 종료된 운행: GPS 경로 재생 (LocationPing trail) */}
+      {isFinished && trail.length > 0 ? (
+        <section className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+          <div className="border-b px-4 py-3">
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-extrabold tracking-tight">
+                운행 경로
+              </h3>
+              <span className="bg-success-soft text-success rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                완료 ({trail.length}개 좌표)
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
+              실주행 경로 — 안전운행기록 면책 자료. 30초 간격 + 정류장 통과 시점
+              + 시작·종료 ping.
+            </p>
+          </div>
+          <TripLiveMap
+            stops={liveMapStops}
+            shuttle={null}
+            direction={trip.route.direction}
+            height="48vh"
+            showCaption
+            showStopLabels
+            trail={trail}
           />
         </section>
       ) : null}

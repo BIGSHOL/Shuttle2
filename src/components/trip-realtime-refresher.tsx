@@ -12,9 +12,10 @@ const REASON_LABEL: Record<string, string> = {
   "trip-state": "운행 상태 변동",
 };
 
-// 학원장 trip 상세 화면에서 기사·동승자 액션을 실시간으로 받아 router.refresh.
-// trip:<tripId> 채널의 "update" 이벤트 구독.
-// 페이지 자체는 Server Component이라 이 컴포넌트가 effect 전용으로 마운트.
+// trip:<tripId> 채널의 "update" 이벤트를 구독해 router.refresh 트리거.
+// 학원장 / 기사 / 동승자 trip 화면 모두 공용 — 자기 자신이 publish해도 refresh되는데
+// 같은 server data가 다시 로드돼 사실상 no-op이라 비용 무시 가능.
+// 페이지 자체는 Server Component이므로 이 컴포넌트가 effect 전용으로 마운트.
 // 토스트는 update 받을 때마다 key로 remount되며 tw-animate-css 로 자동 페이드.
 export function TripRealtimeRefresher({ tripId }: { tripId: string }) {
   const router = useRouter();

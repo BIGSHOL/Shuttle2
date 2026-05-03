@@ -23,6 +23,8 @@
 | W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용) | _이번_ | ⏳ |
 | W17-A | Supabase 비밀번호 재설정 메일 한국어 템플릿 (`supabase/templates/recovery.html`) | _이번_ | ⏳ |
 | W17-C | 학부모 BottomTabBar (홈·알림·결석·정류장 4탭) | _이번_ | ⏳ |
+| W16-C | 종료 운행 GPS 경로 (LocationPing trail polyline) | _이번_ | ⏳ |
+| W17-D | 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화) | _이번_ | ⏳ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -295,6 +297,36 @@
 - "설정" 별도 라우트 없음 → 기존 헤더 dropdown 유지 (W14 디자인).
   4탭으로 축약하는 게 모바일 가독성 우선.
 - 홈은 `/home` exact match가 아닌 prefix 매칭 — `/home/anything` 도 active.
+
+## W16-C 완료 (종료 운행 GPS 경로)
+
+### 결과
+- `lib/map/trip-live-map-inner.tsx`: `trail?: {lat,lng}[]` prop 추가.
+  주어지면 노선 polyline 위에 노란 굵은 선(`#f5c518`, weight 5, opacity 0.85)
+  으로 실주행 경로 overlay. 캡션도 "운행 경로 N개 좌표" 분기.
+- `(owner)/dashboard/trip/[tripId]/page.tsx`:
+  - `isFinished`일 때 `db.locationPing.findMany`로 trail 추가 fetch
+  - 실주행 카드 신설 (header: "완료 (N개 좌표)" + 면책 자료 캡션)
+  - `<TripLiveMap shuttle={null} trail={trail} />` 직접 사용 (broadcast 불필요)
+
+### 의도
+- 안전운행기록(별지 제20호의2) PDF에 포함하기 전 화면 검증용.
+- 시각적 경로 + 정류장 통과 시점이 일치하는지 학원장이 확인 가능.
+
+## W17-D 완료 (기사·동승자 trip 화면 실시간 자동 갱신)
+
+### 결과
+- `components/trip-realtime-refresher.tsx` (이전 owner 전용에서 이동) —
+  공용 컴포넌트화. owner page는 import 경로만 수정.
+- `(driver)/trip/[id]/trip-screen.tsx`:
+  - 진행 중 trip 분기에 `<TripRealtimeRefresher tripId={trip.id} />` 마운트
+  - driver와 helper가 같은 화면을 공유하므로 둘 다 혜택
+  - 본인이 publish 한 update도 받지만 router.refresh가 같은 server data 다시
+    로드 → no-op. 불필요한 refresh 비용 무시 가능.
+
+### 영향
+- 학부모 trip-live는 그대로 (별도 사실상 broadcast만 사용)
+- 학원장 → 기사 → 동승자 전 채널이 같은 `trip:<tripId>` "update" 이벤트 공유
 
 ## 다음 우선순위 (W17-B+)
 

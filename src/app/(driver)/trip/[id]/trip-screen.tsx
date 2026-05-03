@@ -1,6 +1,7 @@
 import { notFound } from "next/navigation";
 import { Check } from "lucide-react";
 
+import { TripRealtimeRefresher } from "@/components/trip-realtime-refresher";
 import { db } from "@/lib/db";
 import { requireTripAccess } from "@/lib/auth/trip-access";
 
@@ -208,52 +209,57 @@ export async function TripScreen({ tripId }: { tripId: string }) {
     select: { studentId: true, status: true, reason: true },
   });
   const absenceByStudent = new Map(
-    absences.map((a) => [a.studentId, { status: a.status, reason: a.reason }] as const),
+    absences.map(
+      (a) => [a.studentId, { status: a.status, reason: a.reason }] as const,
+    ),
   );
 
   return (
-    <TripRunningView
-      tripId={trip.id}
-      route={{ name: trip.route.name, direction: trip.route.direction }}
-      vehicle={trip.vehicle}
-      stops={trip.route.stops.map((rs) => ({
-        id: rs.id,
-        order: rs.order,
-        scheduledAt: rs.scheduledAt,
-        name: rs.stop.name,
-        lat: rs.stop.lat,
-        lng: rs.stop.lng,
-        radiusM: rs.stop.radiusM,
-        students: (studentsByStop.get(rs.stop.id) ?? []).map((s) => {
-          const ab = absenceByStudent.get(s.id);
-          const iss = issueByStudent.get(s.id);
-          return {
-            ...s,
-            absence: ab
-              ? { status: ab.status, reason: ab.reason }
-              : null,
-            issue: iss ? { type: iss.type, reason: iss.reason } : null,
-          };
-        }),
-      }))}
-      isKidsMode={trip.vehicle.mode === "KIDS"}
-      startedAtISO={trip.startedAt?.toISOString() ?? null}
-      safetyCheck={
-        trip.safetyCheck
-          ? {
-              seatbeltAllOk: trip.safetyCheck.seatbeltAllOk,
-              helperPresent: trip.safetyCheck.helperPresent,
-              allAlightedOk: trip.safetyCheck.allAlightedOk,
-            }
-          : null
-      }
-      boardedStudentIds={Array.from(boardedSet)}
-      alightedStudentIds={Array.from(alightedSet)}
-      driver={trip.driver}
-      helper={trip.helper}
-      helperCandidates={helperCandidates}
-      isDriver={access.isDriver}
-      isHelper={access.isHelper}
-    />
+    <>
+      {/* W17-D: 기사·동승자 본인 외의 액션(safety toggle, helper 배정 등)도
+          즉시 반영. 본인 액션도 publish하지만 router.refresh가 사실상 no-op. */}
+      <TripRealtimeRefresher tripId={trip.id} />
+      <TripRunningView
+        tripId={trip.id}
+        route={{ name: trip.route.name, direction: trip.route.direction }}
+        vehicle={trip.vehicle}
+        stops={trip.route.stops.map((rs) => ({
+          id: rs.id,
+          order: rs.order,
+          scheduledAt: rs.scheduledAt,
+          name: rs.stop.name,
+          lat: rs.stop.lat,
+          lng: rs.stop.lng,
+          radiusM: rs.stop.radiusM,
+          students: (studentsByStop.get(rs.stop.id) ?? []).map((s) => {
+            const ab = absenceByStudent.get(s.id);
+            const iss = issueByStudent.get(s.id);
+            return {
+              ...s,
+              absence: ab ? { status: ab.status, reason: ab.reason } : null,
+              issue: iss ? { type: iss.type, reason: iss.reason } : null,
+            };
+          }),
+        }))}
+        isKidsMode={trip.vehicle.mode === "KIDS"}
+        startedAtISO={trip.startedAt?.toISOString() ?? null}
+        safetyCheck={
+          trip.safetyCheck
+            ? {
+                seatbeltAllOk: trip.safetyCheck.seatbeltAllOk,
+                helperPresent: trip.safetyCheck.helperPresent,
+                allAlightedOk: trip.safetyCheck.allAlightedOk,
+              }
+            : null
+        }
+        boardedStudentIds={Array.from(boardedSet)}
+        alightedStudentIds={Array.from(alightedSet)}
+        driver={trip.driver}
+        helper={trip.helper}
+        helperCandidates={helperCandidates}
+        isDriver={access.isDriver}
+        isHelper={access.isHelper}
+      />
+    </>
   );
 }
