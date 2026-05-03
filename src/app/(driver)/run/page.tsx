@@ -11,7 +11,9 @@ import {
 import { db } from "@/lib/db";
 import { requireDriver } from "@/lib/auth/session";
 import { todayBitKst, todayUtcDateKst } from "@/lib/date/today";
+import { env } from "@/lib/env";
 
+import { DriverNotificationToggle } from "../notifications/driver-notification-toggle";
 import { StartTripButton } from "./start-trip-button";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
@@ -68,6 +70,13 @@ export default async function RunPage() {
         <p className="text-muted-foreground text-sm">
           오늘 요일에 해당하는 노선만 표시됩니다.
         </p>
+        {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
+          <div className="mt-3">
+            <DriverNotificationToggle
+              vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+            />
+          </div>
+        ) : null}
       </div>
 
       {todaysRoutes.length === 0 ? (

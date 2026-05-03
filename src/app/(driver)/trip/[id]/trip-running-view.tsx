@@ -32,7 +32,13 @@ type StopRow = {
   lat: number;
   lng: number;
   radiusM: number;
-  students: { id: string; name: string }[];
+  students: {
+    id: string;
+    name: string;
+    absence:
+      | { status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED"; reason: string | null }
+      | null;
+  }[];
 };
 
 type StaffRef = { id: string; name: string };
@@ -312,6 +318,7 @@ export function TripRunningView({
                           checked={checkedSet.has(st.id)}
                           gpsLat={gps.fix?.latitude ?? null}
                           gpsLng={gps.fix?.longitude ?? null}
+                          absence={st.absence}
                         />
                       ))}
                     </ul>
@@ -492,6 +499,7 @@ function BoardingRow({
   checked,
   gpsLat,
   gpsLng,
+  absence,
 }: {
   tripId: string;
   studentId: string;
@@ -500,6 +508,9 @@ function BoardingRow({
   checked: boolean;
   gpsLat: number | null;
   gpsLng: number | null;
+  absence:
+    | { status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED"; reason: string | null }
+    | null;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -519,6 +530,54 @@ function BoardingRow({
         setError(err instanceof Error ? err.message : "저장 실패");
       }
     });
+  }
+
+  // 결석 신청된 학생: 회색 배경 + "결석" 뱃지 + 사유 (있으면). 탑승 토글
+  // 자체는 막지 않음 — driver가 학부모 사정 변경됐을 수 있음.
+  if (absence) {
+    const ackLabel =
+      absence.status === "ACKNOWLEDGED"
+        ? "결석 (확인)"
+        : absence.status === "NOTIFIED_DRIVER"
+          ? "결석 (전달됨)"
+          : "결석 (대기)";
+    return (
+      <li className="flex items-center gap-2 text-sm">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={toggle}
+          className={
+            checked
+              ? "flex flex-1 items-center gap-2 rounded-md border border-emerald-300 bg-emerald-100/60 px-2 py-1.5 text-left text-sm font-medium text-emerald-900"
+              : "border-muted-foreground/20 bg-muted/40 text-muted-foreground hover:bg-muted flex flex-1 items-center gap-2 rounded-md border px-2 py-1.5 text-left text-sm line-through decoration-slate-400"
+          }
+        >
+          <span
+            className={
+              checked
+                ? "flex h-5 w-5 items-center justify-center rounded-md bg-emerald-500 text-xs text-white"
+                : "border-muted-foreground/30 flex h-5 w-5 items-center justify-center rounded-md border"
+            }
+          >
+            {checked ? "✓" : ""}
+          </span>
+          <span className="flex-1">{studentName}</span>
+          <span className="rounded-md bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-900">
+            {ackLabel}
+          </span>
+          <span className="text-muted-foreground text-xs">
+            {type === "BOARD" ? "탑승" : "하차"}
+          </span>
+        </button>
+        {absence.reason ? (
+          <span className="text-muted-foreground text-[10px]">
+            ({absence.reason})
+          </span>
+        ) : null}
+        {error ? <span className="text-destructive text-xs">{error}</span> : null}
+      </li>
+    );
   }
 
   return (

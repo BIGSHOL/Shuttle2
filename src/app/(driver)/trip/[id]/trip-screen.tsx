@@ -128,6 +128,25 @@ export async function TripScreen({ tripId }: { tripId: string }) {
     else alightedSet.add(e.studentId);
   }
 
+  // 오늘 결석 학생 (route.direction 영향 받는 type만 — 등원 노선이면
+  // ABSENT_BOTH/ABSENT_PICKUP, 하원 노선이면 ABSENT_BOTH/ABSENT_DROPOFF)
+  const allStudentIds = trip.route.students.map((rs) => rs.student.id);
+  const directionTypes =
+    trip.route.direction === "PICKUP"
+      ? ["ABSENT_BOTH", "ABSENT_PICKUP"]
+      : ["ABSENT_BOTH", "ABSENT_DROPOFF"];
+  const absences = await db.absenceRequest.findMany({
+    where: {
+      studentId: { in: allStudentIds },
+      date: trip.date,
+      type: { in: directionTypes as ("ABSENT_BOTH" | "ABSENT_PICKUP" | "ABSENT_DROPOFF")[] },
+    },
+    select: { studentId: true, status: true, reason: true },
+  });
+  const absenceByStudent = new Map(
+    absences.map((a) => [a.studentId, { status: a.status, reason: a.reason }] as const),
+  );
+
   return (
     <TripRunningView
       tripId={trip.id}
@@ -141,7 +160,15 @@ export async function TripScreen({ tripId }: { tripId: string }) {
         lat: rs.stop.lat,
         lng: rs.stop.lng,
         radiusM: rs.stop.radiusM,
-        students: studentsByStop.get(rs.stop.id) ?? [],
+        students: (studentsByStop.get(rs.stop.id) ?? []).map((s) => {
+          const ab = absenceByStudent.get(s.id);
+          return {
+            ...s,
+            absence: ab
+              ? { status: ab.status, reason: ab.reason }
+              : null,
+          };
+        }),
       }))}
       isKidsMode={trip.vehicle.mode === "KIDS"}
       startedAtISO={trip.startedAt?.toISOString() ?? null}
