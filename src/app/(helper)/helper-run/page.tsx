@@ -10,14 +10,14 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { requireHelper } from "@/lib/auth/session";
+import { todayUtcDateKst } from "@/lib/date/today";
 
 export default async function HelperRunPage() {
   const me = await requireHelper();
   const orgId = me.org.id;
 
   // 본인이 helperId로 지정된 진행 중 trip이 있으면 곧장 그 화면으로.
-  const todayDate = new Date();
-  todayDate.setUTCHours(0, 0, 0, 0);
+  const todayDate = todayUtcDateKst();
   const activeTrip = await db.trip.findFirst({
     where: {
       helperId: me.staff.id,

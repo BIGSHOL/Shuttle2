@@ -10,23 +10,16 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { requireDriver } from "@/lib/auth/session";
+import { todayBitKst, todayUtcDateKst } from "@/lib/date/today";
 
 import { StartTripButton } from "./start-trip-button";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
-// 비트마스크: 월=1 화=2 수=4 목=8 금=16 토=32 일=64. JS getDay() 일=0 월=1 ... 토=6.
-function todayBit(): number {
-  const d = new Date().getDay();
-  // 일=0 → 64, 월=1 → 1, ..., 토=6 → 32
-  if (d === 0) return 64;
-  return 1 << (d - 1);
-}
-
 export default async function RunPage() {
   const me = await requireDriver();
   const orgId = me.org.id;
-  const bit = todayBit();
+  const bit = todayBitKst();
 
   // 오늘 운행하는 노선만 (weekdays 비트마스크에 오늘 비트가 켜진 것)
   const allRoutes = await db.route.findMany({
@@ -40,8 +33,7 @@ export default async function RunPage() {
   const todaysRoutes = allRoutes.filter((r) => (r.weekdays & bit) !== 0);
 
   // 이미 진행 중인 trip이 있으면 곧장 그 화면으로 안내
-  const todayDate = new Date();
-  todayDate.setUTCHours(0, 0, 0, 0);
+  const todayDate = todayUtcDateKst();
   const activeTrip = await db.trip.findFirst({
     where: {
       driverId: me.staff.id,

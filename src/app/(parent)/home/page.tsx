@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
+import { todayUtcDateKst } from "@/lib/date/today";
 import { ORG_TYPE_LABEL } from "@/lib/i18n/org-terms";
 import {
   getTodayChildTrips,
@@ -134,8 +135,7 @@ export default async function ParentHomePage() {
   );
 
   // 다가오는 결석 신청 (오늘 또는 미래, ACKNOWLEDGED 제외, 5건)
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  const today = todayUtcDateKst();
   const upcomingAbsences = await db.absenceRequest.findMany({
     where: {
       studentId: { in: studentIds },

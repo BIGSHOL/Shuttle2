@@ -7,6 +7,7 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireDriver } from "@/lib/auth/session";
 import { requireTripAccess } from "@/lib/auth/trip-access";
+import { todayUtcDateKst } from "@/lib/date/today";
 
 // W3-3b: 기사 폰이 직접 좌표를 send. start/end 시 위치는 첫/마지막 ping에서 채워짐.
 
@@ -35,8 +36,7 @@ export async function startTripAction(
   }
 
   // 오늘 KST 자정 기준 (Date 컬럼은 시각 무시)
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  const today = todayUtcDateKst();
 
   // upsert: 같은 vehicle/route/date 조합이 이미 있으면 그걸 다시 사용
   // (driver가 종료 안 하고 다시 들어와도 같은 trip 이어감)

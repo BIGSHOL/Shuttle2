@@ -6,6 +6,7 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
+import { todayUtcDateKst } from "@/lib/date/today";
 
 // 학부모가 자녀의 결석을 신청. 마감 정책 (MVP):
 // - 오늘 또는 미래 날짜만 허용 (과거 X).
@@ -28,12 +29,6 @@ const schema = z.object({
   type: z.enum(["ABSENT_BOTH", "ABSENT_PICKUP", "ABSENT_DROPOFF"]),
   reason: z.string().max(200).optional(),
 });
-
-function todayUtcDate(): Date {
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  return d;
-}
 
 export async function createAbsenceRequestAction(
   _prev: CreateAbsenceState,
@@ -61,7 +56,7 @@ export async function createAbsenceRequestAction(
 
   // 날짜 검증 — 오늘 또는 미래만
   const targetDate = new Date(`${date}T00:00:00.000Z`);
-  if (targetDate < todayUtcDate()) {
+  if (targetDate < todayUtcDateKst()) {
     return {
       fieldErrors: { date: ["과거 날짜는 신청할 수 없습니다"] },
     };

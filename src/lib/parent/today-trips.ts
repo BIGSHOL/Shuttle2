@@ -1,9 +1,10 @@
 import { db } from "@/lib/db";
+import { todayBitKst, todayUtcDateKst } from "@/lib/date/today";
 
 // 학부모 /home·/trip-live에서 쓰는 자녀별 오늘 운행 카드.
 // 한 자녀가 등원·하원 두 노선에 배정되면 cards 2개 (각 노선당 1개).
 //
-// 날짜 처리는 driver/run/page.tsx 패턴 그대로 — UTC 자정 setUTCHours.
+// 날짜는 KST 기준 오늘. driver측 trip.date도 KST 자정으로 저장돼 비교 키 일치.
 // trip 레코드는 driver가 운행 시작 버튼 누를 때 만들어지므로,
 // "예정"인 노선은 trip이 아직 없을 수 있다. 그래서 RouteStudent를 기준으로
 // 노선을 펼치고, 그 노선의 오늘 trip 레코드 유무를 따로 본다.
@@ -42,27 +43,13 @@ export type ChildTodaySummary = {
   cards: ChildTripCard[];
 };
 
-// 비트마스크: 월=1 화=2 수=4 목=8 금=16 토=32 일=64.
-// JS getDay() 일=0 월=1 ... 토=6.
-function todayBit(): number {
-  const d = new Date().getDay();
-  if (d === 0) return 64;
-  return 1 << (d - 1);
-}
-
-function todayUtcDate(): Date {
-  const d = new Date();
-  d.setUTCHours(0, 0, 0, 0);
-  return d;
-}
-
 export async function getTodayChildTrips(
   students: { id: string; name: string }[],
 ): Promise<ChildTodaySummary[]> {
   if (students.length === 0) return [];
 
-  const bit = todayBit();
-  const today = todayUtcDate();
+  const bit = todayBitKst();
+  const today = todayUtcDateKst();
   const studentIds = students.map((s) => s.id);
 
   const routeStudents = await db.routeStudent.findMany({

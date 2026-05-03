@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
+import { todayUtcDateKst } from "@/lib/date/today";
 import { studentTerm } from "@/lib/i18n/org-terms";
 
 import { AckAbsenceButton } from "./_components/ack-absence-button";
@@ -34,8 +35,7 @@ export default async function OwnerAbsencesPage() {
   const orgId = await getOrgId();
   const term = studentTerm(me.org.type);
 
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  const today = todayUtcDateKst();
 
   // 본인 org 학생의 결석. 오늘 이후 + 최근 30일 ACKNOWLEDGED 함께.
   const pending = await db.absenceRequest.findMany({

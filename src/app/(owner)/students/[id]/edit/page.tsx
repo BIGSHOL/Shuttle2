@@ -1,7 +1,10 @@
 import { notFound } from "next/navigation";
 
+import Link from "next/link";
+
 import {
   Card,
+  CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
@@ -32,6 +35,14 @@ export default async function EditStudentPage({
           route: { select: { id: true, name: true, direction: true } },
           stop: { select: { id: true, name: true } },
         },
+      },
+      guardians: {
+        include: {
+          guardian: {
+            select: { id: true, name: true, phone: true, userId: true },
+          },
+        },
+        orderBy: { isPrimary: "desc" },
       },
     },
   });
@@ -91,6 +102,52 @@ export default async function EditStudentPage({
         routes={routes}
         stops={stops}
       />
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle>연결된 보호자</CardTitle>
+              <CardDescription>
+                보호자 추가·해제는 보호자 화면에서 관리합니다.
+              </CardDescription>
+            </div>
+            <Link
+              href="/guardians"
+              className="text-primary text-sm hover:underline"
+            >
+              보호자 화면으로 →
+            </Link>
+          </div>
+        </CardHeader>
+        <CardContent className="p-0">
+          {student.guardians.length === 0 ? (
+            <p className="text-muted-foreground p-6 text-sm">
+              아직 연결된 보호자가 없어요. 보호자 화면에서 새 초대를 보내세요.
+            </p>
+          ) : (
+            <ul className="divide-y text-sm">
+              {student.guardians.map((g) => (
+                <li
+                  key={g.id}
+                  className="flex items-center justify-between gap-3 px-4 py-2"
+                >
+                  <div>
+                    <span className="font-medium">{g.guardian.name}</span>
+                    <span className="text-muted-foreground ml-2 text-xs">
+                      ({g.relation}
+                      {g.isPrimary ? " · 주" : ""}) · {g.guardian.phone}
+                    </span>
+                  </div>
+                  <span className="text-muted-foreground text-xs">
+                    {g.guardian.userId ? "가입 완료" : "미가입"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </CardContent>
+      </Card>
     </main>
   );
 }
