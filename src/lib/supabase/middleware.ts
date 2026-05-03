@@ -50,7 +50,7 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/_next/") ||
     path.startsWith("/invite/") || // 직원 초대 토큰 가입 (W3-2)
     path.startsWith("/parent-invite/") || // 학부모 초대 토큰 가입 (W4-1)
-    /\.(png|svg|ico|webmanifest|txt)$/.test(path); // 정적 자원 (icon 등)
+    /\.(png|svg|ico|webmanifest|txt|woff2|woff|ttf|otf|eot)$/.test(path); // 정적 자원·폰트
 
   if (!isPublic && !user) {
     const url = request.nextUrl.clone();
