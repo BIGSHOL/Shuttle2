@@ -18,7 +18,7 @@
 | W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정 | `e71961f` | ✅ |
 | W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 | `a2bf51b` | ✅ |
 | W15-C | 약관·개인정보처리방침 + 가입 동의 link | `3c41c2a` | ✅ |
-| W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정 | (다음 commit) | ✅ |
+| W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정 | `684315a` | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
