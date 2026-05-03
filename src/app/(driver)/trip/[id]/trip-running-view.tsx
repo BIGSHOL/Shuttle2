@@ -8,6 +8,7 @@ import {
   Clock,
   MapPin,
   Square,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -16,7 +17,9 @@ import { useWakeLock } from "@/lib/wake-lock/use-wake-lock";
 import {
   assignHelperAction,
   endTripAction,
+  markBoardingIssueAction,
   toggleBoardingEventAction,
+  unmarkBoardingIssueAction,
   upsertSafetyCheckAction,
   type SafetyFieldsInput,
 } from "../../run/actions";
@@ -38,6 +41,12 @@ type StopRow = {
     absence:
       | {
           status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED" | "REJECTED";
+          reason: string | null;
+        }
+      | null;
+    issue:
+      | {
+          type: "NO_SHOW" | "NO_DROPOFF";
           reason: string | null;
         }
       | null;
@@ -360,6 +369,7 @@ export function TripRunningView({
                         gpsLat={gps.fix?.latitude ?? null}
                         gpsLng={gps.fix?.longitude ?? null}
                         absence={st.absence}
+                        issue={st.issue}
                       />
                     ))}
                   </ul>
@@ -550,6 +560,7 @@ function BoardingRow({
   gpsLat,
   gpsLng,
   absence,
+  issue,
 }: {
   tripId: string;
   studentId: string;
@@ -564,9 +575,17 @@ function BoardingRow({
         reason: string | null;
       }
     | null;
+  issue:
+    | {
+        type: "NO_SHOW" | "NO_DROPOFF";
+        reason: string | null;
+      }
+    | null;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState("");
 
   function toggle() {
     setError(null);
@@ -585,7 +604,84 @@ function BoardingRow({
     });
   }
 
+  function reportIssue() {
+    if (reportReason.trim().length === 0) {
+      setError("사유를 입력하세요");
+      return;
+    }
+    setError(null);
+    const issueType = type === "BOARD" ? "NO_SHOW" : "NO_DROPOFF";
+    startTransition(async () => {
+      try {
+        await markBoardingIssueAction({
+          tripId,
+          studentId,
+          type: issueType,
+          reason: reportReason.trim(),
+          lat: gpsLat ?? undefined,
+          lng: gpsLng ?? undefined,
+        });
+        setReportOpen(false);
+        setReportReason("");
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "저장 실패");
+      }
+    });
+  }
+
+  function clearIssue() {
+    if (!issue) return;
+    setError(null);
+    startTransition(async () => {
+      try {
+        await unmarkBoardingIssueAction(tripId, studentId, issue.type);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "해제 실패");
+      }
+    });
+  }
+
   const action = type === "BOARD" ? "탑승" : "하차";
+  const issueLabel = type === "BOARD" ? "미탑승" : "미하차";
+
+  // 미탑승·미하차 마크된 학생: destructive 배경 + 사유 + 해제 버튼
+  if (issue) {
+    return (
+      <li>
+        <div className="border-destructive bg-destructive/10 flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm">
+          <AlertTriangle className="text-destructive h-4 w-4 shrink-0" />
+          <div className="min-w-0 flex-1">
+            <p className="text-destructive truncate font-extrabold">
+              {studentName}{" "}
+              <span className="text-[11px]">
+                — {issue.type === "NO_SHOW" ? "미탑승" : "미하차"}
+              </span>
+            </p>
+            {issue.reason ? (
+              <p className="text-muted-foreground mt-0.5 truncate text-[11px] font-medium">
+                사유: {issue.reason}
+              </p>
+            ) : null}
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="h-7 px-2 text-xs"
+            onClick={clearIssue}
+            disabled={pending}
+          >
+            해제
+          </Button>
+        </div>
+        {error ? (
+          <p className="text-destructive mt-0.5 px-3 text-[10px] font-medium">
+            {error}
+          </p>
+        ) : null}
+      </li>
+    );
+  }
 
   // 결석 신청된 학생: 회색 배경 + "결석" 뱃지 + 사유 (있으면). 탑승 토글
   // 자체는 막지 않음 — driver가 학부모 사정 변경됐을 수 있음.
@@ -638,34 +734,124 @@ function BoardingRow({
 
   return (
     <li>
-      <button
-        type="button"
-        disabled={pending}
-        onClick={toggle}
-        className={
-          checked
-            ? "border-success bg-success-soft text-success flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
-            : "border-input bg-background hover:bg-muted active:bg-muted flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
-        }
-      >
-        <span
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          disabled={pending}
+          onClick={toggle}
           className={
             checked
-              ? "bg-success text-success-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
-              : "border-input flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
+              ? "border-success bg-success-soft text-success flex flex-1 items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
+              : "border-input bg-background hover:bg-muted active:bg-muted flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
           }
         >
-          {checked ? <Check className="h-3.5 w-3.5" /> : null}
-        </span>
-        <span className="min-w-0 flex-1 truncate">{studentName}</span>
-        <span className="text-muted-foreground text-xs font-bold whitespace-nowrap">
-          {action}
-        </span>
-      </button>
+          <span
+            className={
+              checked
+                ? "bg-success text-success-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
+                : "border-input flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
+            }
+          >
+            {checked ? <Check className="h-3.5 w-3.5" /> : null}
+          </span>
+          <span className="min-w-0 flex-1 truncate">{studentName}</span>
+          <span className="text-muted-foreground text-xs font-bold whitespace-nowrap">
+            {action}
+          </span>
+        </button>
+        {!checked ? (
+          <button
+            type="button"
+            onClick={() => setReportOpen(true)}
+            disabled={pending}
+            className="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border disabled:opacity-60"
+            title={`${issueLabel} 보고`}
+            aria-label={`${issueLabel} 보고`}
+          >
+            <AlertTriangle className="h-4 w-4" />
+          </button>
+        ) : null}
+      </div>
       {error ? (
         <p className="text-destructive mt-0.5 px-3 text-[10px] font-medium">
           {error}
         </p>
+      ) : null}
+
+      {/* 사유 다이얼로그 (간단 모달) */}
+      {reportOpen ? (
+        <div
+          className="bg-foreground/40 fixed inset-0 z-50 flex items-end justify-center sm:items-center"
+          onClick={() => !pending && setReportOpen(false)}
+        >
+          <div
+            className="bg-card w-full max-w-md rounded-t-2xl border p-5 shadow-xl sm:rounded-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-start gap-2">
+              <span className="bg-destructive/10 text-destructive flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-base font-extrabold tracking-tight">
+                  {studentName} {issueLabel} 보고
+                </h3>
+                <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+                  {type === "BOARD"
+                    ? "정류장에서 학생이 보이지 않으면 사유를 적고 보고하세요. 학부모·학원장에 즉시 푸시 알림이 갑니다."
+                    : "정류장에서 학생이 내리지 못한 경우 사유와 후속 조치를 적으세요. 매우 위험 — 학부모·학원장에 즉시 경고됩니다."}
+                </p>
+              </div>
+            </div>
+            <textarea
+              value={reportReason}
+              onChange={(e) => setReportReason(e.target.value)}
+              maxLength={200}
+              rows={3}
+              placeholder={
+                type === "BOARD"
+                  ? "예: 부모님과 통화했으나 안 나옴 / 결석 사전 미통보 / 시간 늦음 후 불가능"
+                  : "예: 잠들어 있어 종점까지 동승 / 보호자 미도착 → 학원으로 복귀"
+              }
+              className="border-input bg-background mt-3 w-full rounded-xl border p-3 text-sm font-medium"
+              disabled={pending}
+              autoFocus
+            />
+            {error ? (
+              <p className="text-destructive mt-1.5 text-xs font-medium">
+                {error}
+              </p>
+            ) : null}
+            <div className="mt-3 flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="flex-1"
+                onClick={() => {
+                  setReportOpen(false);
+                  setReportReason("");
+                  setError(null);
+                }}
+                disabled={pending}
+              >
+                <X className="mr-1 h-3.5 w-3.5" />
+                취소
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                size="sm"
+                className="flex-1 font-extrabold"
+                onClick={reportIssue}
+                disabled={pending}
+              >
+                <AlertTriangle className="mr-1 h-3.5 w-3.5" />
+                {pending ? "보고 중..." : `${issueLabel} 보고`}
+              </Button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </li>
   );

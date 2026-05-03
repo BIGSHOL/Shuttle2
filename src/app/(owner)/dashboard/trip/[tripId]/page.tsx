@@ -76,7 +76,13 @@ export default async function OwnerTripDetailPage({
       safetyCheck: true,
       events: {
         orderBy: { at: "asc" },
-        select: { id: true, studentId: true, type: true, at: true },
+        select: {
+          id: true,
+          studentId: true,
+          type: true,
+          at: true,
+          notes: true,
+        },
       },
     },
   });
@@ -99,10 +105,23 @@ export default async function OwnerTripDetailPage({
   // BoardingEvent를 student+type 키로 모음
   const boardedAt = new Map<string, Date>();
   const alightedAt = new Map<string, Date>();
+  const issueByStudent = new Map<
+    string,
+    { type: "NO_SHOW" | "NO_DROPOFF"; reason: string | null; at: Date }
+  >();
   for (const e of trip.events) {
     if (e.type === "BOARD") boardedAt.set(e.studentId, e.at);
-    else alightedAt.set(e.studentId, e.at);
+    else if (e.type === "ALIGHT") alightedAt.set(e.studentId, e.at);
+    else if (e.type === "NO_SHOW" || e.type === "NO_DROPOFF") {
+      // 가장 최근 이슈 (asc 정렬이라 마지막 것)
+      issueByStudent.set(e.studentId, {
+        type: e.type,
+        reason: e.notes,
+        at: e.at,
+      });
+    }
   }
+  const issueCount = issueByStudent.size;
 
   // 오늘 결석 학생
   const allStudentIds = trip.route.students.map((rs) => rs.student.id);
@@ -146,7 +165,7 @@ export default async function OwnerTripDetailPage({
   const checkedCount = Array.from(checkedMap.keys()).filter((sid) =>
     allStudentIds.includes(sid),
   ).length;
-  const remaining = totalStudents - absentCount - checkedCount;
+  const remaining = totalStudents - absentCount - checkedCount - issueCount;
 
   return (
     <main className="mx-auto max-w-4xl space-y-4 px-4 py-6 lg:px-6">
@@ -389,6 +408,26 @@ export default async function OwnerTripDetailPage({
         </section>
       ) : null}
 
+      {/* 미탑승·미하차 경고 배너 */}
+      {issueCount > 0 ? (
+        <section className="border-destructive bg-destructive/10 rounded-2xl border-2 p-4 shadow-sm">
+          <div className="flex items-start gap-2">
+            <span className="bg-destructive text-destructive-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+              <AlertTriangle className="h-4 w-4" />
+            </span>
+            <div className="min-w-0 flex-1">
+              <h3 className="text-destructive text-sm font-extrabold tracking-tight">
+                미탑승·미하차 {issueCount}건 발생
+              </h3>
+              <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+                기사가 보고한 즉시 학부모에 푸시가 갔습니다. 정류장별 상세는
+                아래 timeline에서 확인.
+              </p>
+            </div>
+          </div>
+        </section>
+      ) : null}
+
       {/* 정류장 timeline */}
       <section className="bg-card rounded-2xl border p-4 shadow-sm">
         <h3 className="text-sm font-extrabold tracking-tight">
@@ -396,7 +435,7 @@ export default async function OwnerTripDetailPage({
         </h3>
         <p className="text-muted-foreground mt-0.5 text-xs font-medium">
           정류장별 학생 처리 상태. {totalStudents}명 중 {checkedCount}명 처리,
-          결석 {absentCount}명.
+          결석 {absentCount}명{issueCount > 0 ? `, 이슈 ${issueCount}건` : ""}.
         </p>
         <ol className="mt-3 space-y-3">
           {trip.route.stops.map((rs) => {
@@ -418,9 +457,38 @@ export default async function OwnerTripDetailPage({
                 {stopStudents.length > 0 ? (
                   <ul className="mt-2 space-y-1">
                     {stopStudents.map((st) => {
+                      const iss = issueByStudent.get(st.id);
                       const ab = absenceByStudent.get(st.id);
                       const at = checkedMap.get(st.id);
                       const checked = !!at;
+
+                      // 우선순위: ISSUE → ABSENCE → BOARD/ALIGHT
+                      if (iss) {
+                        return (
+                          <li
+                            key={st.id}
+                            className="border-destructive bg-destructive/10 flex items-start gap-2 rounded-lg border-2 px-2.5 py-1.5 text-sm"
+                          >
+                            <AlertTriangle className="text-destructive mt-0.5 h-3.5 w-3.5 shrink-0" />
+                            <div className="min-w-0 flex-1">
+                              <p className="text-destructive flex items-center gap-1.5 font-extrabold">
+                                {st.name}
+                                <span className="bg-destructive text-destructive-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide whitespace-nowrap">
+                                  {iss.type === "NO_SHOW" ? "미탑승" : "미하차"}
+                                </span>
+                              </p>
+                              {iss.reason ? (
+                                <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
+                                  사유: {iss.reason}
+                                </p>
+                              ) : null}
+                            </div>
+                            <span className="text-muted-foreground font-mono text-[11px] font-medium whitespace-nowrap">
+                              {fmtKstHHmm(iss.at)}
+                            </span>
+                          </li>
+                        );
+                      }
                       if (ab) {
                         return (
                           <li

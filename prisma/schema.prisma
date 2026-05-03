@@ -293,6 +293,8 @@ model BoardingEvent {
 enum BoardingType {
   BOARD
   ALIGHT
+  NO_SHOW // 미탑승 (등원 정류장에 안 옴)
+  NO_DROPOFF // 미하차 (하원 정류장에서 못 내림)
 }
 
 // 운행 중 위치 ping (영구 저장, 면책 자료)

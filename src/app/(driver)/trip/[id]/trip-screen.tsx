@@ -43,7 +43,13 @@ export async function TripScreen({ tripId }: { tripId: string }) {
       safetyCheck: true,
       events: {
         orderBy: { at: "desc" },
-        select: { id: true, studentId: true, type: true, at: true },
+        select: {
+          id: true,
+          studentId: true,
+          type: true,
+          at: true,
+          notes: true,
+        },
       },
       driver: { select: { id: true, name: true } },
       helper: { select: { id: true, name: true } },
@@ -160,9 +166,22 @@ export async function TripScreen({ tripId }: { tripId: string }) {
   // BoardingEvent를 student+type 키로 모음
   const boardedSet = new Set<string>();
   const alightedSet = new Set<string>();
+  const issueByStudent = new Map<
+    string,
+    { type: "NO_SHOW" | "NO_DROPOFF"; reason: string | null }
+  >();
+  // events는 at desc 정렬 — 가장 최근 이슈만 살아남음
   for (const e of trip.events) {
     if (e.type === "BOARD") boardedSet.add(e.studentId);
-    else alightedSet.add(e.studentId);
+    else if (e.type === "ALIGHT") alightedSet.add(e.studentId);
+    else if (e.type === "NO_SHOW" || e.type === "NO_DROPOFF") {
+      if (!issueByStudent.has(e.studentId)) {
+        issueByStudent.set(e.studentId, {
+          type: e.type,
+          reason: e.notes,
+        });
+      }
+    }
   }
 
   // 오늘 결석 학생 (route.direction 영향 받는 type만 — 등원 노선이면
@@ -207,11 +226,13 @@ export async function TripScreen({ tripId }: { tripId: string }) {
         radiusM: rs.stop.radiusM,
         students: (studentsByStop.get(rs.stop.id) ?? []).map((s) => {
           const ab = absenceByStudent.get(s.id);
+          const iss = issueByStudent.get(s.id);
           return {
             ...s,
             absence: ab
               ? { status: ab.status, reason: ab.reason }
               : null,
+            issue: iss ? { type: iss.type, reason: iss.reason } : null,
           };
         }),
       }))}

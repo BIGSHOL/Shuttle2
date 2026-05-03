@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-04 (W15-A Owner trip 상세 view + parent-invite 줄바꿈 수정)
+> 마지막 업데이트: 2026-05-04 (W15-B BoardingType NO_SHOW/NO_DROPOFF 확장)
 
 ## 완료된 마일스톤
 
@@ -15,7 +15,8 @@
 | W12 | 학원장 dashboard 재구성 + 실시간 운행 모니터 + owner 토큰 마이그레이션 | `f87e566` | ✅ |
 | W13 | 마케팅 랜딩 디자인 + /pricing 신규 + login/signup 디자인 | `dc75d7a`, `a1b41a4` | ✅ |
 | W14 | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화 | `7776d9b` | ✅ |
-| W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정 | (다음 commit) | ✅ |
+| W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정 | `e71961f` | ✅ |
+| W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 | (다음 commit) | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -110,22 +111,47 @@
 - 실시간 자동 갱신 (Realtime broadcast subscribe) — 현재는 페이지 새로고침 필요
 - 운행 종료 후 LocationPing 경로 시각화 (안전운행기록 면책 자료)
 
-## 다음 우선순위 (W15-B, C, D)
+## W15-B 완료 (BoardingType NO_SHOW/NO_DROPOFF)
 
-### W15-B: BoardingType NO_SHOW/NO_DROPOFF 확장
-- prisma migration: enum 확장
-- 미탑승·미하차 BottomSheet UI (driver/trip)
-- 학부모·학원에 즉시 푸시 (NotificationCategory 매핑)
+### 결과
+- prisma migration `20260503201957_boarding_type_no_show_no_dropoff` — enum 확장
+- `(driver)/run/actions.ts` 신규 액션:
+  - `markBoardingIssueAction` — 미탑승·미하차 등록 + 학부모·학원장 즉시 푸시
+  - `unmarkBoardingIssueAction` — 해제 (실수 누름 대응)
+- `(driver)/trip/[id]/trip-screen.tsx` — issue 정보 BoardingRow에 전달
+- `(driver)/trip/[id]/trip-running-view.tsx`:
+  - BoardingRow 우측에 빨간 ⚠️ 버튼 (미탑승/미하차 보고)
+  - 클릭 시 모달 다이얼로그 (사유 textarea, 200자, 한국어 placeholder)
+  - issue 마크된 학생은 destructive 카드로 표시 + "해제" 버튼
+- `(owner)/dashboard/trip/[tripId]/page.tsx`:
+  - 진행 통계의 "남은 인원"에서 issue 차감
+  - 미탑승·미하차 경고 배너 (발생 시 destructive border-2)
+  - 정류장 timeline에서 issue 학생 우선 표시 (border-2 destructive + 사유 + 시각)
+- 푸시 카테고리 활용: STUDENT_NO_SHOW / STUDENT_NO_DROPOFF (이미 enum 존재)
+
+### 푸시 흐름
+1. 기사가 정류장에서 학생 안 보임 → ⚠️ 보고 → 사유 입력 → 보고
+2. `markBoardingIssueAction` 실행:
+   - BoardingEvent {type:NO_SHOW/NO_DROPOFF, notes:reason} 저장
+   - student.guardians 모두에게 sendToGuardian fan-out (URL: /home)
+   - sendToOwnersOfOrg(student.orgId) — 학원장 모두에게 (URL: /dashboard)
+3. 학부모·학원장 알림 인박스 + 푸시 동시 도착
+
+## 다음 우선순위 (W15-C, D, W16)
 
 ### W15-C: 약관·개인정보처리방침
 - `/terms`, `/privacy` (marketing 그룹 + footer link)
+- 가입 시 동의 체크박스 → 약관 페이지 link
+- 학생 보호자 동의 흐름 명문화
 
 ### W15-D: 비밀번호 재설정
 - `/forgot-password` + Supabase password reset flow
+- 이메일 발송 → 토큰 검증 → 새 비밀번호 입력 → /login
 
-### W16+: Realtime 실시간 갱신
+### W16: Realtime 실시간 갱신
 - Owner trip 상세에서 Realtime 구독 → BoardingEvent·LocationPing 자동 갱신
-- 현재 페이지 새로고침 필요 → SWR or Realtime 5초 폴링
+- Driver의 issue 보고 즉시 owner 화면에 반영 (현재는 새로고침 필요)
+- LocationPing 5초 broadcast → owner 지도에 마커 이동
 
 ## 다음 우선순위 (이번 세션 또는 다음)
 

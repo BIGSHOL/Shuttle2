@@ -9,7 +9,7 @@ import { requireDriver } from "@/lib/auth/session";
 import { requireTripAccess } from "@/lib/auth/trip-access";
 import { todayUtcDateKst } from "@/lib/date/today";
 import { haversineMeters } from "@/lib/geo/distance";
-import { sendToGuardian } from "@/lib/push/server";
+import { sendToGuardian, sendToOwnersOfOrg } from "@/lib/push/server";
 
 // W3-3b: 기사 폰이 직접 좌표를 send. start/end 시 위치는 첫/마지막 ping에서 채워짐.
 
@@ -354,6 +354,123 @@ export async function toggleBoardingEventAction(
   }
 
   revalidatePath(`/trip/${parsed.data.tripId}`);
+}
+
+// ────────────────────────────────────────────────────────────────────
+// 미탑승·미하차 mark — 학부모·학원장 즉시 푸시
+// W15-B: 미탑승은 등원 운행에서 학생이 정류장에 안 옴.
+//        미하차는 하원 운행에서 정류장에서 못 내림 (매우 위험).
+// ────────────────────────────────────────────────────────────────────
+
+const MarkIssueInput = z.object({
+  tripId: z.string().min(1),
+  studentId: z.string().min(1),
+  type: z.enum(["NO_SHOW", "NO_DROPOFF"]),
+  reason: z.string().min(1).max(200),
+  lat: z.number().min(-90).max(90).optional(),
+  lng: z.number().min(-180).max(180).optional(),
+});
+
+export type MarkIssueInputType = z.infer<typeof MarkIssueInput>;
+
+export async function markBoardingIssueAction(
+  input: MarkIssueInputType,
+): Promise<void> {
+  const parsed = MarkIssueInput.safeParse(input);
+  if (!parsed.success) throw new Error("잘못된 입력 데이터");
+
+  await requireTripAccess(parsed.data.tripId);
+
+  // 같은 type이 이미 있으면 갱신, 없으면 새로 생성 (idempotent)
+  const existing = await db.boardingEvent.findFirst({
+    where: {
+      tripId: parsed.data.tripId,
+      studentId: parsed.data.studentId,
+      type: parsed.data.type,
+    },
+    orderBy: { at: "desc" },
+  });
+
+  if (existing) {
+    await db.boardingEvent.update({
+      where: { id: existing.id },
+      data: {
+        notes: parsed.data.reason,
+        lat: parsed.data.lat ?? null,
+        lng: parsed.data.lng ?? null,
+        at: new Date(),
+      },
+    });
+  } else {
+    await db.boardingEvent.create({
+      data: {
+        tripId: parsed.data.tripId,
+        studentId: parsed.data.studentId,
+        type: parsed.data.type,
+        notes: parsed.data.reason,
+        lat: parsed.data.lat ?? null,
+        lng: parsed.data.lng ?? null,
+      },
+    });
+  }
+
+  // 학부모·학원장 푸시 — 자녀의 보호자 모두 + org의 OWNER 모두
+  const student = await db.student.findUnique({
+    where: { id: parsed.data.studentId },
+    select: {
+      name: true,
+      orgId: true,
+      guardians: { select: { guardianId: true } },
+    },
+  });
+
+  if (student) {
+    const isNoShow = parsed.data.type === "NO_SHOW";
+    const title = isNoShow
+      ? `${student.name} 미탑승`
+      : `${student.name} 미하차 — 확인 필요`;
+    const body = isNoShow
+      ? `정류장에 자녀가 보이지 않아 출발했어요. 사유: ${parsed.data.reason}`
+      : `정류장에서 자녀가 내리지 못했어요. 사유: ${parsed.data.reason}`;
+    const category = isNoShow ? "STUDENT_NO_SHOW" : "STUDENT_NO_DROPOFF";
+
+    // 보호자 fan-out
+    for (const g of student.guardians) {
+      await sendToGuardian(g.guardianId, {
+        category,
+        title,
+        body,
+        url: "/home",
+      }).catch((e) => console.error("push to guardian failed:", e));
+    }
+
+    // 학원장 fan-out
+    await sendToOwnersOfOrg(student.orgId, {
+      category,
+      title,
+      body,
+      url: "/dashboard",
+    }).catch((e) => console.error("push to owners failed:", e));
+  }
+
+  revalidatePath(`/trip/${parsed.data.tripId}`);
+  revalidatePath(`/dashboard/trip/${parsed.data.tripId}`);
+}
+
+// 미탑승·미하차 mark 해제 (실수로 누른 경우)
+export async function unmarkBoardingIssueAction(
+  tripId: string,
+  studentId: string,
+  type: "NO_SHOW" | "NO_DROPOFF",
+): Promise<void> {
+  await requireTripAccess(tripId);
+
+  await db.boardingEvent.deleteMany({
+    where: { tripId, studentId, type },
+  });
+
+  revalidatePath(`/trip/${tripId}`);
+  revalidatePath(`/dashboard/trip/${tripId}`);
 }
 
 // ────────────────────────────────────────────────────────────────────
