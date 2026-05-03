@@ -13,7 +13,7 @@
 | W10 | Notification 모델 + StopChangeRequest + 결석 반려 + 학부모/owner 워크플로우 | `abb8a5b`, `00f07eb` | ✅ |
 | W11 | 기사 화면 디자인 (mobile-first + dark gradient running header + tokens) | `b4cb872` | ✅ |
 | W12 | 학원장 dashboard 재구성 + 실시간 운행 모니터 + owner 토큰 마이그레이션 | `f87e566` | ✅ |
-| W13 | 마케팅 랜딩 디자인 + /pricing 신규 + login/signup 디자인 | (다음 commit) | ✅ |
+| W13 | 마케팅 랜딩 디자인 + /pricing 신규 + login/signup 디자인 | `dc75d7a`, `a1b41a4` | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
