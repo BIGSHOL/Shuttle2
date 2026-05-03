@@ -18,7 +18,7 @@ export default async function NewAbsencePage() {
   });
 
   return (
-    <main className="mx-auto max-w-md p-4 sm:p-6">
+    <main className="px-4 pt-4 pb-6">
       <AbsenceForm students={students} />
     </main>
   );

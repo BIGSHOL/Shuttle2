@@ -1,13 +1,11 @@
-import { notFound } from "next/navigation";
-
 import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
 
 import { NotificationList } from "./notification-list";
 
 export default async function NotificationsPage() {
+  // requireGuardian이 미인증이면 throw → middleware가 /login으로 보냄.
   const me = await requireGuardian();
-  if (!me) notFound();
 
   const notifications = await db.notification.findMany({
     where: { userId: me.authUserId },

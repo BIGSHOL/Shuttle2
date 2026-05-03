@@ -48,7 +48,7 @@ export default async function ParentAbsencesPage() {
   });
 
   return (
-    <main className="mx-auto max-w-3xl space-y-4 p-4 sm:p-6">
+    <main className="space-y-4 px-4 pt-4 pb-6">
       <div className="flex items-end justify-between gap-3">
         <div>
           <h2 className="text-xl font-semibold">결석 신청 내역</h2>

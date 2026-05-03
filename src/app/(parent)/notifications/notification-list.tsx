@@ -47,7 +47,10 @@ type Item = {
   createdAt: Date;
 };
 
-const ICON_BY_CAT: Record<NotifyCategory, React.ComponentType<{ className?: string }>> = {
+const ICON_BY_CAT: Record<
+  NotifyCategory,
+  React.ComponentType<{ className?: string }>
+> = {
   TRIP_STARTED: Bus,
   STUDENT_BOARDED: Bus,
   STUDENT_DROPPED_OFF: Check,
@@ -148,60 +151,35 @@ export function NotificationList({ items }: { items: Item[] }) {
             const Icon = ICON_BY_CAT[item.category] ?? Bell;
             const urgent = URGENT_CATS.has(item.category);
             const unread = item.readAt === null;
-            const Wrapper: React.ElementType = item.url ? "button" : "div";
+            const baseClass = `bg-card relative flex w-full items-start gap-3 rounded-2xl border p-3.5 text-left shadow-sm transition-colors ${
+              urgent
+                ? "border-l-destructive border-l-4"
+                : unread
+                  ? "border-bus/40"
+                  : ""
+            }`;
+            const body = (
+              <ItemBody
+                Icon={Icon}
+                urgent={urgent}
+                unread={unread}
+                item={item}
+              />
+            );
             return (
               <li key={item.id}>
-                <Wrapper
-                  onClick={item.url ? () => handleClick(item) : undefined}
-                  disabled={pending}
-                  className={`bg-card relative flex w-full items-start gap-3 rounded-2xl border p-3.5 text-left shadow-sm transition-colors ${
-                    item.url ? "hover:bg-muted/40 active:bg-muted/60" : ""
-                  } ${
-                    urgent
-                      ? "border-l-destructive border-l-4"
-                      : unread
-                        ? "border-bus/40"
-                        : ""
-                  }`}
-                >
-                  <div
-                    className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
-                      urgent
-                        ? "bg-destructive/10 text-destructive"
-                        : unread
-                          ? "bg-bus-soft text-bus-foreground"
-                          : "bg-muted text-muted-foreground"
-                    }`}
+                {item.url ? (
+                  <button
+                    type="button"
+                    onClick={() => handleClick(item)}
+                    disabled={pending}
+                    className={`${baseClass} hover:bg-muted/40 active:bg-muted/60 disabled:opacity-60`}
                   >
-                    <Icon className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p
-                        className={`flex-1 text-sm tracking-tight ${
-                          unread ? "font-extrabold" : "text-muted-foreground font-bold"
-                        }`}
-                      >
-                        {item.title}
-                      </p>
-                      {unread ? (
-                        <span className="bg-bus h-2 w-2 shrink-0 rounded-full" />
-                      ) : null}
-                    </div>
-                    <p
-                      className={`mt-0.5 text-xs ${
-                        unread
-                          ? "text-foreground font-medium"
-                          : "text-muted-foreground font-medium"
-                      }`}
-                    >
-                      {item.body}
-                    </p>
-                    <p className="text-muted-foreground mt-1 text-[11px] font-medium">
-                      {formatRelative(item.createdAt)}
-                    </p>
-                  </div>
-                </Wrapper>
+                    {body}
+                  </button>
+                ) : (
+                  <div className={baseClass}>{body}</div>
+                )}
               </li>
             );
           })}
@@ -212,6 +190,60 @@ export function NotificationList({ items }: { items: Item[] }) {
         <Button asChild variant="ghost" size="sm">
           <Link href="/home">홈으로</Link>
         </Button>
+      </div>
+    </>
+  );
+}
+
+function ItemBody({
+  Icon,
+  urgent,
+  unread,
+  item,
+}: {
+  Icon: React.ComponentType<{ className?: string }>;
+  urgent: boolean;
+  unread: boolean;
+  item: Item;
+}) {
+  return (
+    <>
+      <div
+        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${
+          urgent
+            ? "bg-destructive/10 text-destructive"
+            : unread
+              ? "bg-bus-soft text-bus-foreground"
+              : "bg-muted text-muted-foreground"
+        }`}
+      >
+        <Icon className="h-4 w-4" />
+      </div>
+      <div className="min-w-0 flex-1">
+        <div className="flex items-center gap-2">
+          <p
+            className={`flex-1 truncate text-sm tracking-tight ${
+              unread ? "font-extrabold" : "text-muted-foreground font-bold"
+            }`}
+          >
+            {item.title}
+          </p>
+          {unread ? (
+            <span className="bg-bus h-2 w-2 shrink-0 rounded-full" />
+          ) : null}
+        </div>
+        <p
+          className={`mt-0.5 text-xs ${
+            unread
+              ? "text-foreground font-medium"
+              : "text-muted-foreground font-medium"
+          }`}
+        >
+          {item.body}
+        </p>
+        <p className="text-muted-foreground mt-1 text-[11px] font-medium">
+          {formatRelative(item.createdAt)}
+        </p>
       </div>
     </>
   );
