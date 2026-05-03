@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-04 (W15-D 비밀번호 재설정 흐름)
+> 마지막 업데이트: 2026-05-03 (W16 학원장 trip 상세 실시간 자동 갱신)
 
 ## 완료된 마일스톤
 
@@ -19,6 +19,7 @@
 | W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 | `a2bf51b` | ✅ |
 | W15-C | 약관·개인정보처리방침 + 가입 동의 link | `3c41c2a` | ✅ |
 | W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정 | `684315a` | ✅ |
+| W16 | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh) | _이번_ | ⏳ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -189,12 +190,57 @@
   정식 운영 시 SendGrid/Mailgun 등 SMTP 설정 필요.
 - 이메일 템플릿은 Supabase 대시보드에서 별도 커스터마이즈 (현재 기본 영문)
 
-## 다음 우선순위 (W16+)
+## W16 완료 (학원장 trip 상세 실시간 자동 갱신)
 
-### W16: Realtime 실시간 갱신
-- Owner trip 상세에서 Realtime 구독 → BoardingEvent·LocationPing 자동 갱신
-- Driver의 issue 보고 즉시 owner 화면에 반영 (현재는 새로고침 필요)
-- LocationPing 5초 broadcast → owner 지도에 마커 이동
+### 결과
+- `lib/geo/realtime.ts`: 기존 `trip:<tripId>` 채널에 `update` 이벤트 추가.
+  ping(5초 GPS broadcast)와 같은 채널을 공유하지만 event 이름으로 분기.
+  payload: `{ tripId, reason: "boarding"|"issue"|"safety"|"trip-state", at: ISO }`
+- `lib/geo/publish-trip-update.ts` 신규 — server-only.
+  Supabase Realtime broadcast HTTP API (`/realtime/v1/api/broadcast`)로
+  fire-and-forget. timeout 2s, 실패 시 throw 안 함 (revalidatePath fallback).
+- `lib/geo/use-trip-updates.ts` 신규 — client.
+  `update` 이벤트 구독 → 400ms debounce 후 onUpdate 콜백 호출.
+  여러 변동이 몰릴 때(예: 정류장에서 학생 5명 연속 탑승) 1번만 refresh.
+  반환: 최신 payload (UI 인디케이터용).
+- `(driver)/run/actions.ts`: 6개 액션 직후 publishTripUpdate 호출:
+  - startTripAction/endTripAction → "trip-state"
+  - upsertSafetyCheckAction → "safety"
+  - toggleBoardingEventAction → "boarding"
+  - markBoardingIssueAction/unmarkBoardingIssueAction → "issue"
+  - assignHelperAction → "trip-state"
+- `(owner)/dashboard/trip/[tripId]/_components/trip-realtime-refresher.tsx`
+  신규 — 운행 중일 때만 마운트.
+  router.refresh()로 server component 재실행 → 최신 데이터로 다시 그림.
+  변동 발생 시 화면 하단 "실시간 갱신 — {reason}" 토스트 표출 (animate-in).
+- `(owner)/dashboard/trip/[tripId]/page.tsx`: isRunning일 때만 refresher
+  마운트, 종료된 운행은 정적 (불필요한 채널 점유 회피).
+  하단 안내 문구 "실시간 자동 갱신됨"으로 갱신.
+
+### 디자인 결정
+- **이벤트 payload는 가볍게** — 어떤 데이터가 변했는지 자세히 보내지 않음.
+  client가 router.refresh() 트리거만 받고 server component가 다시 fetch.
+  단일 source of truth + 기존 렌더링 로직 100% 재사용.
+- **broadcast HTTP API 선택** — 서버에서 channel.subscribe→send→removeChannel
+  은 매번 250~500ms 들어 server action이 느려짐. HTTP API는 fire-and-forget
+  ~50ms.
+- **revalidatePath 유지** — broadcast 실패 시 fallback. 다음 페이지 진입은
+  어쨌든 fresh data로.
+- **운행 중일 때만 구독** — 종료·예정 trip은 변동 없으니 채널 미점유.
+
+### 알려진 제약 / 다음 단계
+- LocationPing(GPS)는 학원장 화면에서 아직 시각화 안 함. trip detail에
+  실시간 지도 보려면 useTripBroadcast(ping)와 kakao map 통합 필요.
+  → W16-B 후속 검토.
+- Supabase 측에서 Realtime broadcast HTTP API가 비활성화돼 있으면
+  fetch 가 실패 → 사용자는 새로고침해야 갱신. 운영 시 Supabase 대시보드에서
+  Realtime 설정 확인 필요.
+
+## 다음 우선순위 (W16-B+)
+
+### W16-B: Owner trip 상세 실시간 GPS 지도
+- 기존 `useTripBroadcast` (ping, 5초)로 셔틀 마커 표시
+- LocationPing 영구 저장은 그대로 두고, 화면 표시만 추가
 
 ### W17: 인증·기능 보강
 - 학부모 폰 OTP 가입 (Supabase phone auth + SMS provider)

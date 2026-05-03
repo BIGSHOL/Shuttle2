@@ -9,6 +9,7 @@ import { requireDriver } from "@/lib/auth/session";
 import { requireTripAccess } from "@/lib/auth/trip-access";
 import { todayUtcDateKst } from "@/lib/date/today";
 import { haversineMeters } from "@/lib/geo/distance";
+import { publishTripUpdate } from "@/lib/geo/publish-trip-update";
 import { sendToGuardian, sendToOwnersOfOrg } from "@/lib/push/server";
 
 // W3-3b: 기사 폰이 직접 좌표를 send. start/end 시 위치는 첫/마지막 ping에서 채워짐.
@@ -73,6 +74,7 @@ export async function startTripAction(
     });
   }
 
+  await publishTripUpdate(trip.id, "trip-state");
   revalidatePath("/run");
   redirect(`/trip/${trip.id}`);
 }
@@ -98,6 +100,7 @@ export async function endTripAction(tripId: string): Promise<void> {
     data: { endedAt: new Date() },
   });
 
+  await publishTripUpdate(trip.id, "trip-state");
   revalidatePath("/run");
   revalidatePath(`/trip/${tripId}`);
   redirect("/run");
@@ -197,7 +200,9 @@ async function notifyGuardiansOfStopPass(
 ): Promise<void> {
   const stops = await db.routeStop.findMany({
     where: { routeId },
-    include: { stop: { select: { id: true, name: true, lat: true, lng: true } } },
+    include: {
+      stop: { select: { id: true, name: true, lat: true, lng: true } },
+    },
   });
 
   let bestStopId: string | null = null;
@@ -301,6 +306,7 @@ export async function upsertSafetyCheckAction(
     update: data,
   });
 
+  await publishTripUpdate(tripId, "safety");
   revalidatePath(`/trip/${tripId}`);
 }
 
@@ -353,7 +359,9 @@ export async function toggleBoardingEventAction(
     });
   }
 
+  await publishTripUpdate(parsed.data.tripId, "boarding");
   revalidatePath(`/trip/${parsed.data.tripId}`);
+  revalidatePath(`/dashboard/trip/${parsed.data.tripId}`);
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -453,6 +461,7 @@ export async function markBoardingIssueAction(
     }).catch((e) => console.error("push to owners failed:", e));
   }
 
+  await publishTripUpdate(parsed.data.tripId, "issue");
   revalidatePath(`/trip/${parsed.data.tripId}`);
   revalidatePath(`/dashboard/trip/${parsed.data.tripId}`);
 }
@@ -469,6 +478,7 @@ export async function unmarkBoardingIssueAction(
     where: { tripId, studentId, type },
   });
 
+  await publishTripUpdate(tripId, "issue");
   revalidatePath(`/trip/${tripId}`);
   revalidatePath(`/dashboard/trip/${tripId}`);
 }
@@ -499,5 +509,6 @@ export async function assignHelperAction(
   });
   if (result.count === 0) throw new Error("운행을 찾을 수 없습니다");
 
+  await publishTripUpdate(tripId, "trip-state");
   revalidatePath(`/trip/${tripId}`);
 }

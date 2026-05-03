@@ -15,6 +15,8 @@ import {
 import { db } from "@/lib/db";
 import { requireOwnerTripAccess } from "@/lib/auth/owner-trip-access";
 
+import { TripRealtimeRefresher } from "./_components/trip-realtime-refresher";
+
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
 const ABSENCE_LABEL = {
@@ -26,9 +28,7 @@ const ABSENCE_LABEL = {
 
 function fmtKstHHmm(d: Date | null): string {
   if (!d) return "—";
-  return new Date(d.getTime() + 9 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(11, 16);
+  return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16);
 }
 
 function fmtElapsed(start: Date, end: Date | null): string {
@@ -90,10 +90,7 @@ export default async function OwnerTripDetailPage({
   if (!trip) notFound();
 
   // RouteStop별 학생 매핑
-  const studentsByStop = new Map<
-    string,
-    { id: string; name: string }[]
-  >();
+  const studentsByStop = new Map<string, { id: string; name: string }[]>();
   for (const rs of trip.route.stops) {
     studentsByStop.set(rs.stop.id, []);
   }
@@ -159,9 +156,7 @@ export default async function OwnerTripDetailPage({
   const checkedMap = eventType === "BOARD" ? boardedAt : alightedAt;
 
   const totalStudents = trip.route.students.length;
-  const absentCount = absences.filter(
-    (a) => a.status !== "REJECTED",
-  ).length;
+  const absentCount = absences.filter((a) => a.status !== "REJECTED").length;
   const checkedCount = Array.from(checkedMap.keys()).filter((sid) =>
     allStudentIds.includes(sid),
   ).length;
@@ -169,6 +164,9 @@ export default async function OwnerTripDetailPage({
 
   return (
     <main className="mx-auto max-w-4xl space-y-4 px-4 py-6 lg:px-6">
+      {/* 운행 중일 때만 실시간 자동 갱신 — 종료된 운행은 정적 */}
+      {isRunning ? <TripRealtimeRefresher tripId={tripId} /> : null}
+
       {/* 뒤로가기 + 헤드 */}
       <div className="flex items-center gap-2">
         <Link
@@ -198,7 +196,9 @@ export default async function OwnerTripDetailPage({
             : undefined
         }
       >
-        {isRunning ? <div className="bg-bus absolute inset-x-0 top-0 h-[3px]" /> : null}
+        {isRunning ? (
+          <div className="bg-bus absolute inset-x-0 top-0 h-[3px]" />
+        ) : null}
         <div className="flex items-start justify-between gap-3">
           <div className="min-w-0 flex-1">
             <div className="flex flex-wrap items-center gap-1.5">
@@ -227,7 +227,7 @@ export default async function OwnerTripDetailPage({
               </span>
               {trip.vehicle.mode === "KIDS" ? (
                 isRunning ? (
-                  <span className="bg-white/15 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                  <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
                     KIDS
                   </span>
                 ) : (
@@ -291,15 +291,15 @@ export default async function OwnerTripDetailPage({
             <div
               className={
                 isRunning
-                  ? "bg-white/10 rounded-md p-2"
+                  ? "rounded-md bg-white/10 p-2"
                   : "bg-muted/40 rounded-md p-2"
               }
             >
               <p
                 className={
                   isRunning
-                    ? "opacity-60 font-extrabold uppercase tracking-wide"
-                    : "text-muted-foreground font-extrabold uppercase tracking-wide"
+                    ? "font-extrabold tracking-wide uppercase opacity-60"
+                    : "text-muted-foreground font-extrabold tracking-wide uppercase"
                 }
               >
                 탑승·하차
@@ -311,15 +311,15 @@ export default async function OwnerTripDetailPage({
             <div
               className={
                 isRunning
-                  ? "bg-white/10 rounded-md p-2"
+                  ? "rounded-md bg-white/10 p-2"
                   : "bg-muted/40 rounded-md p-2"
               }
             >
               <p
                 className={
                   isRunning
-                    ? "opacity-60 font-extrabold uppercase tracking-wide"
-                    : "text-muted-foreground font-extrabold uppercase tracking-wide"
+                    ? "font-extrabold tracking-wide uppercase opacity-60"
+                    : "text-muted-foreground font-extrabold tracking-wide uppercase"
                 }
               >
                 결석
@@ -331,15 +331,15 @@ export default async function OwnerTripDetailPage({
             <div
               className={
                 isRunning
-                  ? "bg-white/10 rounded-md p-2"
+                  ? "rounded-md bg-white/10 p-2"
                   : "bg-muted/40 rounded-md p-2"
               }
             >
               <p
                 className={
                   isRunning
-                    ? "opacity-60 font-extrabold uppercase tracking-wide"
-                    : "text-muted-foreground font-extrabold uppercase tracking-wide"
+                    ? "font-extrabold tracking-wide uppercase opacity-60"
+                    : "text-muted-foreground font-extrabold tracking-wide uppercase"
                 }
               >
                 남은 인원
@@ -441,7 +441,7 @@ export default async function OwnerTripDetailPage({
           {trip.route.stops.map((rs) => {
             const stopStudents = studentsByStop.get(rs.stop.id) ?? [];
             return (
-              <li key={rs.id} className="border-l-2 border-l-muted pl-4">
+              <li key={rs.id} className="border-l-muted border-l-2 pl-4">
                 <div className="flex items-center gap-2">
                   <span className="bg-muted text-muted-foreground flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-extrabold">
                     {rs.order}
@@ -534,7 +534,9 @@ export default async function OwnerTripDetailPage({
                             </span>
                           ) : (
                             <span className="text-muted-foreground text-[11px] font-medium whitespace-nowrap">
-                              {eventType === "BOARD" ? "탑승 대기" : "하차 대기"}
+                              {eventType === "BOARD"
+                                ? "탑승 대기"
+                                : "하차 대기"}
                             </span>
                           )}
                         </li>
@@ -553,7 +555,9 @@ export default async function OwnerTripDetailPage({
       </section>
 
       <p className="text-muted-foreground text-center text-[11px] font-medium">
-        실시간 업데이트는 페이지 새로고침. 자동 갱신은 다음 단계에서 추가.
+        {isRunning
+          ? "실시간 자동 갱신됨 — 기사·동승자 액션이 반영되면 자동으로 다시 그립니다."
+          : "운행이 종료되었습니다. 변동 발생 시 새로고침해 주세요."}
       </p>
     </main>
   );
@@ -573,7 +577,9 @@ function StaffRow({
   Icon: React.ComponentType<{ className?: string }>;
 }) {
   const cls =
-    tone === "success" ? "bg-success-soft text-success" : "bg-info-soft text-info";
+    tone === "success"
+      ? "bg-success-soft text-success"
+      : "bg-info-soft text-info";
   return (
     <div className="bg-background flex items-center gap-3 rounded-xl border p-3">
       <span
