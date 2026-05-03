@@ -36,42 +36,77 @@
 
 ## 기술 스택
 
-- Next.js 15 (App Router) + TypeScript strict
-- Prisma + PostgreSQL (Supabase)
-- Supabase Auth (이메일·전화 OTP)
+- Next.js 16 (App Router, Turbopack 기본) + TypeScript strict
+  - middleware.ts → **proxy.ts** 마이그레이션됨 (Next.js 16)
+- React 19 (`useActionState`)
+- Prisma 7 + PostgreSQL (Supabase)
+- Supabase Auth (이메일 + 학부모용 토큰 가입)
 - **Supabase Realtime** (기사 → 학부모 실시간 위치 broadcast)
 - **카카오맵 JS SDK** (지도·정류장 위치·실시간 셔틀 마커)
-- Tailwind CSS + shadcn/ui
-- Web Push API + VAPID (학부모 푸시)
+- Tailwind CSS v4 (`@theme inline` 토큰) + shadcn/ui (radix-nova preset)
+- **Pretendard 폰트** (`public/fonts/Pretendard-{Regular,Bold}.ttf` + next/font/local)
+- **lucide-react** 아이콘
+- Web Push API + VAPID + Service Worker (학부모·직원 푸시)
 - Wake Lock API (기사 운행 화면 잠금 방지)
+- @react-pdf/renderer (안전운행기록 PDF 생성)
 - 패키지매니저: pnpm
 - 배포: Vercel + Supabase Cloud (region: Seoul)
-- 모바일은 PWA로 시작, 기사용 네이티브 앱은 W12 이후 검토
+- 모바일은 PWA로 시작, 기사용 네이티브 앱은 W14 이후 검토
+
+## 디자인 토큰 (globals.css `@theme inline`)
+
+- `--bus`, `--bus-soft`, `--bus-foreground` — KIDS·LIVE 노란 컬러
+- `--success` / `--success-soft` — 등원·승인·완료
+- `--warning` / `--warning-soft` — 대기·만료 임박
+- `--info` / `--info-soft` — 하원·정보
+- `--destructive` / `--destructive-foreground` — 만료·반려·이슈
+- `--muted` / `--muted-foreground` — 보조 텍스트·뱃지
+
+**임의 색상 금지** (`bg-[#abc]`, `bg-emerald-100` 등) → 토큰만 사용.
 
 ## 디렉토리 구조
 
 ```
 src/
   app/
-    (marketing)/        # 랜딩, 가격, 사전등록
-    (auth)/             # 로그인·가입·비밀번호 재설정
-    (owner)/            # 학원장 대시보드 (PC 우선)
-    (driver)/           # 기사 PWA 화면 (Wake Lock 적용)
-    (helper)/           # 동승자 PWA 화면 (KIDS만)
-    (parent)/           # 학부모 PWA 화면 (실시간 지도 포함)
-    api/                # Route Handlers
+    (marketing)/        # 랜딩 / pricing / 사전등록 / admin
+    (auth)/             # /login, /signup (학원장 가입)
+    (owner)/            # 학원장 dashboard + CRUD + alerts (PC·태블릿 + 모바일 nav)
+    (driver)/           # 기사 PWA (Wake Lock + GPS)
+      run/, run/notifications/, trip/[id]/
+    (helper)/           # 동승자 PWA (KIDS만, layout 공유)
+    (parent)/           # 학부모 PWA + 카카오맵 + 푸시
+      home/, trip-live/[tripId]/, notifications/, my-absences/, my-stop-changes/
+    api/                # Route Handlers (push subscribe, safety-report PDF)
+    invite/[token]/     # 직원 초대 토큰 가입
+    parent-invite/[token]/  # 학부모 초대 토큰 가입
   lib/
     db.ts               # Prisma client 싱글톤
-    supabase/           # 서버·클라이언트 헬퍼 + Realtime 채널
-    auth/               # 세션·역할 판정
-    map/                # 카카오맵 로더·정류장 헬퍼
-    geo/                # GPS 송신·반경 판정
+    supabase/           # 서버·클라이언트 + Realtime + middleware
+    auth/               # 세션·역할 + requireGuardianTripAccess
+    map/                # 카카오맵 로더·TripLiveMap (heightClass)
+    geo/                # GPS realtime broadcast + 반경 판정
+    push/               # web-push 서버 + Notification 모델 미러
+    pdf/                # @react-pdf/renderer 안전운행기록
+    parent/             # 학부모 dashboard helper (today-trips)
+    date/               # KST 헬퍼 (todayBitKst, todayUtcDateKst)
+    wake-lock/          # 기사 화면 잠금 방지 hook
   components/
-    ui/                 # shadcn/ui
+    ui/                 # shadcn/ui (radix-nova)
+    child-avatar.tsx, mode-badge.tsx, live-pulse-dot.tsx, trip-status-badge.tsx
 prisma/
-  schema.prisma
-  seed.ts
+  schema.prisma         # Org, Vehicle, Route, Stop, Student, Trip, BoardingEvent,
+                        # SafetyCheck, AbsenceRequest, StopChangeRequest,
+                        # Notification, PushSubscription, ...
+  migrations/           # 모든 변경 파일 (RLS는 별도 마이그레이션)
 ```
+
+### 라우트 충돌 회피 패턴
+
+route group 다른 그룹이 같은 path를 만들면 빌드 실패. 우리 패턴:
+- `/notifications` (parent) ↔ `/run/notifications` (driver) ↔ `/dashboard/notifications` (owner)
+- `/absences` (owner) ↔ `/my-absences` (parent)
+- `/stop-change-requests` (owner) ↔ `/my-stop-changes` (parent)
 
 ## 코딩 규약
 
@@ -85,10 +120,11 @@ prisma/
 
 ## 멀티테넌시 규칙 (중요)
 
-- 모든 도메인 테이블은 `orgId` 컬럼 보유.
-- Supabase RLS를 활성화하되, 1차 MVP에서는 애플리케이션 레이어에서
-  `orgId` 강제 (RLS는 W7 결제 직전에 추가).
-- 세션에서 `orgId`를 추출해 쿼리에 항상 주입하는 헬퍼 사용.
+- 모든 도메인 테이블은 `orgId` 컬럼 보유 (예외: `Trip`은 vehicle 통해 derive →
+  `where: { vehicle: { orgId } }` 패턴).
+- Supabase RLS는 W7부터 활성화됨. service_role 키는 Prisma `DIRECT_URL`로 우회.
+  새 도메인 모델 추가 시 마이그레이션에서 `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` 동봉.
+- 세션에서 `orgId`를 추출해 쿼리에 항상 주입하는 헬퍼 사용 (`getOrgId()`).
 
 ## 위치 데이터·보안 규칙
 
@@ -115,17 +151,19 @@ iOS Safari PWA는 백그라운드에서 GPS를 사실상 받지 못한다. 화�
 
 ## 도메인 용어 (코드와 UI 일관성)
 
-- "학원·원" = Organization (어린이집·유치원도 포함)
+- "학원·원" = Organization (어린이집·유치원도 포함, 라벨은 orgType별 분기 — `학생` vs `원아`)
 - "차량" = Vehicle (mode: KIDS | GENERAL)
 - "노선" = Route (direction: PICKUP 등원 | DROPOFF 하원)
 - "정류장" = Stop (lat/lng + radiusM)
 - "학생·원아" = Student
 - "보호자" = Guardian (학부모 또는 본인)
 - "기사" = Driver (Staff role), "동승자" = Helper
-- "운행" = Trip (날짜·노선 단위 인스턴스)
-- "탑승·하차" = BoardingEvent
+- "운행" = Trip (날짜·노선 단위 인스턴스, status는 startedAt/endedAt에서 derive)
+- "탑승·하차" = BoardingEvent (BoardingType: BOARD | ALIGHT)
 - "안전점검" = SafetyCheck (KIDS 모드 운행마다 1건)
-- "결석 신청" = AbsenceRequest
+- "결석 신청" = AbsenceRequest (AbsenceStatus: PENDING | NOTIFIED_DRIVER | ACKNOWLEDGED | REJECTED)
+- "정류장 변경 요청" = StopChangeRequest (RequestStatus: PENDING | APPROVED | REJECTED)
+- "알림" = Notification (NotificationCategory enum, web-push + DB 미러)
 - "위치 ping" = LocationPing (운행 중 위치 기록)
 
 ## 절대 하지 말 것
@@ -141,10 +179,32 @@ iOS Safari PWA는 백그라운드에서 GPS를 사실상 받지 못한다. 화�
 ## 자주 쓰는 명령어
 
 ```
-pnpm dev                # 개발 서버
+pnpm dev                # 개발 서버 (Next.js 16 Turbopack)
 pnpm db:push            # 스키마 → DB 즉시 반영 (개발용)
-pnpm db:migrate         # 마이그레이션 생성·적용
+pnpm db:migrate         # 마이그레이션 생성·적용 (RLS는 별도 .sql 마이그레이션)
 pnpm db:studio          # Prisma Studio
 pnpm lint               # ESLint
 pnpm typecheck          # tsc --noEmit
+pnpm build              # production 빌드 (라우트 충돌 검증)
+vercel deploy --prod --yes  # 프로덕션 배포
 ```
+
+## 진행 현황
+
+`progress.md` — 세션이 끊겨도 웹/앱 클로드 코드에서 이어가도록 마일스톤·결정사항·다음 우선순위 기록.
+
+### 마일스톤 요약 (2026-05-04 기준)
+- W1~W7: 도메인 모델·CRUD·기사·학부모·실시간 GPS·KIDS 안전점검·RLS·보험 D-30·안전교육
+- W8: 마케팅 사전등록 + admin
+- W9: 학부모 home + trip-live 디자인 (Pretendard 적용)
+- W10: Notification + StopChangeRequest + 결석 반려 워크플로우
+- W11: 기사 화면 디자인 (mobile-first + dark gradient running header)
+- W12: 학원장 dashboard 재구성 + 실시간 운행 모니터 + 토큰 마이그레이션
+- W13: 마케팅 랜딩 + /pricing + login/signup 디자인
+
+### 알려진 미해결 (다음 세션)
+- 학부모 폰 OTP 가입 + 푸시 권한 단계
+- Owner-side trip 상세 view (`requireOwnerTripAccess`)
+- BoardingType NO_SHOW/NO_DROPOFF 확장 + 미탑승 시트 UI
+- 약관·개인정보처리방침 페이지
+- 비밀번호 재설정 흐름
