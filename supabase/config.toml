@@ -243,6 +243,13 @@ otp_expiry = 3600
 # subject = "You have been invited"
 # content_path = "./supabase/templates/invite.html"
 
+# 비밀번호 재설정 메일 — W17-A 한국어 커스텀.
+# /forgot-password 흐름이 supabase.auth.resetPasswordForEmail를 호출하면 발송.
+# {{ .ConfirmationURL }}이 /reset-password 로 link됨 (auth.additional_redirect_urls 등록 필요).
+[auth.email.template.recovery]
+subject = "[셔틀이] 비밀번호 재설정 안내"
+content_path = "./supabase/templates/recovery.html"
+
 # Uncomment to customize notification email template
 # [auth.email.notification.password_changed]
 # enabled = true

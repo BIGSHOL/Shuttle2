@@ -21,6 +21,7 @@
 | W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정 | `684315a` | ✅ |
 | W16 | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh) | _이번_ | ⏳ |
 | W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용) | _이번_ | ⏳ |
+| W17-A | Supabase 비밀번호 재설정 메일 한국어 템플릿 (`supabase/templates/recovery.html`) | _이번_ | ⏳ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -254,7 +255,33 @@
   child-stop 플래그를 받게 돼 있어 그대로 사용 가능. 학원장은 전부 false.
 - **운행 중에만 표시** — 종료된 trip의 정적 경로 시각화는 W16-C로 미룸.
 
-## 다음 우선순위 (W17+)
+## W17-A 완료 (Supabase 비밀번호 재설정 메일 한국어)
+
+### 결과
+- `supabase/templates/recovery.html` 신규 — Pretendard 기반 셔틀이 브랜드
+  HTML. 노란 로고 뱃지 + 큰 다크 CTA 버튼 + fallback 링크 + 1시간 유효 안내.
+  `{{ .ConfirmationURL }}` 토큰만 사용 (Supabase가 1회용 link로 채움).
+- `supabase/config.toml` — `[auth.email.template.recovery]` 블록 활성화,
+  subject "[셔틀이] 비밀번호 재설정 안내".
+
+### 적용 방법 (운영자가 수동으로 1번)
+1. `supabase login` (서버에 인증)
+2. `pnpm sb:link` (이미 project-ref 등록됨)
+3. **Supabase 대시보드** → Authentication → Email Templates → Recovery 탭에서
+   `recovery.html` 내용 붙여넣기 + Subject 수정.
+   (CLI 측 `supabase config push`가 templates 동기화를 아직 GA 지원 안함)
+
+### 영향 범위
+- W15-D `(auth)/forgot-password` 흐름이 `resetPasswordForEmail` 호출
+  → 이 템플릿으로 메일 발송됨.
+- 가입 confirmation은 `admin.createUser({ email_confirm: true })`로 bypass
+  중이므로 confirmation.html은 W17-B로 미룸.
+- magic_link, invite는 우리가 자체 토큰 흐름 사용 → 템플릿 불필요.
+
+## 다음 우선순위 (W17-B+)
+
+### W17-B: 가입 확인 메일 한국어 (선택)
+- Supabase email_confirm bypass 해제 시 필요. 베타 시점은 보류.
 
 ### W17: 인증·기능 보강
 - 학부모 폰 OTP 가입 (Supabase phone auth + SMS provider)
