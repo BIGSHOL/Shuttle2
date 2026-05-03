@@ -78,15 +78,24 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
             {pending ? "로그인 중..." : "로그인"}
           </Button>
         </form>
-        <p className="text-muted-foreground mt-4 text-center text-xs font-medium">
-          계정이 없다면{" "}
+        <div className="text-muted-foreground mt-4 flex items-center justify-center gap-3 text-xs font-medium">
           <Link
-            href="/signup"
-            className="text-primary font-bold underline-offset-2 hover:underline"
+            href="/forgot-password"
+            className="hover:text-foreground hover:underline"
           >
-            가입하기
+            비밀번호 찾기
           </Link>
-        </p>
+          <span className="text-muted-foreground/40">·</span>
+          <span>
+            계정이 없다면{" "}
+            <Link
+              href="/signup"
+              className="text-primary font-bold underline-offset-2 hover:underline"
+            >
+              가입하기
+            </Link>
+          </span>
+        </div>
       </div>
 
       <p className="text-muted-foreground text-center text-[11px] font-medium">

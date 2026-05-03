@@ -206,9 +206,17 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - W15-A: Owner-side trip 상세 view (`requireOwnerTripAccess` + `/dashboard/trip/[tripId]`)
 - W15-B: BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 학부모·학원장 푸시
 - W15-C: /terms · /privacy 페이지 + 가입 동의 체크박스 link
+- W15-D: /forgot-password + /reset-password 비밀번호 재설정 흐름
 
 ### 알려진 미해결 (다음 세션)
 - 학부모 폰 OTP 가입 + 푸시 권한 단계
-- 비밀번호 재설정 흐름 (`/forgot-password`)
 - Owner trip 상세 Realtime 자동 갱신 (현재 새로고침 필요)
 - 약관·개인정보처리방침 정식 법무 검토 (현재 베타 임시본)
+- Supabase 이메일 템플릿 한국어 커스터마이즈 (현재 기본 영문)
+- 결제 통합 (Toss Payments 또는 Stripe)
+
+### 환경 변수 가드레일 (W15-D 트러블슈팅 결과)
+- `lib/env.ts` proxy는 `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` 등 server-only 변수까지 검증
+- 따라서 **Client Component에서는 `env.X` 사용 금지** — `process.env.NEXT_PUBLIC_*`을 직접 사용
+- `lib/supabase/client.ts`가 모범 예시 (process.env 직접)
+- Server Component / Server Action / Route Handler에서만 `env.X` 사용

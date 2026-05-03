@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-04 (W15-C 약관·개인정보처리방침 + 가입 동의 link)
+> 마지막 업데이트: 2026-05-04 (W15-D 비밀번호 재설정 흐름)
 
 ## 완료된 마일스톤
 
@@ -17,7 +17,8 @@
 | W14 | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화 | `7776d9b` | ✅ |
 | W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정 | `e71961f` | ✅ |
 | W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 | `a2bf51b` | ✅ |
-| W15-C | 약관·개인정보처리방침 + 가입 동의 link | (다음 commit) | ✅ |
+| W15-C | 약관·개인정보처리방침 + 가입 동의 link | `3c41c2a` | ✅ |
+| W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정 | (다음 commit) | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -158,18 +159,52 @@
   - `(auth)/signup`: 이용약관·개인정보처리방침 동의 체크박스 (필수, has-[:checked]:bg-bus-soft 강조)
   - `parent-invite/[token]/accept-form`: 동의 문구에 두 페이지 link 추가
 
-## 다음 우선순위 (W15-D, W16)
+## W15-D 완료 (비밀번호 재설정)
 
-### W15-D: 비밀번호 재설정
-- `(auth)/forgot-password/page.tsx` — 이메일 입력 → 재설정 링크 발송
-- `(auth)/reset-password/page.tsx` — 토큰 검증 → 새 비밀번호 → /login
-- Supabase Auth `resetPasswordForEmail` API 사용
-- /login에 "비밀번호 찾기" link 복원
+### 결과
+- `(auth)/forgot-password/page.tsx + forgot-form.tsx + actions.ts`:
+  - 이메일 입력 → `supabase.auth.resetPasswordForEmail` 호출
+  - redirectTo: `${proto}://${host}/reset-password` (production·preview·local 모두 대응)
+  - 보안: 가입 여부 무관 항상 success 응답 (계정 enumeration 방지)
+  - success 카드 (success-soft + Check) — "재설정 메일을 보냈어요"
+- `(auth)/reset-password/page.tsx + reset-form.tsx + actions.ts`:
+  - 4-state UI (loading / ready / expired / success)
+  - hash fragment 또는 query code 둘 다 처리:
+    · Implicit flow: `#access_token=...&refresh_token=...&type=recovery` → setSession
+    · PKCE flow: `?code=...` → exchangeCodeForSession
+    · 모두 없으면 expired
+  - `supabase.auth.updateUser({password})` 호출
+  - 성공 후 2.5초 뒤 자동 `/login` redirect
+- middleware: `/forgot-password`, `/reset-password` PUBLIC_PATHS 추가
+- `(auth)/login/login-form.tsx`: "비밀번호 찾기" link 추가 (가입하기 옆)
+
+### 부수 수정
+- **lib/supabase/client.ts**: `env` proxy → `process.env` 직접 사용
+  - 기존: `env.NEXT_PUBLIC_*` 호출 시 proxy가 server-only 변수까지 검증해 client에서 throw
+  - 수정: `process.env.NEXT_PUBLIC_*` (Next.js가 client 번들에 inline)
+  - 영향: 모든 client-side `createClient()` 호출 (현재는 reset-form만 사용 중)
+
+### 알려진 제약 (운영 정착 후)
+- 이메일 발송은 Supabase 기본 SMTP 사용 (베타 한정 무료, 시간당 한도 있음).
+  정식 운영 시 SendGrid/Mailgun 등 SMTP 설정 필요.
+- 이메일 템플릿은 Supabase 대시보드에서 별도 커스터마이즈 (현재 기본 영문)
+
+## 다음 우선순위 (W16+)
 
 ### W16: Realtime 실시간 갱신
 - Owner trip 상세에서 Realtime 구독 → BoardingEvent·LocationPing 자동 갱신
 - Driver의 issue 보고 즉시 owner 화면에 반영 (현재는 새로고침 필요)
 - LocationPing 5초 broadcast → owner 지도에 마커 이동
+
+### W17: 인증·기능 보강
+- 학부모 폰 OTP 가입 (Supabase phone auth + SMS provider)
+- 약관·개인정보처리방침 정식 법무 검토
+- Supabase 이메일 템플릿 한국어 커스터마이즈
+
+### W18: 결제·요금제
+- Toss Payments 또는 Stripe 통합
+- Plan 전환 (TRIAL → BASIC → PRO)
+- 차량 단위 청구 + 세금계산서
 
 ## 다음 우선순위 (이번 세션 또는 다음)
 
