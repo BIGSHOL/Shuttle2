@@ -147,16 +147,22 @@ export default async function GuardiansPage() {
                           <p className="text-muted-foreground mt-1.5 text-xs font-medium">
                             ID {g.loginId ?? "—"} · {g.phone}
                           </p>
+                          {/* 자녀 list: 좁은 폭에서도 이름이 단어 중간에서
+                              끊기지 않도록 name+관계를 whitespace-nowrap으로
+                              한 덩어리로 묶고, flex-wrap으로 해제 버튼이 자리
+                              부족 시 자연스럽게 다음 줄로. */}
                           <ul className="mt-2 space-y-1 text-xs">
                             {g.children.map((c) => (
                               <li
                                 key={c.linkId}
-                                className="flex items-center gap-1.5"
+                                className="flex flex-wrap items-center gap-x-1.5 gap-y-1"
                               >
-                                <span className="font-medium">{c.name}</span>
-                                <span className="text-muted-foreground">
-                                  ({c.relation}
-                                  {c.isPrimary ? " · 주" : ""})
+                                <span className="whitespace-nowrap">
+                                  <span className="font-medium">{c.name}</span>
+                                  <span className="text-muted-foreground ml-1">
+                                    ({c.relation}
+                                    {c.isPrimary ? "·주" : ""})
+                                  </span>
                                 </span>
                                 <UnlinkGuardianLinkButton
                                   linkId={c.linkId}
