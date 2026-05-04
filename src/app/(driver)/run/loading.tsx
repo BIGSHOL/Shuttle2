@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // 기사 /run — 오늘 운행 목록 + 시작 버튼.
 export default function DriverRunLoading() {
   return (
-    <main className="space-y-4 px-4 pt-4 pb-6">
+    <div className="space-y-4 px-4 pt-4 pb-6">
       <div className="space-y-2">
         <Skeleton className="h-6 w-32" />
         <Skeleton className="h-4 w-48" />
@@ -19,6 +19,6 @@ export default function DriverRunLoading() {
           <Skeleton className="h-12 w-full rounded-xl" />
         </div>
       ))}
-    </main>
+    </div>
   );
 }

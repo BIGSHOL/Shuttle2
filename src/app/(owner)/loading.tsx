@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // 대부분에 어울리는 generic skeleton.
 export default function OwnerLoading() {
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="flex items-center justify-between">
         <div className="space-y-2">
           <Skeleton className="h-7 w-32" />
@@ -34,6 +34,6 @@ export default function OwnerLoading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // 알림·결석·정류장 변경 list 페이지에 어울리는 카드 stack.
 export default function ParentLoading() {
   return (
-    <main className="space-y-3 px-4 pt-4 pb-6">
+    <div className="space-y-3 px-4 pt-4 pb-6">
       <Skeleton className="h-6 w-32" />
       {Array.from({ length: 4 }).map((_, i) => (
         <div key={i} className="bg-card space-y-2 rounded-2xl border p-4">
@@ -16,6 +16,6 @@ export default function ParentLoading() {
           <Skeleton className="h-3 w-2/3" />
         </div>
       ))}
-    </main>
+    </div>
   );
 }

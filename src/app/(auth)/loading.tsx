@@ -1,10 +1,12 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
 // (auth) — login·signup·forgot-password·reset-password 카드 form skeleton.
+// page.tsx가 <main>을 가지므로 fallback은 <div>로 — landmark 중복 방지.
+// page.tsx의 outer container와 동일한 시각 위치 유지.
 export default function AuthLoading() {
   return (
-    <main className="mx-auto flex min-h-[100dvh] max-w-md flex-col justify-center px-6 py-10">
-      <div className="bg-card space-y-4 rounded-2xl border p-6">
+    <div className="bg-muted/40 flex min-h-screen items-center justify-center p-4">
+      <div className="bg-card w-full max-w-md space-y-4 rounded-2xl border p-6">
         <div className="space-y-2">
           <Skeleton className="h-6 w-24" />
           <Skeleton className="h-4 w-48" />
@@ -19,6 +21,6 @@ export default function AuthLoading() {
         </div>
         <Skeleton className="h-10 w-full" />
       </div>
-    </main>
+    </div>
   );
 }

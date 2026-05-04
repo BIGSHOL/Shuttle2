@@ -4,7 +4,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // 대신 카드 grid skeleton.
 export default function DashboardLoading() {
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
+    <div className="mx-auto max-w-6xl space-y-6 p-6">
       <div className="space-y-2">
         <Skeleton className="h-7 w-40" />
         <Skeleton className="h-4 w-64" />
@@ -37,6 +37,6 @@ export default function DashboardLoading() {
           </div>
         ))}
       </div>
-    </main>
+    </div>
   );
 }

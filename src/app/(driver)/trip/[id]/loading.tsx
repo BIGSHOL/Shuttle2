@@ -3,7 +3,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 // 기사 trip 운행 화면 — dark gradient 헤더 + 정류장 progress + 종료 버튼.
 export default function DriverTripLoading() {
   return (
-    <main className="space-y-4 px-4 pt-4 pb-6">
+    <div className="space-y-4 px-4 pt-4 pb-6">
       {/* dark gradient 헤더 자리 */}
       <Skeleton className="h-32 w-full rounded-2xl" />
 
@@ -24,6 +24,6 @@ export default function DriverTripLoading() {
 
       {/* 종료 버튼 자리 */}
       <Skeleton className="h-14 w-full rounded-2xl" />
-    </main>
+    </div>
   );
 }
