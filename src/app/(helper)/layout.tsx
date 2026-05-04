@@ -1,6 +1,12 @@
+import { redirect } from "next/navigation";
+
 import { SwRegister } from "@/components/sw-register";
 import { db } from "@/lib/db";
-import { requireHelper } from "@/lib/auth/session";
+import {
+  getCurrentGuardian,
+  getCurrentUser,
+  homePathForRole,
+} from "@/lib/auth/session";
 
 import { DriverHeader } from "@/app/(driver)/driver-header";
 
@@ -10,7 +16,16 @@ export default async function HelperLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireHelper();
+  // 이 그룹은 HELPER 전용. 다른 역할이 잘못 진입하면 본인 home으로.
+  const user = await getCurrentUser();
+  if (!user) {
+    const guardian = await getCurrentGuardian();
+    if (guardian) redirect("/home");
+    redirect("/login?redirectTo=/helper-run");
+  }
+  if (user.staff.role !== "HELPER") {
+    redirect(homePathForRole(user.staff.role));
+  }
 
   // 안 읽은 알림 카운트 (헤더 벨 뱃지)
   const unreadCount = await db.notification.count({

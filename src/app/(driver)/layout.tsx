@@ -1,6 +1,12 @@
+import { redirect } from "next/navigation";
+
 import { SwRegister } from "@/components/sw-register";
 import { db } from "@/lib/db";
-import { requireDriver } from "@/lib/auth/session";
+import {
+  getCurrentGuardian,
+  getCurrentUser,
+  homePathForRole,
+} from "@/lib/auth/session";
 
 import { DriverHeader } from "./driver-header";
 
@@ -11,7 +17,17 @@ export default async function DriverLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const user = await requireDriver();
+  // 이 그룹은 DRIVER 전용. 다른 역할이 잘못 진입하면 본인 home으로,
+  // 미인증은 /login으로 보내 throw 500이 노출되지 않도록.
+  const user = await getCurrentUser();
+  if (!user) {
+    const guardian = await getCurrentGuardian();
+    if (guardian) redirect("/home");
+    redirect("/login?redirectTo=/run");
+  }
+  if (user.staff.role !== "DRIVER") {
+    redirect(homePathForRole(user.staff.role));
+  }
 
   // 안 읽은 알림 카운트 (헤더 벨 뱃지)
   const unreadCount = await db.notification.count({
