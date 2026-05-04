@@ -84,7 +84,7 @@ export default async function RunPage() {
         ) : null}
       </div>
 
-      <details className="bg-card rounded-2xl border px-4 py-3 text-sm shadow-sm">
+      <details className="bg-card rounded-lg border px-4 py-3 text-sm shadow-sm">
         <summary className="text-foreground cursor-pointer text-xs font-bold tracking-wide uppercase">
           운행 전 확인사항
         </summary>
@@ -122,7 +122,7 @@ export default async function RunPage() {
       </details>
 
       {todaysRoutes.length === 0 ? (
-        <div className="bg-card rounded-2xl border p-6 text-center shadow-sm">
+        <div className="bg-card rounded-lg border p-6 text-center shadow-sm">
           <Bus className="text-muted-foreground mx-auto h-8 w-8" />
           <p className="mt-3 text-base font-bold">오늘 배정된 노선이 없어요</p>
           <p className="text-muted-foreground mt-1 text-xs font-medium">
@@ -140,7 +140,7 @@ export default async function RunPage() {
             return (
               <li
                 key={r.id}
-                className="bg-card relative rounded-2xl border p-4 shadow-sm"
+                className="bg-card relative rounded-lg border p-4 shadow-sm"
               >
                 <div className="flex items-start gap-3">
                   <div

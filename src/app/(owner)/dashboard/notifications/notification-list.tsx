@@ -140,7 +140,7 @@ export function NotificationList({ items }: { items: Item[] }) {
       </div>
 
       {items.length === 0 ? (
-        <div className="bg-card rounded-2xl border p-6 text-center">
+        <div className="bg-card rounded-lg border p-6 text-center">
           <Bell className="text-muted-foreground mx-auto h-8 w-8" />
           <p className="mt-3 text-base font-bold">아직 알림이 없어요</p>
           <p className="text-muted-foreground mt-1 text-xs font-medium">
@@ -153,7 +153,7 @@ export function NotificationList({ items }: { items: Item[] }) {
             const Icon = ICON_BY_CAT[item.category] ?? Bell;
             const urgent = URGENT_CATS.has(item.category);
             const unread = item.readAt === null;
-            const baseClass = `bg-card relative flex w-full items-start gap-3 rounded-2xl border p-3.5 text-left shadow-sm transition-colors ${
+            const baseClass = `bg-card relative flex w-full items-start gap-3 rounded-lg border p-3.5 text-left shadow-sm transition-colors ${
               urgent
                 ? "border-l-destructive border-l-4"
                 : unread

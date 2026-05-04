@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function StopChangeNewLoading() {
   return (
     <div className="space-y-4 px-4 pt-4 pb-6">
-      <div className="bg-card space-y-4 rounded-2xl border p-5">
+      <div className="bg-card space-y-4 rounded-lg border p-5">
         <div className="space-y-1.5">
           <Skeleton className="h-4 w-20" />
           <Skeleton className="h-9 w-full" />
@@ -15,7 +15,7 @@ export default function StopChangeNewLoading() {
           <Skeleton className="h-9 w-full" />
         </div>
         {/* 지도 picker */}
-        <Skeleton className="h-[320px] w-full rounded-xl" />
+        <Skeleton className="h-[320px] w-full rounded-md" />
         <div className="space-y-1.5">
           <Skeleton className="h-4 w-16" />
           <Skeleton className="h-20 w-full" />

@@ -200,7 +200,7 @@ export function TripLiveShell({
           <ChildEtaCard eta={childEta} />
         ) : null}
 
-        <div className="bg-muted/40 mt-4 rounded-xl px-3.5 py-2.5">
+        <div className="bg-muted/40 mt-4 rounded-md px-3.5 py-2.5">
           <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
             운행 정보
           </p>
@@ -265,7 +265,7 @@ function ChildEtaCard({
     }
 
     return (
-      <div className="bg-success-soft mt-4 rounded-xl border border-success/30 px-3.5 py-3">
+      <div className="bg-success-soft mt-4 rounded-md border border-success/30 px-3.5 py-3">
         <p className="text-success text-[10px] font-extrabold tracking-wide uppercase">
           자녀 정류장 도착 예상
         </p>
@@ -288,7 +288,7 @@ function ChildEtaCard({
   // 데이터 부족 → scheduledAt 정시 안내
   if (eta.scheduledAt) {
     return (
-      <div className="bg-muted/40 mt-4 rounded-xl px-3.5 py-3">
+      <div className="bg-muted/40 mt-4 rounded-md px-3.5 py-3">
         <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
           자녀 정류장 정시 도착
         </p>

@@ -35,7 +35,7 @@ export function AbsencesPreview({ items }: { items: Item[] }) {
         {items.map((a) => (
           <li
             key={a.id}
-            className="bg-card flex items-center justify-between gap-2 rounded-xl border px-3.5 py-2.5 text-sm shadow-sm"
+            className="bg-card flex items-center justify-between gap-2 rounded-md border px-3.5 py-2.5 text-sm shadow-sm"
           >
             <span>
               <span className="font-bold">{a.studentName}</span>

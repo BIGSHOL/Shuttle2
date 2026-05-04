@@ -7,7 +7,7 @@ export default function ParentLoading() {
     <div className="space-y-3 px-4 pt-4 pb-6">
       <Skeleton className="h-6 w-32" />
       {Array.from({ length: 4 }).map((_, i) => (
-        <div key={i} className="bg-card space-y-2 rounded-2xl border p-4">
+        <div key={i} className="bg-card space-y-2 rounded-lg border p-4">
           <div className="flex items-center justify-between">
             <Skeleton className="h-4 w-28" />
             <Skeleton className="h-4 w-12" />

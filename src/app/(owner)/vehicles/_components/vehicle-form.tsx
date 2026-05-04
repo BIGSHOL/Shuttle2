@@ -121,7 +121,7 @@ export function VehicleForm({
           </div>
 
           {mode === "KIDS" ? (
-            <div className="border-warning/40 bg-warning-soft/40 space-y-4 rounded-xl border p-4">
+            <div className="border-warning/40 bg-warning-soft/40 space-y-4 rounded-md border p-4">
               <p className="text-warning text-sm font-bold">
                 어린이용 모드 — 어린이통학버스 의무 정보
               </p>

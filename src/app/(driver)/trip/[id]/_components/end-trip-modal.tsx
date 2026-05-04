@@ -111,7 +111,7 @@ export function EndTripModal({
       role="dialog"
       aria-modal="true"
     >
-      <div className="bg-card max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border p-5 shadow-lg sm:rounded-2xl">
+      <div className="bg-card max-h-[85vh] w-full max-w-md overflow-y-auto rounded-t-2xl border p-5 shadow-lg sm:rounded-lg">
         <div className="flex items-start justify-between gap-3">
           <div className="flex items-start gap-2">
             <span className="bg-warning-soft text-warning mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
@@ -153,7 +153,7 @@ export function EndTripModal({
             return (
               <li
                 key={item.studentId}
-                className="rounded-xl border p-3 shadow-sm"
+                className="rounded-md border p-3 shadow-sm"
               >
                 <div className="flex items-center justify-between gap-2">
                   <div className="min-w-0">

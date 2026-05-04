@@ -160,7 +160,7 @@ export default async function AdminKpiPage() {
           요금제·기관 유형 분포
         </h3>
         <div className="grid gap-3 lg:grid-cols-2">
-          <div className="bg-card rounded-2xl border p-4 shadow-sm">
+          <div className="bg-card rounded-lg border p-4 shadow-sm">
             <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
               요금제
             </p>
@@ -184,7 +184,7 @@ export default async function AdminKpiPage() {
               ))}
             </ul>
           </div>
-          <div className="bg-card rounded-2xl border p-4 shadow-sm">
+          <div className="bg-card rounded-lg border p-4 shadow-sm">
             <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
               기관 유형
             </p>
@@ -234,7 +234,7 @@ function KpiCard({
           ? "text-muted-foreground"
           : "text-foreground";
   return (
-    <div className="bg-card rounded-2xl border p-4 shadow-sm">
+    <div className="bg-card rounded-lg border p-4 shadow-sm">
       <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
         {label}
       </p>

@@ -25,7 +25,7 @@ export function FormSkeleton({
           <Skeleton className="h-4 w-72" />
         </div>
       ) : null}
-      <div className="bg-card space-y-4 rounded-2xl border p-6">
+      <div className="bg-card space-y-4 rounded-lg border p-6">
         {Array.from({ length: fields }).map((_, i) => (
           <div key={i} className="space-y-1.5">
             <Skeleton className="h-4 w-20" />

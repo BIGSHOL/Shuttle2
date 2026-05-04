@@ -13,7 +13,7 @@ const SHELL =
 function Logo() {
   return (
     <Link href="/" className="flex items-center justify-center gap-2">
-      <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-xl shadow-sm">
+      <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-md shadow-sm">
         <Bus className="h-5 w-5" />
       </span>
       <span className="text-lg font-extrabold tracking-tight">셔틀이</span>
@@ -33,7 +33,7 @@ function ErrorCard({
   return (
     <div className="w-full max-w-md space-y-6">
       <Logo />
-      <div className="bg-card rounded-2xl border p-6 text-center shadow-sm">
+      <div className="bg-card rounded-lg border p-6 text-center shadow-sm">
         <span className="bg-destructive/10 text-destructive mx-auto flex h-12 w-12 items-center justify-center rounded-full">
           <Icon className="h-6 w-6" />
         </span>

@@ -25,13 +25,13 @@ export function SignupForm() {
   return (
     <div className="w-full max-w-md space-y-6">
       <Link href="/" className="flex items-center justify-center gap-2">
-        <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-xl shadow-sm">
+        <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-md shadow-sm">
           <Bus className="h-5 w-5" />
         </span>
         <span className="text-lg font-extrabold tracking-tight">셔틀이</span>
       </Link>
 
-      <div className="bg-card rounded-2xl border p-6 shadow-sm">
+      <div className="bg-card rounded-lg border p-6 shadow-sm">
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight">
             학원·기관 가입
@@ -67,7 +67,7 @@ export function SignupForm() {
               {ORG_TYPE_OPTIONS.map((opt, idx) => (
                 <label
                   key={opt.value}
-                  className="border-input bg-background hover:bg-muted has-[:checked]:border-bus has-[:checked]:bg-bus-soft has-[:checked]:text-bus-foreground flex cursor-pointer items-center justify-center rounded-xl border p-3 text-xs font-bold transition-colors has-[:checked]:font-extrabold"
+                  className="border-input bg-background hover:bg-muted has-[:checked]:border-bus has-[:checked]:bg-bus-soft has-[:checked]:text-bus-foreground flex cursor-pointer items-center justify-center rounded-md border p-3 text-xs font-bold transition-colors has-[:checked]:font-extrabold"
                 >
                   <input
                     type="radio"
@@ -121,7 +121,7 @@ export function SignupForm() {
             ) : null}
           </div>
 
-          <label className="border-input bg-background hover:bg-muted/40 has-[:checked]:border-bus has-[:checked]:bg-bus-soft/40 flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-xs transition-colors">
+          <label className="border-input bg-background hover:bg-muted/40 has-[:checked]:border-bus has-[:checked]:bg-bus-soft/40 flex cursor-pointer items-start gap-2 rounded-md border p-3 text-xs transition-colors">
             <input
               type="checkbox"
               name="agreeTerms"
@@ -150,7 +150,7 @@ export function SignupForm() {
 
           {state.error ? (
             <div
-              className="border-destructive/30 bg-destructive/5 text-destructive rounded-xl border p-2.5 text-xs font-medium"
+              className="border-destructive/30 bg-destructive/5 text-destructive rounded-md border p-2.5 text-xs font-medium"
               role="alert"
             >
               {state.error}
@@ -178,7 +178,7 @@ export function SignupForm() {
         </p>
       </div>
 
-      <div className="bg-card rounded-2xl border p-4 text-center shadow-sm">
+      <div className="bg-card rounded-lg border p-4 text-center shadow-sm">
         <p className="text-xs font-bold">학부모이신가요?</p>
         <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
           기관에서 받은 초대 링크로 자녀를 연결하세요. 별도 가입 불필요.

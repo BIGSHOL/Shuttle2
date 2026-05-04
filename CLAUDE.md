@@ -64,6 +64,19 @@
 
 **임의 색상 금지** (`bg-[#abc]`, `bg-emerald-100` 등) → 토큰만 사용.
 
+## 라운드(둥근 모서리) 스케일
+
+전체 UI 통일. 과도한 라운드는 모바일 PWA 분위기를 망치므로 **소극적**으로.
+
+- `rounded-lg` (8px) — **외곽 컨테이너** (Card·Section·Banner·KPI 카드·dashboard 카드 등)
+- `rounded-md` (6px) — **내부 element** (Button·Input·Badge·Pill·Sub-card·Logo 컨테이너·작은 아이콘 박스 등)
+- `rounded-full` — Avatar·원형 아이콘
+- `rounded-t-2xl` — 모바일 BottomSheet·Modal 상단 (의도적 idiom, 유지)
+- `rounded-3xl` — 마케팅 device frame mock 등 특수 시각 (유지)
+
+**금지**: `rounded-2xl` (외곽), `rounded-xl` (내부) — 너무 round해서 사용 금지.
+새 컴포넌트 추가 시 위 스케일을 따를 것.
+
 ## 디렉토리 구조
 
 ```

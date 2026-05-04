@@ -4,12 +4,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function HelperLoading() {
   return (
     <div className="space-y-4 px-4 pt-4 pb-6">
-      <Skeleton className="h-32 w-full rounded-2xl" />
-      <Skeleton className="h-24 w-full rounded-2xl" />
-      <div className="bg-card space-y-3 rounded-2xl border p-4">
+      <Skeleton className="h-32 w-full rounded-lg" />
+      <Skeleton className="h-24 w-full rounded-lg" />
+      <div className="bg-card space-y-3 rounded-lg border p-4">
         <Skeleton className="h-5 w-32" />
         {Array.from({ length: 4 }).map((_, i) => (
-          <Skeleton key={i} className="h-10 w-full rounded-xl" />
+          <Skeleton key={i} className="h-10 w-full rounded-md" />
         ))}
       </div>
     </div>

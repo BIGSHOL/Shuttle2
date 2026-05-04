@@ -48,7 +48,7 @@ const ORG_TYPE_LABEL = {
 
 export function IdleTripCard(props: IdleCardProps) {
   return (
-    <article className="bg-card rounded-2xl border p-3.5 shadow-sm">
+    <article className="bg-card rounded-lg border p-3.5 shadow-sm">
       <div className="mb-2.5 flex items-center gap-2.5">
         <ChildAvatar name={props.childName} tone="idle" size="default" />
         <div className="flex-1">

@@ -73,7 +73,7 @@ export default async function ParentHomePage() {
       ) : null}
 
       {todayCards.length === 0 ? (
-        <div className="bg-card mx-4 rounded-2xl border p-6 text-center">
+        <div className="bg-card mx-4 rounded-lg border p-6 text-center">
           <p className="text-base font-bold">연결된 자녀가 아직 없어요</p>
           <p className="text-muted-foreground mt-1 text-xs font-medium">
             학원장·원장님께 보호자 초대를 다시 요청해 주세요.

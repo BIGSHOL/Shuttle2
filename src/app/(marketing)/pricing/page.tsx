@@ -158,8 +158,8 @@ export default function PricingPage() {
                 key={p.name}
                 className={
                   p.highlight
-                    ? "border-bus relative rounded-2xl border-2 p-6 shadow-md"
-                    : "bg-card rounded-2xl border p-6 shadow-sm"
+                    ? "border-bus relative rounded-lg border-2 p-6 shadow-md"
+                    : "bg-card rounded-lg border p-6 shadow-sm"
                 }
                 style={
                   p.highlight
@@ -244,7 +244,7 @@ export default function PricingPage() {
             {FAQS.map((f) => (
               <details
                 key={f.q}
-                className="bg-card group rounded-2xl border p-5 shadow-sm"
+                className="bg-card group rounded-lg border p-5 shadow-sm"
               >
                 <summary className="flex cursor-pointer items-center justify-between gap-3 text-base font-extrabold tracking-tight">
                   {f.q}

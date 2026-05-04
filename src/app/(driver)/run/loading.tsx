@@ -10,13 +10,13 @@ export default function DriverRunLoading() {
       </div>
 
       {Array.from({ length: 2 }).map((_, i) => (
-        <div key={i} className="bg-card space-y-3 rounded-2xl border p-4">
+        <div key={i} className="bg-card space-y-3 rounded-lg border p-4">
           <div className="flex items-center justify-between">
             <Skeleton className="h-5 w-36" />
             <Skeleton className="h-6 w-12 rounded-md" />
           </div>
           <Skeleton className="h-3 w-2/3" />
-          <Skeleton className="h-12 w-full rounded-xl" />
+          <Skeleton className="h-12 w-full rounded-md" />
         </div>
       ))}
     </div>

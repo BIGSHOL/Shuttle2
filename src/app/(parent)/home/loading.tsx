@@ -11,13 +11,13 @@ export default function ParentHomeLoading() {
 
       {/* 알림 토글 자리 */}
       <div className="px-4">
-        <Skeleton className="h-12 w-full rounded-2xl" />
+        <Skeleton className="h-12 w-full rounded-lg" />
       </div>
 
       {/* trip 카드 2개 */}
       <div className="space-y-3 px-4">
         {Array.from({ length: 2 }).map((_, i) => (
-          <div key={i} className="bg-card space-y-3 rounded-2xl border p-4">
+          <div key={i} className="bg-card space-y-3 rounded-lg border p-4">
             <div className="flex items-center gap-3">
               <Skeleton className="h-10 w-10 rounded-full" />
               <div className="flex-1 space-y-1">

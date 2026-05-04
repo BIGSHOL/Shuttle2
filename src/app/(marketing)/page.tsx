@@ -214,8 +214,8 @@ export default function MarketingPage() {
             {/* 모바일 mock */}
             <div className="relative">
               <div className="bg-card relative mx-auto max-w-sm rounded-3xl border-8 border-zinc-900 p-3 shadow-2xl">
-                <div className="bg-muted/40 rounded-2xl p-4">
-                  <div className="bg-card mb-3 rounded-xl border p-3 shadow-sm">
+                <div className="bg-muted/40 rounded-lg p-4">
+                  <div className="bg-card mb-3 rounded-md border p-3 shadow-sm">
                     <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
                       운행 중
                     </p>
@@ -224,7 +224,7 @@ export default function MarketingPage() {
                     </p>
                   </div>
                   <div
-                    className="relative mb-3 overflow-hidden rounded-xl p-4 text-white"
+                    className="relative mb-3 overflow-hidden rounded-md p-4 text-white"
                     style={{
                       background: "linear-gradient(155deg, #1a1c22, #0f1014)",
                     }}
@@ -246,7 +246,7 @@ export default function MarketingPage() {
                       ○○아파트 정문 · 5번째 정류장
                     </p>
                   </div>
-                  <div className="bg-card flex items-center gap-2 rounded-xl border p-2.5 shadow-sm">
+                  <div className="bg-card flex items-center gap-2 rounded-md border p-2.5 shadow-sm">
                     <span className="bg-success-soft text-success flex h-7 w-7 items-center justify-center rounded-full">
                       <Check className="h-3.5 w-3.5" />
                     </span>
@@ -288,7 +288,7 @@ export default function MarketingPage() {
               return (
                 <div
                   key={p.title}
-                  className="bg-card rounded-2xl border p-5 shadow-sm"
+                  className="bg-card rounded-lg border p-5 shadow-sm"
                 >
                   <span
                     className={`flex h-10 w-10 items-center justify-center rounded-full ${t}`}
@@ -327,10 +327,10 @@ export default function MarketingPage() {
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="bg-card rounded-2xl border p-6 shadow-sm"
+                className="bg-card rounded-lg border p-6 shadow-sm"
               >
                 <div className="flex items-start gap-3">
-                  <span className="bg-bus-soft text-bus-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-xl">
+                  <span className="bg-bus-soft text-bus-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-md">
                     <f.Icon className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
@@ -364,7 +364,7 @@ export default function MarketingPage() {
               셔틀이 vs 기존 솔루션
             </h3>
           </div>
-          <div className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+          <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
             <table className="w-full text-sm">
               <thead className="bg-muted/50">
                 <tr>
@@ -426,8 +426,8 @@ export default function MarketingPage() {
                 key={p.name}
                 className={
                   p.highlight
-                    ? "border-bus relative rounded-2xl border-2 p-6 shadow-md"
-                    : "bg-card rounded-2xl border p-6 shadow-sm"
+                    ? "border-bus relative rounded-lg border-2 p-6 shadow-md"
+                    : "bg-card rounded-lg border p-6 shadow-sm"
                 }
                 style={
                   p.highlight

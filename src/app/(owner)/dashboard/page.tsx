@@ -304,7 +304,7 @@ export default async function DashboardPage() {
         </div>
 
         {todayTrips.length === 0 ? (
-          <div className="bg-card rounded-2xl border p-6 text-center shadow-sm">
+          <div className="bg-card rounded-lg border p-6 text-center shadow-sm">
             <Bus className="text-muted-foreground mx-auto h-8 w-8" />
             <p className="mt-3 text-base font-bold">오늘 운행이 없어요</p>
             <p className="text-muted-foreground mt-1 text-xs font-medium">
@@ -352,7 +352,7 @@ export default async function DashboardPage() {
       {/* 미해결 알림 */}
       {repeatNoShowAlerts.length > 0 ? (
         <section>
-          <div className="border-destructive/40 bg-destructive/5 rounded-2xl border p-4 shadow-sm">
+          <div className="border-destructive/40 bg-destructive/5 rounded-lg border p-4 shadow-sm">
             <div className="flex items-start gap-2">
               <span className="bg-destructive/15 text-destructive mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
                 <AlertTriangle className="h-4 w-4" />
@@ -372,7 +372,7 @@ export default async function DashboardPage() {
               {repeatNoShowAlerts.map((s) => (
                 <li
                   key={s.id}
-                  className="bg-background flex items-center justify-between gap-3 rounded-xl border px-3 py-2"
+                  className="bg-background flex items-center justify-between gap-3 rounded-md border px-3 py-2"
                 >
                   <div className="flex flex-1 items-center gap-2">
                     <span className="text-sm font-bold">{s.name}</span>
@@ -395,7 +395,7 @@ export default async function DashboardPage() {
 
       {trainingAlerts.length > 0 ? (
         <section>
-          <div className="border-warning bg-warning-soft/40 rounded-2xl border p-4 shadow-sm">
+          <div className="border-warning bg-warning-soft/40 rounded-lg border p-4 shadow-sm">
             <div className="flex items-start gap-2">
               <span className="bg-warning text-warning-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
                 <GraduationCap className="h-4 w-4" />
@@ -426,7 +426,7 @@ export default async function DashboardPage() {
                   <li key={s.id}>
                     <Link
                       href="/training"
-                      className="bg-background hover:bg-muted/40 flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-colors"
+                      className="bg-background hover:bg-muted/40 flex items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors"
                     >
                       <span className="flex items-center gap-2 text-sm font-bold">
                         {s.name}
@@ -455,7 +455,7 @@ export default async function DashboardPage() {
 
       {expiringVehicles.length > 0 ? (
         <section>
-          <div className="border-warning bg-warning-soft/40 rounded-2xl border p-4 shadow-sm">
+          <div className="border-warning bg-warning-soft/40 rounded-lg border p-4 shadow-sm">
             <div className="flex items-start gap-2">
               <span className="bg-warning text-warning-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
                 <ShieldAlert className="h-4 w-4" />
@@ -484,7 +484,7 @@ export default async function DashboardPage() {
                   <li key={v.id}>
                     <Link
                       href={`/vehicles/${v.id}/edit`}
-                      className="bg-background hover:bg-muted/40 flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-colors"
+                      className="bg-background hover:bg-muted/40 flex items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors"
                     >
                       <span className="flex items-center gap-2 font-mono text-sm font-bold">
                         {v.plate}
@@ -572,7 +572,7 @@ function KpiCard({
 }) {
   const t = TONE_CLS[tone];
   return (
-    <div className="bg-card rounded-2xl border p-4 shadow-sm">
+    <div className="bg-card rounded-lg border p-4 shadow-sm">
       <div className="flex items-center gap-2">
         <span
           className={`flex h-8 w-8 items-center justify-center rounded-full ${t.bg} ${t.text}`}
@@ -633,7 +633,7 @@ function TripMonitorCard({
       <li>
         <Link
           href={`/dashboard/trip/${tripId}`}
-          className="relative block overflow-hidden rounded-2xl p-4 text-white shadow-md transition-opacity hover:opacity-95"
+          className="relative block overflow-hidden rounded-lg p-4 text-white shadow-md transition-opacity hover:opacity-95"
           style={{
             background: "linear-gradient(155deg, #1a1c22, #0f1014)",
           }}
@@ -706,9 +706,9 @@ function TripMonitorCard({
       ? {
           href: `/dashboard/trip/${tripId}`,
           className:
-            "bg-card hover:bg-muted/40 block rounded-2xl border p-4 shadow-sm transition-colors",
+            "bg-card hover:bg-muted/40 block rounded-lg border p-4 shadow-sm transition-colors",
         }
-      : { className: "bg-card rounded-2xl border p-4 shadow-sm" };
+      : { className: "bg-card rounded-lg border p-4 shadow-sm" };
 
   return (
     <li>
@@ -781,7 +781,7 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="bg-card hover:border-primary hover:bg-muted/40 flex items-center justify-between rounded-2xl border p-4 shadow-sm transition-colors"
+      className="bg-card hover:border-primary hover:bg-muted/40 flex items-center justify-between rounded-lg border p-4 shadow-sm transition-colors"
     >
       <div>
         <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">

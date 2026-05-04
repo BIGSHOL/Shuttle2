@@ -35,14 +35,14 @@ export function ParentAcceptForm({
   return (
     <div className="w-full max-w-md space-y-6">
       <Link href="/" className="flex items-center justify-center gap-2">
-        <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-xl shadow-sm">
+        <span className="bg-bus text-bus-foreground flex h-9 w-9 items-center justify-center rounded-md shadow-sm">
           <Bus className="h-5 w-5" />
         </span>
         <span className="text-lg font-extrabold tracking-tight">셔틀이</span>
       </Link>
 
       {/* 초대 정보 카드 */}
-      <div className="bg-card rounded-2xl border p-5 shadow-sm">
+      <div className="bg-card rounded-lg border p-5 shadow-sm">
         <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
           초대 정보
         </p>
@@ -93,7 +93,7 @@ export function ParentAcceptForm({
       </div>
 
       {/* 가입 폼 */}
-      <div className="bg-card rounded-2xl border p-6 shadow-sm">
+      <div className="bg-card rounded-lg border p-6 shadow-sm">
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight">학부모 가입</h2>
           <p className="text-muted-foreground mt-1 text-sm font-medium">
@@ -153,7 +153,7 @@ export function ParentAcceptForm({
             ) : null}
           </div>
 
-          <label className="border-input bg-background hover:bg-muted/40 has-[:checked]:border-bus has-[:checked]:bg-bus-soft/40 flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm transition-colors">
+          <label className="border-input bg-background hover:bg-muted/40 has-[:checked]:border-bus has-[:checked]:bg-bus-soft/40 flex cursor-pointer items-start gap-2 rounded-md border p-3 text-sm transition-colors">
             <input
               type="checkbox"
               name="consentMinor"
@@ -188,7 +188,7 @@ export function ParentAcceptForm({
 
           {state.error ? (
             <div
-              className="border-destructive/30 bg-destructive/5 text-destructive rounded-xl border p-2.5 text-xs font-medium"
+              className="border-destructive/30 bg-destructive/5 text-destructive rounded-md border p-2.5 text-xs font-medium"
               role="alert"
             >
               {state.error}

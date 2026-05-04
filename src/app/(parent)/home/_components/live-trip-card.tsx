@@ -34,7 +34,7 @@ export function LiveTripCard({
   return (
     <Link
       href={`/trip-live/${tripId}`}
-      className="relative block overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-950 p-4 text-white shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
+      className="relative block overflow-hidden rounded-lg bg-gradient-to-br from-zinc-900 to-zinc-950 p-4 text-white shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
     >
       {/* 노란 accent stripe */}
       <div className="from-bus pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r to-transparent" />
@@ -53,7 +53,7 @@ export function LiveTripCard({
         </span>
       </div>
 
-      <div className="bg-bus-soft/10 border-bus/15 rounded-xl border px-3.5 py-3">
+      <div className="bg-bus-soft/10 border-bus/15 rounded-md border px-3.5 py-3">
         <div className="flex items-center gap-2.5">
           <div className="bg-bus/20 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
             <MapPin className="text-bus h-4 w-4" />

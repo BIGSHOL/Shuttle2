@@ -215,8 +215,8 @@ export default async function OwnerTripDetailPage({
       <section
         className={
           isRunning
-            ? "relative overflow-hidden rounded-2xl p-5 text-white shadow-md"
-            : "bg-card rounded-2xl border p-5 shadow-sm"
+            ? "relative overflow-hidden rounded-lg p-5 text-white shadow-md"
+            : "bg-card rounded-lg border p-5 shadow-sm"
         }
         style={
           isRunning
@@ -384,7 +384,7 @@ export default async function OwnerTripDetailPage({
 
       {/* 라이브 GPS 지도 (운행 중일 때만) */}
       {isRunning ? (
-        <section className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+        <section className="bg-card overflow-hidden rounded-lg border shadow-sm">
           <div className="border-b px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-extrabold tracking-tight">
@@ -409,7 +409,7 @@ export default async function OwnerTripDetailPage({
 
       {/* 종료된 운행: GPS 경로 재생 (LocationPing trail) */}
       {isFinished && trail.length > 0 ? (
-        <section className="bg-card overflow-hidden rounded-2xl border shadow-sm">
+        <section className="bg-card overflow-hidden rounded-lg border shadow-sm">
           <div className="border-b px-4 py-3">
             <div className="flex items-center justify-between gap-2">
               <h3 className="text-sm font-extrabold tracking-tight">
@@ -437,7 +437,7 @@ export default async function OwnerTripDetailPage({
       ) : null}
 
       {/* 운행자 정보 */}
-      <section className="bg-card rounded-2xl border p-4 shadow-sm">
+      <section className="bg-card rounded-lg border p-4 shadow-sm">
         <h3 className="text-sm font-extrabold tracking-tight">운행자</h3>
         <div className="mt-2 grid gap-2 sm:grid-cols-2">
           <StaffRow
@@ -456,7 +456,7 @@ export default async function OwnerTripDetailPage({
               Icon={ShieldCheck}
             />
           ) : trip.vehicle.mode === "KIDS" ? (
-            <div className="border-warning/30 bg-warning-soft/40 rounded-xl border p-3">
+            <div className="border-warning/30 bg-warning-soft/40 rounded-md border p-3">
               <p className="text-warning inline-flex items-center gap-1.5 text-xs font-extrabold">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 동승보호자 미지정
@@ -471,7 +471,7 @@ export default async function OwnerTripDetailPage({
 
       {/* 안전점검 (어린이용 모드만) */}
       {trip.vehicle.mode === "KIDS" ? (
-        <section className="border-warning/30 bg-warning-soft/40 rounded-2xl border p-4">
+        <section className="border-warning/30 bg-warning-soft/40 rounded-lg border p-4">
           <h3 className="text-sm font-extrabold tracking-tight">
             안전점검 (어린이용)
           </h3>
@@ -494,7 +494,7 @@ export default async function OwnerTripDetailPage({
 
       {/* 미탑승·미하차 경고 배너 */}
       {issueCount > 0 ? (
-        <section className="border-destructive bg-destructive/10 rounded-2xl border-2 p-4 shadow-sm">
+        <section className="border-destructive bg-destructive/10 rounded-lg border-2 p-4 shadow-sm">
           <div className="flex items-start gap-2">
             <span className="bg-destructive text-destructive-foreground mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
               <AlertTriangle className="h-4 w-4" />
@@ -513,7 +513,7 @@ export default async function OwnerTripDetailPage({
       ) : null}
 
       {/* 정류장 timeline */}
-      <section className="bg-card rounded-2xl border p-4 shadow-sm">
+      <section className="bg-card rounded-lg border p-4 shadow-sm">
         <h3 className="text-sm font-extrabold tracking-tight">
           정류장·{eventType === "BOARD" ? "탑승" : "하차"} 진행
         </h3>
@@ -665,7 +665,7 @@ function StaffRow({
       ? "bg-success-soft text-success"
       : "bg-info-soft text-info";
   return (
-    <div className="bg-background flex items-center gap-3 rounded-xl border p-3">
+    <div className="bg-background flex items-center gap-3 rounded-md border p-3">
       <span
         className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${cls}`}
       >

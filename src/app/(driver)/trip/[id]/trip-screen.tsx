@@ -67,7 +67,7 @@ export async function TripScreen({ tripId }: { tripId: string }) {
       new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16);
     return (
       <main className="space-y-4 px-4 pt-4 pb-6">
-        <div className="bg-card rounded-2xl border p-5 shadow-sm">
+        <div className="bg-card rounded-lg border p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="bg-success-soft text-success flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
               <Check className="h-5 w-5" />
@@ -108,7 +108,7 @@ export async function TripScreen({ tripId }: { tripId: string }) {
             </div>
           </dl>
           {trip.vehicle.mode === "KIDS" && sc ? (
-            <div className="border-warning/30 bg-warning-soft/40 mt-4 rounded-xl border p-3 text-xs font-medium">
+            <div className="border-warning/30 bg-warning-soft/40 mt-4 rounded-md border p-3 text-xs font-medium">
               <p className="text-foreground/80 mb-1.5 text-[10px] font-extrabold tracking-wide">
                 안전점검 (어린이용)
               </p>

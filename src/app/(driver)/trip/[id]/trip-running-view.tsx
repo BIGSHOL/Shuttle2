@@ -236,7 +236,7 @@ export function TripRunningView({
     <main className="space-y-4 px-4 pt-4 pb-6">
       {/* Wake Lock 미지원 — sticky 경고 */}
       {!wakeLock.supported ? (
-        <div className="border-warning bg-warning-soft text-warning-foreground rounded-2xl border p-3 text-xs font-medium">
+        <div className="border-warning bg-warning-soft text-warning-foreground rounded-lg border p-3 text-xs font-medium">
           <p className="text-warning inline-flex items-center gap-1.5 text-sm font-extrabold">
             <AlertTriangle className="h-4 w-4" />
             화면 자동 꺼짐 방지가 지원되지 않습니다
@@ -252,7 +252,7 @@ export function TripRunningView({
       {isKidsMode &&
       !helper &&
       stops.reduce((acc, s) => acc + s.students.length, 0) >= 1 ? (
-        <div className="border-destructive bg-destructive/10 rounded-2xl border p-3">
+        <div className="border-destructive bg-destructive/10 rounded-lg border p-3">
           <p className="text-destructive inline-flex items-center gap-1.5 text-sm font-extrabold">
             <CircleAlert className="h-4 w-4" />
             동승보호자가 지정되지 않았어요
@@ -266,7 +266,7 @@ export function TripRunningView({
 
       {/* 운행 헤드 — dark gradient + 노란 accent stripe */}
       <div
-        className="relative overflow-hidden rounded-2xl p-4 text-white shadow-md"
+        className="relative overflow-hidden rounded-lg p-4 text-white shadow-md"
         style={{
           background: "linear-gradient(155deg, #1a1c22, #0f1014)",
         }}
@@ -382,7 +382,7 @@ export function TripRunningView({
       ) : null}
 
       {/* 정류장 진행도 + 학생 탑승·하차 토글 */}
-      <section className="bg-card rounded-2xl border p-4 shadow-sm">
+      <section className="bg-card rounded-lg border p-4 shadow-sm">
         <div className="mb-3 flex items-end justify-between gap-3">
           <div>
             <h3 className="text-base font-extrabold tracking-tight">
@@ -470,7 +470,7 @@ export function TripRunningView({
 
       {/* 운행 종료 — driver만 */}
       {isDriver ? (
-        <div className="border-destructive/30 bg-destructive/5 space-y-2 rounded-2xl border p-4">
+        <div className="border-destructive/30 bg-destructive/5 space-y-2 rounded-lg border p-4">
           <Button
             type="button"
             variant="destructive"
@@ -552,7 +552,7 @@ function SafetyCheckCard({
   const alighted = safetyCheck?.allAlightedOk ?? false;
 
   return (
-    <section className="border-warning/30 bg-warning-soft/40 rounded-2xl border p-4">
+    <section className="border-warning/30 bg-warning-soft/40 rounded-lg border p-4">
       <div className="flex items-start gap-2">
         <span className="bg-warning text-warning-foreground mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full">
           <AlertTriangle className="h-3.5 w-3.5" />
@@ -622,8 +622,8 @@ function CheckboxRow({
       onClick={onClick}
       className={
         checked
-          ? "border-success bg-success-soft text-success flex w-full items-center gap-3 rounded-xl border-2 px-3.5 py-3 text-left text-sm font-extrabold disabled:opacity-60"
-          : "border-input bg-background hover:bg-muted active:bg-muted flex w-full items-center gap-3 rounded-xl border px-3.5 py-3 text-left text-sm font-bold disabled:opacity-60"
+          ? "border-success bg-success-soft text-success flex w-full items-center gap-3 rounded-md border-2 px-3.5 py-3 text-left text-sm font-extrabold disabled:opacity-60"
+          : "border-input bg-background hover:bg-muted active:bg-muted flex w-full items-center gap-3 rounded-md border px-3.5 py-3 text-left text-sm font-bold disabled:opacity-60"
       }
     >
       <span
@@ -740,7 +740,7 @@ function BoardingRow({
   if (issue) {
     return (
       <li>
-        <div className="border-destructive bg-destructive/10 flex items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm">
+        <div className="border-destructive bg-destructive/10 flex items-center gap-2 rounded-md border-2 px-3 py-2.5 text-sm">
           <AlertTriangle className="text-destructive h-4 w-4 shrink-0" />
           <div className="min-w-0 flex-1">
             <p className="text-destructive truncate font-extrabold">
@@ -792,8 +792,8 @@ function BoardingRow({
           onClick={toggle}
           className={
             checked
-              ? "border-success bg-success-soft text-success flex w-full items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
-              : "border-warning/40 bg-warning-soft/50 text-muted-foreground hover:bg-warning-soft/80 flex w-full items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-medium line-through disabled:opacity-60"
+              ? "border-success bg-success-soft text-success flex w-full items-center gap-2 rounded-md border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
+              : "border-warning/40 bg-warning-soft/50 text-muted-foreground hover:bg-warning-soft/80 flex w-full items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm font-medium line-through disabled:opacity-60"
           }
         >
           <span
@@ -832,7 +832,7 @@ function BoardingRow({
       <div
         className={
           expiredHighlight
-            ? "ring-warning relative flex animate-pulse items-center gap-1.5 rounded-xl ring-2 ring-offset-1"
+            ? "ring-warning relative flex animate-pulse items-center gap-1.5 rounded-md ring-2 ring-offset-1"
             : "flex items-center gap-1.5"
         }
       >
@@ -842,10 +842,10 @@ function BoardingRow({
           onClick={toggle}
           className={
             checked
-              ? "border-success bg-success-soft text-success flex flex-1 items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
+              ? "border-success bg-success-soft text-success flex flex-1 items-center gap-2 rounded-md border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
               : expiredHighlight
-                ? "border-warning bg-warning-soft hover:bg-warning-soft/80 active:bg-warning-soft/80 text-foreground flex flex-1 items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
-                : "border-input bg-background hover:bg-muted active:bg-muted flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
+                ? "border-warning bg-warning-soft hover:bg-warning-soft/80 active:bg-warning-soft/80 text-foreground flex flex-1 items-center gap-2 rounded-md border-2 px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
+                : "border-input bg-background hover:bg-muted active:bg-muted flex flex-1 items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
           }
         >
           <span
@@ -874,7 +874,7 @@ function BoardingRow({
             type="button"
             onClick={() => setReportOpen(true)}
             disabled={pending}
-            className="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border disabled:opacity-60"
+            className="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive flex h-10 w-10 shrink-0 items-center justify-center rounded-md border disabled:opacity-60"
             title={`${issueLabel} 보고`}
             aria-label={`${issueLabel} 보고`}
           >
@@ -895,7 +895,7 @@ function BoardingRow({
           onClick={() => !pending && setReportOpen(false)}
         >
           <div
-            className="bg-card w-full max-w-md rounded-t-2xl border p-5 shadow-xl sm:rounded-2xl"
+            className="bg-card w-full max-w-md rounded-t-2xl border p-5 shadow-xl sm:rounded-lg"
             onClick={(e) => e.stopPropagation()}
           >
             <div className="flex items-start gap-2">
@@ -923,7 +923,7 @@ function BoardingRow({
                   ? "예: 부모님과 통화했으나 안 나옴 / 결석 사전 미통보 / 시간 늦음 후 불가능"
                   : "예: 잠들어 있어 종점까지 동승 / 보호자 미도착 → 학원으로 복귀"
               }
-              className="border-input bg-background mt-3 w-full rounded-xl border p-3 text-sm font-medium"
+              className="border-input bg-background mt-3 w-full rounded-md border p-3 text-sm font-medium"
               disabled={pending}
               autoFocus
             />
@@ -994,7 +994,7 @@ function HelperPicker({
 
   if (options.length === 0) {
     return (
-      <section className="bg-card rounded-2xl border p-4 shadow-sm">
+      <section className="bg-card rounded-lg border p-4 shadow-sm">
         <h3 className="text-sm font-extrabold tracking-tight">동승보호자</h3>
         <p className="text-muted-foreground mt-1 text-xs font-medium">
           등록된 동승자가 없습니다. 학원장·원장이 직원 페이지에서 초대 후
@@ -1007,7 +1007,7 @@ function HelperPicker({
   // radix Select는 빈 문자열 값을 허용하지 않으므로 "__none__" sentinel로 대체.
   const NONE = "__none__";
   return (
-    <section className="bg-card rounded-2xl border p-4 shadow-sm">
+    <section className="bg-card rounded-lg border p-4 shadow-sm">
       <h3 className="text-sm font-extrabold tracking-tight">동승보호자 지정</h3>
       <div className="mt-2">
         <Select
@@ -1015,7 +1015,7 @@ function HelperPicker({
           disabled={pending}
           onValueChange={(v) => commit(v === NONE ? "" : v)}
         >
-          <SelectTrigger className="h-10 rounded-xl">
+          <SelectTrigger className="h-10 rounded-md">
             <SelectValue placeholder="동승자 선택" />
           </SelectTrigger>
           <SelectContent>

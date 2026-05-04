@@ -156,7 +156,7 @@ export function NotificationToggle({
   };
 
   // 기본 카드 wrapper — 상태별 다른 톤
-  const wrapper = "bg-card flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm";
+  const wrapper = "bg-card flex items-start gap-3 rounded-lg border p-3.5 shadow-sm";
 
   if (status.kind === "loading") {
     return (
@@ -189,7 +189,7 @@ export function NotificationToggle({
 
   if (status.kind === "denied") {
     return (
-      <div className="border-warning/30 bg-warning-soft/40 flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm">
+      <div className="border-warning/30 bg-warning-soft/40 flex items-start gap-3 rounded-lg border p-3.5 shadow-sm">
         <span className="bg-warning text-warning-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
           <BellOff className="h-4 w-4" />
         </span>
@@ -205,7 +205,7 @@ export function NotificationToggle({
 
   if (status.kind === "subscribed") {
     return (
-      <div className="border-success/30 bg-success-soft/40 flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm">
+      <div className="border-success/30 bg-success-soft/40 flex items-start gap-3 rounded-lg border p-3.5 shadow-sm">
         <span className="bg-success text-success-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
           <Check className="h-4 w-4" />
         </span>
@@ -235,7 +235,7 @@ export function NotificationToggle({
 
   // unsubscribed (또는 error)
   return (
-    <div className="border-bus/40 bg-bus-soft/40 flex items-start gap-3 rounded-2xl border p-3.5 shadow-sm">
+    <div className="border-bus/40 bg-bus-soft/40 flex items-start gap-3 rounded-lg border p-3.5 shadow-sm">
       <span className="bg-bus text-bus-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
         <Bell className="h-4 w-4" />
       </span>

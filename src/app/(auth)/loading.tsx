@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 export default function AuthLoading() {
   return (
     <div className="bg-muted/40 flex min-h-screen items-center justify-center p-4">
-      <div className="bg-card w-full max-w-md space-y-4 rounded-2xl border p-6">
+      <div className="bg-card w-full max-w-md space-y-4 rounded-lg border p-6">
         <div className="space-y-2">
           <Skeleton className="h-6 w-24" />
           <Skeleton className="h-4 w-48" />

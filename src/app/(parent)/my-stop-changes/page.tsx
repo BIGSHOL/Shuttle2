@@ -67,7 +67,7 @@ export default async function StopChangeRequestsPage() {
           {items.map((it) => (
             <li
               key={it.id}
-              className="bg-card rounded-2xl border p-3.5 shadow-sm"
+              className="bg-card rounded-lg border p-3.5 shadow-sm"
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
