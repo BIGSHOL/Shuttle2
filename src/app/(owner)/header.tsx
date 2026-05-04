@@ -17,28 +17,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
+import { buildOwnerNav } from "./_owner-nav";
+
 const ORG_TYPE_LABEL: Record<"ACADEMY" | "DAYCARE" | "KINDERGARTEN", string> = {
   ACADEMY: "학원·교습소",
   DAYCARE: "어린이집",
   KINDERGARTEN: "유치원",
 };
-
-function buildNav(orgType: "ACADEMY" | "DAYCARE" | "KINDERGARTEN") {
-  const studentLabel = orgType === "ACADEMY" ? "학생" : "원아";
-  return [
-    { href: "/dashboard", label: "대시보드" },
-    { href: "/vehicles", label: "차량" },
-    { href: "/stops", label: "정류장" },
-    { href: "/routes", label: "노선" },
-    { href: "/students", label: studentLabel },
-    { href: "/staff", label: "직원" },
-    { href: "/guardians", label: "보호자" },
-    { href: "/absences", label: "결석" },
-    { href: "/stop-change-requests", label: "정류장 변경" },
-    { href: "/training", label: "안전교육" },
-    { href: "/safety-report", label: "안전기록" },
-  ];
-}
 
 export function OwnerHeader({
   orgName,
@@ -53,7 +38,7 @@ export function OwnerHeader({
 }) {
   const [pending, startTransition] = useTransition();
   const pathname = usePathname();
-  const nav = buildNav(orgType);
+  const nav = buildOwnerNav(orgType);
 
   return (
     <header className="bg-background sticky top-0 z-30 border-b">
@@ -70,22 +55,31 @@ export function OwnerHeader({
               {ORG_TYPE_LABEL[orgType]} · 셔틀이
             </p>
           </Link>
-          <nav className="hidden items-center gap-0.5 lg:flex">
-            {nav.map((item) => {
+          {/* 데스크톱 — 아이콘 + 라벨 (라벨 아래에 위치) */}
+          <nav
+            aria-label="주 탐색"
+            className="hidden items-stretch gap-0.5 lg:flex"
+          >
+            {nav.map(({ href, label, Icon }) => {
               const active =
-                pathname === item.href || pathname.startsWith(`${item.href}/`);
+                pathname === href || pathname.startsWith(`${href}/`);
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "rounded-md px-2.5 py-1.5 text-sm font-medium transition-colors",
+                    "flex flex-col items-center justify-center gap-0.5 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-tight transition-colors",
                     active
-                      ? "bg-primary/10 text-primary font-bold"
+                      ? "bg-primary/10 text-primary font-extrabold"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
-                  {item.label}
+                  <Icon
+                    className="h-4 w-4"
+                    strokeWidth={active ? 2.5 : 2}
+                  />
+                  <span>{label}</span>
                 </Link>
               );
             })}
@@ -136,30 +130,7 @@ export function OwnerHeader({
           </DropdownMenu>
         </div>
       </div>
-
-      {/* 모바일/태블릿: 가로 스크롤 nav */}
-      <nav className="border-t lg:hidden">
-        <div className="scrollbar-hide flex items-center gap-0.5 overflow-x-auto px-2 py-1.5">
-          {nav.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(`${item.href}/`);
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={cn(
-                  "shrink-0 rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
-                  active
-                    ? "bg-primary/10 text-primary font-bold"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-              >
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
-      </nav>
+      {/* 모바일/태블릿 nav는 OwnerBottomNav (layout에서 fixed bottom으로 마운트) */}
     </header>
   );
 }

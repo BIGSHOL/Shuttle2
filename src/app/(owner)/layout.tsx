@@ -8,6 +8,7 @@ import {
   homePathForRole,
 } from "@/lib/auth/session";
 
+import { OwnerBottomNav } from "./owner-bottom-nav";
 import { OwnerHeader } from "./header";
 
 export default async function OwnerLayout({
@@ -34,7 +35,8 @@ export default async function OwnerLayout({
   });
 
   return (
-    <div className="bg-muted/40 min-h-screen">
+    // pb-20 lg:pb-0 — 모바일에서 fixed bottom nav 가림 방지, 데스크톱은 0.
+    <div className="bg-muted/40 min-h-screen pb-20 lg:pb-0">
       <OwnerHeader
         orgName={user.org.name}
         orgType={user.org.type}
@@ -43,6 +45,7 @@ export default async function OwnerLayout({
       />
       <SwRegister />
       {children}
+      <OwnerBottomNav orgType={user.org.type} />
     </div>
   );
 }
