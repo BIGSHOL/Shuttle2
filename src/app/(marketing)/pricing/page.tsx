@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 
 const PLANS = [
   {
-    name: "Lite",
+    name: "라이트",
     price: "차량당 ₩5,000",
     priceSubtitle: "월 정기 결제 / 차량당",
     desc: "안전운행기록 PDF만 필요한 학원·교습소",
@@ -13,7 +13,7 @@ const PLANS = [
       { label: "안전운행기록 PDF 분기 추출", included: true },
       { label: "기본 운행 일지", included: true },
       { label: "최대 30명 학생", included: true },
-      { label: "실시간 GPS 위치 공유", included: false },
+      { label: "실시간 위치 공유", included: false },
       { label: "결석·정류장 변경 워크플로우", included: false },
       { label: "푸시 알림", included: false },
       { label: "일괄 알림 발송", included: false },
@@ -24,7 +24,7 @@ const PLANS = [
     highlight: false,
   },
   {
-    name: "Standard",
+    name: "스탠다드",
     price: "차량당 ₩9,000",
     priceSubtitle: "월 정기 결제 / 차량당",
     desc: "베타 참여 학원·어린이집 권장",
@@ -32,7 +32,7 @@ const PLANS = [
       { label: "안전운행기록 PDF 분기 추출", included: true },
       { label: "기본 운행 일지", included: true },
       { label: "최대 100명 학생", included: true },
-      { label: "실시간 GPS 위치 공유", included: true },
+      { label: "실시간 위치 공유", included: true },
       { label: "결석·정류장 변경 워크플로우", included: true },
       { label: "푸시 알림 + 자녀 도착 푸시", included: true },
       { label: "일괄 알림 발송", included: false },
@@ -44,7 +44,7 @@ const PLANS = [
     badge: "추천",
   },
   {
-    name: "Pro",
+    name: "프로",
     price: "맞춤 견적",
     priceSubtitle: "체인·다지점·기업 통근",
     desc: "다지점 통합 + 일괄 알림 + API",
@@ -52,7 +52,7 @@ const PLANS = [
       { label: "안전운행기록 PDF 분기 추출", included: true },
       { label: "기본 운행 일지", included: true },
       { label: "학생 수 무제한", included: true },
-      { label: "실시간 GPS 위치 공유", included: true },
+      { label: "실시간 위치 공유", included: true },
       { label: "결석·정류장 변경 워크플로우", included: true },
       { label: "푸시 알림 + 자녀 도착 푸시", included: true },
       { label: "일괄 알림 + 예약 발송", included: true },
@@ -67,19 +67,19 @@ const PLANS = [
 const FAQS = [
   {
     q: "베타 기간 동안에는 무료인가요?",
-    a: "네. 베타 참여 기관은 Standard 플랜을 무료로 사용하실 수 있고, 베타 종료 시점에 정식 요금제로 전환할지 결정하실 수 있습니다. 베타 종료 최소 2주 전에 안내드립니다.",
+    a: "네. 베타 참여 기관은 스탠다드 요금제를 무료로 사용하실 수 있고, 베타 종료 시점에 정식 요금제로 전환할지 결정하실 수 있습니다. 베타 종료 최소 2주 전에 안내드립니다.",
   },
   {
     q: "안전운행기록 PDF는 어떻게 만들어지나요?",
-    a: "매 운행마다 기사가 입력하는 안전점검(좌석안전띠·동승보호자·전원하차) + 자동 누적되는 BoardingEvent를 합쳐 도로교통법 별지 제20호의2 양식에 맞게 분기 단위로 PDF를 추출합니다. 차량별·운행별 표 형식.",
+    a: "매 운행마다 기사가 입력하는 안전점검(좌석안전띠·동승보호자·전원하차) + 자동 누적되는 학생별 탑승·하차 기록을 합쳐 도로교통법 별지 제20호의2 양식에 맞게 분기 단위로 PDF를 추출합니다. 차량별·운행별 표 형식.",
   },
   {
     q: "기사가 안드로이드여야 하나요?",
-    a: "권장합니다. iOS Safari는 백그라운드 GPS·화면 잠금 방지가 약해 운행 중 셔틀 위치가 끊길 수 있습니다. iPhone을 쓰는 기사는 거치대 + 충전기와 함께 운행 화면을 항상 켠 상태로 두시면 됩니다.",
+    a: "권장합니다. 아이폰 사파리 브라우저는 백그라운드 위치 신호·화면 잠금 방지가 약해 운행 중 셔틀 위치가 끊길 수 있습니다. 아이폰을 쓰는 기사는 거치대 + 충전기와 함께 운행 화면을 항상 켠 상태로 두시면 됩니다.",
   },
   {
     q: "학부모는 별도 앱 설치가 필요한가요?",
-    a: "아닙니다. PWA로 동작해서 카카오·네이버 브라우저나 Safari·Chrome에서 “홈 화면에 추가”만 하면 됩니다. 푸시 알림은 Web Push로 받습니다 (iOS 16.4+ 지원).",
+    a: "아닙니다. 카카오·네이버 브라우저나 사파리·크롬에서 \"홈 화면에 추가\"만 하면 셔틀이가 앱처럼 동작합니다. 푸시 알림도 그대로 받을 수 있어요 (아이폰은 iOS 16.4 이상).",
   },
   {
     q: "여러 자녀가 다른 학원에 다녀도 한 계정으로 볼 수 있나요?",
@@ -137,14 +137,14 @@ export default function PricingPage() {
         <div className="mx-auto max-w-3xl space-y-4 px-4 text-center lg:px-6">
           <span className="bg-bus-soft text-bus-foreground inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold tracking-wide">
             <Sparkles className="h-3.5 w-3.5" />
-            베타 기간 Standard 무료
+            베타 기간 스탠다드 무료
           </span>
           <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl">
             요금제
           </h2>
           <p className="text-muted-foreground text-base font-medium sm:text-lg">
-            차량 단위 월 구독. 안전운행기록만 필요하면 Lite, GPS·결석·푸시까지면
-            Standard. 다지점·기업 통근은 Pro 맞춤.
+            차량 단위 월 구독. 안전운행기록만 필요하면 라이트, 위치·결석·푸시까지면
+            스탠다드. 다지점·기업 통근은 프로 맞춤.
           </p>
         </div>
       </section>

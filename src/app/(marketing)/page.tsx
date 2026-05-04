@@ -32,7 +32,7 @@ const PAIN_POINTS = [
   },
   {
     Icon: Shield,
-    title: "기존 셔틀 앱은 GPS 끊김·UI 답답함",
+    title: "기존 셔틀 앱은 위치 끊김·답답한 화면",
     body: "기존 솔루션은 안정성 약하고, 안전운행기록 기능은 따로 또 입력. 이중 작업.",
     tone: "info" as const,
   },
@@ -67,10 +67,10 @@ const FEATURES = [
 
 const COMPARISON = [
   { feature: "안전운행기록 PDF 자동", us: true, others: false },
-  { feature: "실시간 GPS 위치 공유", us: true, others: true },
+  { feature: "실시간 위치 공유", us: true, others: true },
   { feature: "결석 신청 자동 매칭", us: true, others: false },
   { feature: "정류장 변경 요청 워크플로우", us: true, others: false },
-  { feature: "푸시 알림 (Web Push)", us: true, others: true },
+  { feature: "푸시 알림 (브라우저 표준)", us: true, others: true },
   { feature: "어린이용 모드 전용 안전점검", us: true, others: false },
   { feature: "분기 안전운행기록 별지 제20호의2", us: true, others: false },
   { feature: "다회 학원 자녀 1계정", us: true, others: false },
@@ -78,7 +78,7 @@ const COMPARISON = [
 
 const PLAN_HIGHLIGHTS = [
   {
-    name: "Lite",
+    name: "라이트",
     price: "차량당 ₩5,000",
     desc: "안전운행기록 PDF만 필요한 기관",
     features: ["안전운행기록 PDF 분기 추출", "기본 운행 일지", "최대 30명"],
@@ -86,12 +86,12 @@ const PLAN_HIGHLIGHTS = [
     highlight: false,
   },
   {
-    name: "Standard",
+    name: "스탠다드",
     price: "차량당 ₩9,000",
     desc: "베타 참여 학원·어린이집 권장",
     features: [
-      "Lite 전체 +",
-      "실시간 GPS 위치 공유",
+      "라이트 전체 +",
+      "실시간 위치 공유",
       "결석·정류장 변경 워크플로우",
       "푸시 알림 + 자녀 도착 푸시",
       "최대 100명",
@@ -101,11 +101,11 @@ const PLAN_HIGHLIGHTS = [
     badge: "추천",
   },
   {
-    name: "Pro",
+    name: "프로",
     price: "맞춤 견적",
     desc: "체인·다지점·기업 통근",
     features: [
-      "Standard 전체 +",
+      "스탠다드 전체 +",
       "일괄 알림 + 예약 발송",
       "다지점 통합 dashboard",
       "API·CSV 연동",
@@ -198,7 +198,7 @@ export default function MarketingPage() {
               <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium">
                 <span className="inline-flex items-center gap-1">
                   <Check className="text-success h-3.5 w-3.5" />
-                  설치 없이 PWA
+                  앱 설치 없이 바로 사용
                 </span>
                 <span className="inline-flex items-center gap-1">
                   <Check className="text-success h-3.5 w-3.5" />
@@ -416,8 +416,8 @@ export default function MarketingPage() {
               필요한 만큼만
             </h3>
             <p className="text-muted-foreground mt-3 text-base font-medium">
-              안전운행기록만 필요하면 Lite, GPS·결석까지면 Standard, 다지점은
-              Pro. 베타 기간 동안 Standard 무료 체험.
+              안전운행기록만 필요하면 라이트, 위치·결석까지면 스탠다드, 다지점은
+              프로. 베타 기간 동안 스탠다드 무료 체험.
             </p>
           </div>
           <div className="grid gap-4 lg:grid-cols-3">

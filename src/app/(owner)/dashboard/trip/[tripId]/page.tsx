@@ -396,7 +396,7 @@ export default async function OwnerTripDetailPage({
               </span>
             </div>
             <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-              기사 폰 GPS · 약 5초마다 갱신
+              기사 폰 위치 · 약 5초마다 갱신
             </p>
           </div>
           <OwnerTripLiveMap

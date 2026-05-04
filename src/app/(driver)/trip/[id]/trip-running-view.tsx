@@ -218,7 +218,7 @@ export function TripRunningView({
       )
         return;
     } else if (
-      !confirm("운행을 종료할까요? 종료 후에는 GPS 송신이 멈춥니다.")
+      !confirm("운행을 종료할까요? 종료 후에는 위치 송신이 멈춥니다.")
     ) {
       return;
     }
@@ -235,8 +235,8 @@ export function TripRunningView({
             화면 자동 꺼짐 방지가 지원되지 않습니다
           </p>
           <p className="mt-1">
-            iOS Safari는 Wake Lock 미지원. 안드로이드 폰을 거치대에 두고 화면을
-            켜둔 채 운행하세요.
+            아이폰 사파리 브라우저는 화면 잠금 방지가 동작하지 않습니다.
+            안드로이드 폰을 거치대에 두고 화면을 켜둔 채 운행하세요.
           </p>
         </div>
       ) : null}
@@ -318,7 +318,7 @@ export function TripRunningView({
                 wakeLock.active ? "bg-success animate-pulse" : "bg-white/40"
               }`}
             />
-            화면잠금 {wakeLock.active ? "ON" : "OFF"}
+            화면잠금 {wakeLock.active ? "켜짐" : "꺼짐"}
           </span>
           <span
             className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold ${
@@ -330,7 +330,7 @@ export function TripRunningView({
             }`}
           >
             <MapPin className="h-3 w-3" />
-            GPS{" "}
+            위치{" "}
             {gps.fix
               ? `±${Math.round(gps.fix.accuracy)}m`
               : gps.error
