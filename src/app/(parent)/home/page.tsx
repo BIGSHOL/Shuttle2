@@ -19,35 +19,32 @@ function fmtKstHHmm(d: Date): string {
 export default async function ParentHomePage() {
   const me = await requireGuardian();
   const studentIds = me.students.map((s) => s.id);
-
-  // 자녀 기본 정보 (org name·type 표시용)
-  const studentRows = await db.student.findMany({
-    where: { id: { in: studentIds } },
-    select: {
-      id: true,
-      name: true,
-      org: { select: { name: true, type: true } },
-    },
-  });
-  const studentInfo = new Map(studentRows.map((s) => [s.id, s] as const));
-
-  // 자녀별 오늘 운행 카드
-  const todayCards = await getTodayChildTrips(
-    me.students.map((s) => ({ id: s.id, name: s.name })),
-  );
-
-  // 다가오는 결석 (오늘 또는 미래, ACKNOWLEDGED 제외, 5건)
   const today = todayUtcDateKst();
-  const upcomingAbsences = await db.absenceRequest.findMany({
-    where: {
-      studentId: { in: studentIds },
-      date: { gte: today },
-      status: { notIn: ["ACKNOWLEDGED", "REJECTED"] },
-    },
-    orderBy: { date: "asc" },
-    take: 5,
-    include: { student: { select: { id: true, name: true } } },
-  });
+
+  // 3개 sequential await → Promise.all 1번 (-100~250ms).
+  // 모두 자녀 ID 기반이지만 의존성 없이 독립.
+  const [studentRows, todayCards, upcomingAbsences] = await Promise.all([
+    db.student.findMany({
+      where: { id: { in: studentIds } },
+      select: {
+        id: true,
+        name: true,
+        org: { select: { name: true, type: true } },
+      },
+    }),
+    getTodayChildTrips(me.students.map((s) => ({ id: s.id, name: s.name }))),
+    db.absenceRequest.findMany({
+      where: {
+        studentId: { in: studentIds },
+        date: { gte: today },
+        status: { notIn: ["ACKNOWLEDGED", "REJECTED"] },
+      },
+      orderBy: { date: "asc" },
+      take: 5,
+      include: { student: { select: { id: true, name: true } } },
+    }),
+  ]);
+  const studentInfo = new Map(studentRows.map((s) => [s.id, s] as const));
 
   // 운행 중 카드 카운트 (인사말의 "오늘 N건")
   const tripCount = todayCards.reduce(

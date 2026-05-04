@@ -73,28 +73,59 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const org = await db.organization.findUnique({
-    where: { id: orgId },
-    select: { plan: true, createdAt: true },
-  });
+  // 보험 만료 D-30 alert (KIDS 모드 차량 한정) — 날짜 경계 미리 계산
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const d30 = new Date(today);
+  d30.setUTCDate(d30.getUTCDate() + 30);
 
-  // 오늘 운행 — 진행중·종료 모두 (orgId는 vehicle 통해 필터)
-  const todayTrips = await db.trip.findMany({
-    where: { vehicle: { orgId }, date: todayDate },
-    orderBy: [{ startedAt: "asc" }],
-    include: {
-      route: {
-        select: {
-          name: true,
-          direction: true,
-          _count: { select: { stops: true } },
+  // org / todayTrips / expiringVehicles / staffWithTraining 4개는 서로 독립적이라 병렬화.
+  // 5번의 sequential await → 1번의 Promise.all (-200~500ms TTFB).
+  const [org, todayTrips, expiringVehicles, staffWithTraining] =
+    await Promise.all([
+      db.organization.findUnique({
+        where: { id: orgId },
+        select: { plan: true, createdAt: true },
+      }),
+      db.trip.findMany({
+        where: { vehicle: { orgId }, date: todayDate },
+        orderBy: [{ startedAt: "asc" }],
+        include: {
+          route: {
+            select: {
+              name: true,
+              direction: true,
+              _count: { select: { stops: true } },
+            },
+          },
+          vehicle: { select: { plate: true, mode: true } },
+          driver: { select: { name: true } },
+          _count: { select: { events: true } },
         },
-      },
-      vehicle: { select: { plate: true, mode: true } },
-      driver: { select: { name: true } },
-      _count: { select: { events: true } },
-    },
-  });
+      }),
+      db.vehicle.findMany({
+        where: {
+          orgId,
+          mode: "KIDS",
+          OR: [{ insuranceUntil: null }, { insuranceUntil: { lte: d30 } }],
+        },
+        orderBy: [{ insuranceUntil: "asc" }],
+        select: { id: true, plate: true, insuranceUntil: true },
+      }),
+      db.staff.findMany({
+        where: { orgId },
+        select: {
+          id: true,
+          name: true,
+          role: true,
+          trainings: {
+            orderBy: { completedOn: "desc" },
+            take: 1,
+            select: { expiresOn: true },
+          },
+        },
+      }),
+    ]);
 
   const runningTrips = todayTrips.filter(
     (t) => t.startedAt !== null && t.endedAt === null,
@@ -102,7 +133,7 @@ export default async function DashboardPage() {
   const finishedTrips = todayTrips.filter((t) => t.endedAt !== null);
   const scheduledCount = todayTrips.filter((t) => t.startedAt === null).length;
 
-  // 진행중 trip별 boarding 진행률 (BOARD/ALIGHT 카운트)
+  // 진행중 trip별 boarding 진행률 (BOARD/ALIGHT 카운트) — todayTrips 결과 의존이라 그 후
   const runningTripIds = runningTrips.map((t) => t.id);
   const runningBoardings =
     runningTripIds.length > 0
@@ -121,36 +152,6 @@ export default async function DashboardPage() {
     if (e.type === "BOARD") stat.board++;
     else stat.alight++;
   }
-
-  // 보험 만료 D-30 alert (KIDS 모드 차량 한정)
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  const d30 = new Date(today);
-  d30.setUTCDate(d30.getUTCDate() + 30);
-  const expiringVehicles = await db.vehicle.findMany({
-    where: {
-      orgId,
-      mode: "KIDS",
-      OR: [{ insuranceUntil: null }, { insuranceUntil: { lte: d30 } }],
-    },
-    orderBy: [{ insuranceUntil: "asc" }],
-    select: { id: true, plate: true, insuranceUntil: true },
-  });
-
-  // 안전교육 D-30 alert
-  const staffWithTraining = await db.staff.findMany({
-    where: { orgId },
-    select: {
-      id: true,
-      name: true,
-      role: true,
-      trainings: {
-        orderBy: { completedOn: "desc" },
-        take: 1,
-        select: { expiresOn: true },
-      },
-    },
-  });
   const trainingAlerts = staffWithTraining
     .map((s) => {
       const latest = s.trainings[0];
