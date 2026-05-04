@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   AlertTriangle,
   Bell,
@@ -18,6 +18,7 @@ import { Button } from "@/components/ui/button";
 import {
   markAllNotificationsReadAction,
   markNotificationReadAction,
+  respondNoShowOnWayAction,
 } from "./notification-actions";
 
 type NotifyCategory =
@@ -90,6 +91,36 @@ export function NotificationList({ items }: { items: Item[] }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
 
+  // M2: 학부모 빠른 응답 — NO_SHOW 알림에 "지금 데려다 드릴게요" 버튼.
+  // 응답 후 client에서 disabled 처리 (재시도 막기).
+  const [respondingId, setRespondingId] = useState<string | null>(null);
+  const [respondedIds, setRespondedIds] = useState<Set<string>>(new Set());
+  const [respondError, setRespondError] = useState<string | null>(null);
+
+  async function handleRespondNoShow(notifId: string) {
+    setRespondingId(notifId);
+    setRespondError(null);
+    try {
+      const res = await respondNoShowOnWayAction();
+      if ("ok" in res) {
+        setRespondedIds((prev) => {
+          const next = new Set(prev);
+          next.add(notifId);
+          return next;
+        });
+        // 알림도 읽음 처리
+        await markNotificationReadAction(notifId).catch(() => {});
+        router.refresh();
+      } else {
+        setRespondError(res.error);
+      }
+    } catch (e) {
+      setRespondError(e instanceof Error ? e.message : "응답 실패");
+    } finally {
+      setRespondingId(null);
+    }
+  }
+
   const unreadCount = items.filter((i) => i.readAt === null).length;
 
   function handleClick(item: Item) {
@@ -139,6 +170,15 @@ export function NotificationList({ items }: { items: Item[] }) {
         ) : null}
       </div>
 
+      {respondError ? (
+        <div
+          className="border-destructive/30 bg-destructive/5 text-destructive rounded-xl border p-2.5 text-xs font-medium"
+          role="alert"
+        >
+          {respondError}
+        </div>
+      ) : null}
+
       {items.length === 0 ? (
         <div className="bg-card rounded-2xl border p-6 text-center">
           <Bell className="text-muted-foreground mx-auto h-8 w-8" />
@@ -168,8 +208,13 @@ export function NotificationList({ items }: { items: Item[] }) {
                 item={item}
               />
             );
+            const showRespondButton =
+              item.category === "STUDENT_NO_SHOW" &&
+              unread &&
+              !respondedIds.has(item.id);
+            const wasResponded = respondedIds.has(item.id);
             return (
-              <li key={item.id}>
+              <li key={item.id} className="space-y-1.5">
                 {item.url ? (
                   <button
                     type="button"
@@ -182,6 +227,26 @@ export function NotificationList({ items }: { items: Item[] }) {
                 ) : (
                   <div className={baseClass}>{body}</div>
                 )}
+                {showRespondButton ? (
+                  <div className="flex items-center justify-end gap-2 pr-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="default"
+                      disabled={respondingId === item.id}
+                      onClick={() => handleRespondNoShow(item.id)}
+                    >
+                      {respondingId === item.id
+                        ? "보내는 중..."
+                        : "지금 데려다 드릴게요"}
+                    </Button>
+                  </div>
+                ) : null}
+                {wasResponded ? (
+                  <p className="text-success pr-1 text-right text-[11px] font-bold">
+                    ✓ 기사·학원장에게 알렸어요
+                  </p>
+                ) : null}
               </li>
             );
           })}
