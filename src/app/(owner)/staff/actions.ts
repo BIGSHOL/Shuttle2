@@ -187,7 +187,7 @@ export async function deleteStaffAction(id: string): Promise<void> {
     select: { role: true, userId: true },
   });
   if (!target) throw new Error("해당 직원을 찾을 수 없습니다");
-  if (target.role === "OWNER") throw new Error("OWNER는 삭제할 수 없습니다");
+  if (target.role === "OWNER") throw new Error("학원장·원장은 삭제할 수 없습니다");
 
   // FK: TrainingRecord, Trip(driver/helper). 묶여 있으면 throw.
   await db.staff.delete({ where: { id } });
@@ -369,7 +369,7 @@ export async function resetStaffPasswordAction(
   });
   if (!target) return { error: "해당 직원을 찾을 수 없습니다" };
   if (target.role === "OWNER") {
-    return { error: "다른 OWNER 비밀번호는 초기화할 수 없습니다" };
+    return { error: "다른 학원장·원장 비밀번호는 초기화할 수 없습니다" };
   }
   if (!target.userId) {
     return { error: "아직 가입을 완료하지 않은 직원입니다" };
