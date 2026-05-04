@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { cache } from "react";
 
 import { db } from "@/lib/db";
@@ -19,27 +20,60 @@ export type CurrentUser = {
   };
 };
 
+// W18-L (B안): middleware가 supabase.auth.getUser()를 이미 호출하고 결과를
+// `x-auth-*` request header에 inject. 이 헬퍼는 그 header를 우선 read.
+// `x-auth-checked` sentinel이 없는 경우(미들웨어 미통과 or build/static gen)는
+// fallback으로 직접 getUser 호출.
+async function resolveAuthUser(): Promise<{
+  userId: string | null;
+  email: string;
+}> {
+  let userId: string | null = null;
+  let email = "";
+  let middlewareChecked = false;
+
+  try {
+    const h = await headers();
+    if (h.get("x-auth-checked") === "1") {
+      middlewareChecked = true;
+      userId = h.get("x-auth-user-id") || null;
+      email = h.get("x-auth-user-email") || "";
+    }
+  } catch {
+    // headers() throws when not in request scope (e.g., during static page build).
+  }
+
+  if (!middlewareChecked) {
+    const supabase = await createClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (user) {
+      userId = user.id;
+      email = user.email ?? "";
+    }
+  }
+
+  return { userId, email };
+}
+
 // React cache로 같은 요청 내 다중 호출을 1회 DB 쿼리로 합침.
 // Server Component·Server Action·Route Handler 어디서 호출해도 동일 사용자 반환.
 export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
+  const { userId, email } = await resolveAuthUser();
+  if (!userId) return null;
 
   // Staff + Organization을 한 쿼리로
   const staff = await db.staff.findFirst({
-    where: { userId: user.id },
+    where: { userId },
     include: { org: true },
   });
 
   if (!staff) return null;
 
   return {
-    authUserId: user.id,
-    email: user.email ?? "",
+    authUserId: userId,
+    email,
     staff: {
       id: staff.id,
       name: staff.name,
@@ -125,14 +159,11 @@ export type CurrentGuardian = {
 
 export const getCurrentGuardian = cache(
   async (): Promise<CurrentGuardian | null> => {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) return null;
+    const { userId, email } = await resolveAuthUser();
+    if (!userId) return null;
 
     const guardian = await db.guardian.findFirst({
-      where: { userId: user.id },
+      where: { userId },
       include: {
         links: {
           include: {
@@ -144,8 +175,8 @@ export const getCurrentGuardian = cache(
     if (!guardian) return null;
 
     return {
-      authUserId: user.id,
-      email: user.email ?? "",
+      authUserId: userId,
+      email,
       guardian: {
         id: guardian.id,
         name: guardian.name,

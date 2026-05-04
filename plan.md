@@ -1,10 +1,10 @@
 # 셔틀이 — 진행 작업 계획
 
-마지막 업데이트: 2026-05-04 (A안 후속 마무리)
+마지막 업데이트: 2026-05-04 (A안 + B안 완료)
 
 ## 직전 진행 사항
 
-사용자 피드백 "웹앱 반응속도가 여전히 느린곳이 제법 있네. 클릭해도 제법 대기해야 넘어가는데" 대응 중. **A안(loading.tsx 스켈레톤 추가) 완료** — 검증 미완 이슈 모두 해결됨. 다음은 B안(auth dedupe).
+사용자 피드백 "웹앱 반응속도가 여전히 느린곳이 제법 있네. 클릭해도 제법 대기해야 넘어가는데" 대응 중. **A안(loading.tsx 스켈레톤) + B안(auth dedupe) 완료**. 다음은 C안(Suspense 스트리밍).
 
 ## A안 완료 (이번 커밋)
 
@@ -50,41 +50,39 @@
   - `(owner)/stops/new/loading.tsx`
   - `(parent)/my-stop-changes/new/loading.tsx`
 
-## 남은 작업
+## B안 완료 (이번 커밋)
 
-### B안 — 중복 auth round-trip 제거 (50~200ms/nav, ROI 높음)
+### 결과
 
-현 구조: nav마다 `supabase.auth.getUser()`가 두 번 — proxy.ts middleware + page.tsx의 `getCurrentUser()`. React `cache()`는 같은 React render 내에서만 dedupe.
+매 nav마다 `supabase.auth.getUser()`가 두 번 호출되던 것 → 한 번으로 단축 (middleware만). 추정 50~200ms/nav.
 
-해결안:
+### 구현
 
-```ts
-// proxy.ts: getUser 결과를 request header에 inject
-const {
-  data: { user },
-} = await supabase.auth.getUser();
-if (user) {
-  request.headers.set("x-auth-user-id", user.id);
-  request.headers.set("x-auth-user-email", user.email ?? "");
-}
+1. **`lib/supabase/middleware.ts`** — `updateSession`에서 검증된 user 정보를 forwarded request header에 inject
+   - 진입 시점에 `x-auth-user-id`, `x-auth-user-email`, `x-auth-checked` strip (위조 차단)
+   - `supabase.auth.getUser()` 후 sentinel `x-auth-checked: 1` + (있으면) user 정보 set
+   - `setAll` callback은 cookie만 갱신 (응답 재생성 안 함) → 우리가 모디 한 headers가 finalResponse에 보존
+   - finalResponse 재생성 + supabaseResponse cookies 복사
 
-// session.ts getCurrentUser: header 우선 lookup
-const headersList = headers(); // next/headers
-const userId = headersList.get("x-auth-user-id");
-if (userId) {
-  // header 신뢰 가능 — middleware에서 검증된 값
-  const staff = await db.staff.findFirst({
-    where: { userId },
-    include: { org: true },
-  });
-  return ...;
-}
-// fallback: 기존 supabase.auth.getUser() (middleware 없는 RSC 진입 케이스)
+2. **`lib/auth/session.ts`** — `resolveAuthUser()` 헬퍼 신규
+   - `headers()` 우선 read. `x-auth-checked: 1`이면 middleware 통과 → trust.
+   - sentinel 없으면 build/static gen 등 비-요청 컨텍스트 → fallback `supabase.auth.getUser()`
+   - `getCurrentUser()`, `getCurrentGuardian()`이 모두 이 헬퍼 사용
+
+### 보안 검증 (사용자 점검 가능)
+
+```bash
+# 1) 미인증 /dashboard → /login redirect
+curl -sI http://localhost:3000/dashboard | grep location
+# location: /login?redirectTo=/dashboard
+
+# 2) 헤더 위조 시도 — middleware가 strip하므로 여전히 redirect
+curl -sI -H "x-auth-checked: 1" -H "x-auth-user-id: fake" \
+  http://localhost:3000/dashboard | grep location
+# location: /login?redirectTo=/dashboard  ← 위조 차단 확인됨
 ```
 
-**보안 검토 필요**: client가 header 위조 못 하도록 Vercel edge에서 확인. proxy.ts 외부에서 `x-auth-user-*` 헤더가 들어오면 strip.
-
-작업량: middleware 1파일 + session.ts 1파일 + 보안 테스트 1회.
+## 남은 작업
 
 ### C안 — Suspense 스트리밍
 
@@ -100,11 +98,13 @@ dashboard·home처럼 여러 query를 모은 페이지에 적용. 빠른 부분 
 
 ### 우선순위 권장
 
-1. **B안** — auth dedupe (1~2시간). 매 nav에서 단축되므로 ROI 높음.
-2. **C안** — B 끝낸 뒤 Speed Insights 데이터 보고 hot spot 결정.
+1. **C안** — Speed Insights 데이터 보고 hot spot 페이지부터 적용. dashboard·home·trip-live 후보. 페이지당 30분~1시간.
+2. 그 외 후보 (작아도 즉시 가능):
+   - revalidatePath 빈도 검토 (publishTripUpdate 후 router.refresh 받는 쪽 N+1 fetch?)
+   - Vercel image optimization·preload font 활용도 점검
 
 ## 참고
 
-- A안 완료 후 사용자 체감 측정 필요 — "클릭 후 즉시 skeleton 보이는지" 확인.
+- A안·B안 완료 후 사용자 체감 측정 필요 — "클릭 → skeleton → 본 컨텐츠"가 부드러운지, "nav가 빨라졌는지" 확인.
 - W18-K까지의 진행 상황은 [progress.md](progress.md) 마일스톤 섹션 참조.
 - 사용자 사전 동의: 기능 추가가 아니라 **체감 속도** 개선이 목표 → 실제 fetch 단축(B·C)도 좋지만 skeleton(A)이 가장 즉각적인 win.
