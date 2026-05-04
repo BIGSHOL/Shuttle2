@@ -65,7 +65,7 @@ export default async function RoutesPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="py-0">
           <CardContent className="p-0">
             <Table>
               <TableHeader>

@@ -143,7 +143,7 @@ export default async function OwnerAbsencesPage() {
             </CardHeader>
           </Card>
         ) : (
-          <Card>
+          <Card className="py-0">
             <CardContent className="p-0">
               <ul className="divide-y text-sm">
                 {recent.map((a) => (

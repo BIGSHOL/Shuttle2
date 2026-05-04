@@ -63,7 +63,9 @@ export function VehicleForm({
       <form action={formAction}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="plate">차량번호</Label>
+            <Label htmlFor="plate" required>
+              차량번호
+            </Label>
             <Input
               id="plate"
               name="plate"
@@ -124,13 +126,16 @@ export function VehicleForm({
                 어린이용 모드 — 어린이통학버스 의무 정보
               </p>
               <div className="space-y-2">
-                <Label htmlFor="reportNo">신고증명서 번호</Label>
+                <Label htmlFor="reportNo" required>
+                  신고증명서 번호
+                </Label>
                 <Input
                   id="reportNo"
                   name="reportNo"
                   placeholder="관할 경찰서 발급"
                   defaultValue={initial.reportNo}
                   maxLength={50}
+                  required
                 />
                 {state.fieldErrors?.reportNo ? (
                   <p className="text-destructive text-sm">
@@ -139,7 +144,9 @@ export function VehicleForm({
                 ) : null}
               </div>
               <div className="space-y-2">
-                <Label htmlFor="insuranceUntil">보험 만료일</Label>
+                <Label htmlFor="insuranceUntil" required>
+                  보험 만료일
+                </Label>
                 <Input
                   id="insuranceUntil"
                   name="insuranceUntil"
@@ -147,6 +154,7 @@ export function VehicleForm({
                   defaultValue={initial.insuranceUntil}
                   min="2024-01-01"
                   max="2099-12-31"
+                  required
                 />
                 <p className="text-muted-foreground text-xs">
                   연도는 2024년부터 2099년까지 입력 가능합니다.

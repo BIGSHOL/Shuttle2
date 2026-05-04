@@ -60,7 +60,7 @@ export default async function StopsPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card>
+        <Card className="py-0">
           <CardContent className="p-0">
             <Table>
               <TableHeader>

@@ -133,7 +133,7 @@ export default async function OwnerStopChangeRequestsPage() {
             </CardHeader>
           </Card>
         ) : (
-          <Card>
+          <Card className="py-0">
             <CardContent className="p-0">
               <ul className="divide-y text-sm">
                 {recent.map((it) => (
