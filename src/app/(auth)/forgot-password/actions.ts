@@ -3,6 +3,7 @@
 import { headers } from "next/headers";
 import { z } from "zod";
 
+import { db } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
 
 const ForgotSchema = z.object({
@@ -23,23 +24,41 @@ export async function requestPasswordResetAction(
     return { error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요" };
   }
 
+  const email = parsed.data.email.toLowerCase();
+
+  // 가입 여부 사전 확인 (사용자 요청: UX 우선).
+  // 트레이드오프: 계정 enumeration 가능 — 베타 B2B 환경에서 수용.
+  // auth.users는 Prisma 스키마 밖이라 raw query로 조회 (DIRECT_URL/service role bypass).
+  const rows = await db.$queryRaw<{ exists: boolean }[]>`
+    SELECT EXISTS(SELECT 1 FROM auth.users WHERE lower(email) = ${email}) AS exists
+  `;
+  if (!rows[0]?.exists) {
+    return {
+      error:
+        "가입되지 않은 이메일입니다. 가입하신 이메일을 다시 확인해 주세요.",
+    };
+  }
+
   const supabase = await createClient();
 
-  // 현재 요청 host 기반으로 redirect URL 구성 (production·preview 모두 대응)
+  // 현재 요청 host 기반으로 redirect URL 구성 (production·preview 모두 대응).
+  // PKCE 흐름이라 /auth/callback에서 서버 측 code exchange 후 /reset-password로 이동.
+  // (server action이 발급한 PKCE verifier는 httpOnly 쿠키라 브라우저가 못 읽음)
   const h = await headers();
   const proto = h.get("x-forwarded-proto") ?? "https";
   const host = h.get("host") ?? "shuttle2-nine.vercel.app";
-  const redirectTo = `${proto}://${host}/reset-password`;
+  const redirectTo = `${proto}://${host}/auth/callback?next=/reset-password`;
 
-  const { error } = await supabase.auth.resetPasswordForEmail(
-    parsed.data.email,
-    { redirectTo },
-  );
+  const { error } = await supabase.auth.resetPasswordForEmail(email, {
+    redirectTo,
+  });
 
-  // 보안: 가입 여부와 무관하게 항상 성공 응답 (계정 enumeration 방지)
   if (error) {
     console.error("password reset email failed:", error);
-    // error.message에 rate limit 등이 있을 수 있지만 사용자에는 동일 메시지
+    return {
+      error:
+        "메일 발송에 실패했습니다. 잠시 후 다시 시도해 주세요. (자주 시도하면 일시 차단될 수 있어요.)",
+    };
   }
 
   return { ok: true };

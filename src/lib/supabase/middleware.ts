@@ -43,6 +43,7 @@ export async function updateSession(request: NextRequest) {
     "/signup",
     "/forgot-password", // W15-D 비밀번호 재설정 요청
     "/reset-password", // W15-D 비밀번호 재설정 (이메일 link 도착)
+    "/auth/callback", // PKCE code exchange (resetPasswordForEmail 등)
     "/pricing", // W13 마케팅 페이지
     "/terms", // W15-C 이용약관
     "/privacy", // W15-C 개인정보처리방침

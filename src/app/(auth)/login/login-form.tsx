@@ -103,7 +103,7 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
         <Link href="/" className="hover:underline">
           셔틀이
         </Link>{" "}
-        · 도로교통법 §53⑦ 안전운행기록 자동화
+        · 셔틀버스 운영 서비스
       </p>
     </div>
   );

@@ -545,8 +545,8 @@ export default function MarketingPage() {
             </div>
           </div>
           <p className="text-muted-foreground text-[11px] font-medium">
-            © {new Date().getFullYear()} 셔틀이 (Shuttlee) · 도로교통법 §53⑦
-            어린이통학버스 안전운행기록 의무 자동화.
+            © {new Date().getFullYear()} 셔틀이 (Shuttlee) · 셔틀버스 운영
+            서비스
           </p>
         </div>
       </footer>
