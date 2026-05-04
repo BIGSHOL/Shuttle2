@@ -20,6 +20,7 @@ import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 
 import { DeleteStaffButton } from "./_components/delete-staff-button";
+import { ResetStaffPasswordButton } from "./_components/reset-staff-password-button";
 import { RevokeInviteButton } from "./_components/revoke-invite-button";
 
 const ROLE_LABEL = {
@@ -80,6 +81,7 @@ export default async function StaffPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>이름</TableHead>
+                <TableHead className="w-32">로그인 아이디</TableHead>
                 <TableHead className="w-32">역할</TableHead>
                 <TableHead className="w-40">전화</TableHead>
                 <TableHead className="w-24">상태</TableHead>
@@ -99,6 +101,11 @@ export default async function StaffPage() {
                         </span>
                       ) : null}
                     </TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {s.loginId ?? (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <span className={ROLE_BADGE[s.role]}>
                         {ROLE_LABEL[s.role]}
@@ -111,14 +118,22 @@ export default async function StaffPage() {
                       {s.userId ? "가입 완료" : "미가입"}
                     </TableCell>
                     <TableCell className="text-right">
-                      {!isMe && s.role !== "OWNER" ? (
-                        <DeleteStaffButton
-                          id={s.id}
-                          name={s.name}
-                          roleLabel={ROLE_LABEL[s.role]}
-                        />
-                      ) : (
+                      {isMe || s.role === "OWNER" ? (
                         <span className="text-muted-foreground text-xs">—</span>
+                      ) : (
+                        <div className="inline-flex items-start gap-1.5">
+                          {s.userId && s.loginId ? (
+                            <ResetStaffPasswordButton
+                              staffId={s.id}
+                              name={s.name}
+                            />
+                          ) : null}
+                          <DeleteStaffButton
+                            id={s.id}
+                            name={s.name}
+                            roleLabel={ROLE_LABEL[s.role]}
+                          />
+                        </div>
                       )}
                     </TableCell>
                   </TableRow>
@@ -147,6 +162,7 @@ export default async function StaffPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>이름</TableHead>
+                  <TableHead className="w-32">로그인 아이디</TableHead>
                   <TableHead className="w-32">역할</TableHead>
                   <TableHead className="w-40">전화</TableHead>
                   <TableHead className="w-32">만료일</TableHead>
@@ -157,6 +173,11 @@ export default async function StaffPage() {
                 {invites.map((i) => (
                   <TableRow key={i.id}>
                     <TableCell className="font-medium">{i.name}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {i.loginId ?? (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <span className={ROLE_BADGE[i.role]}>
                         {ROLE_LABEL[i.role]}

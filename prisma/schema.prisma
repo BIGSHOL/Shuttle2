@@ -38,6 +38,7 @@ model StaffInvite {
   role              StaffRole // OWNER 발급 거절 (server action에서 검증)
   name              String
   phone             String
+  loginId           String? // 발급 시 학원장이 정한 로그인 아이디. 본인이 그대로 사용.
   token             String       @unique
   createdAt         DateTime     @default(now())
   expiresAt         DateTime
@@ -59,6 +60,7 @@ model GuardianInvite {
   phone                String
   relation             String // "모", "부", "조부" 등
   isPrimary            Boolean        @default(false)
+  loginId              String? // 발급 시 학원장이 정한 로그인 아이디. 본인이 그대로 사용.
   token                String         @unique
   createdAt            DateTime       @default(now())
   expiresAt            DateTime
@@ -116,13 +118,14 @@ enum VehicleMode {
 }
 
 model Staff {
-  id     String       @id @default(cuid())
-  orgId  String
-  org    Organization @relation(fields: [orgId], references: [id])
-  userId String? // Supabase auth.users 연결
-  name   String
-  phone  String
-  role   StaffRole
+  id      String       @id @default(cuid())
+  orgId   String
+  org     Organization @relation(fields: [orgId], references: [id])
+  userId  String? // Supabase auth.users 연결
+  loginId String? @unique // 영문·숫자·_ 4~20자. 학원장 발급 또는 본인 선택. 이메일 대신 사용.
+  name    String
+  phone   String
+  role    StaffRole
 
   trainings         TrainingRecord[]
   driverTrips       Trip[]                  @relation("DriverTrips")
@@ -226,10 +229,11 @@ model Student {
 }
 
 model Guardian {
-  id     String  @id @default(cuid())
-  userId String? // Supabase auth (학부모 본인 계정)
-  name   String
-  phone  String  @unique
+  id      String  @id @default(cuid())
+  userId  String? // Supabase auth (학부모 본인 계정)
+  loginId String? @unique // 영문·숫자·_ 4~20자. 학원장 발급 또는 본인 선택. 이메일 대신 사용.
+  name    String
+  phone   String  @unique
 
   links              GuardianLink[]
   absences           AbsenceRequest[]

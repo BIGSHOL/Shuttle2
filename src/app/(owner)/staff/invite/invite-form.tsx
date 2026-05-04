@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { suggestLoginId } from "@/lib/auth/login-id";
 
 import { createInviteAction, type InviteFormState } from "../actions";
 
@@ -23,6 +24,7 @@ export function InviteForm({ origin }: { origin: string }) {
     InviteFormState,
     FormData
   >(createInviteAction, {});
+  const [loginId, setLoginId] = useState<string>(() => suggestLoginId());
 
   const inviteUrl = state.newInvite
     ? `${origin}/invite/${state.newInvite.token}`
@@ -35,7 +37,7 @@ export function InviteForm({ origin }: { origin: string }) {
           <CardTitle>새 직원 초대</CardTitle>
           <CardDescription>
             기사·동승자에게 줄 1회용 초대 링크를 발급합니다. 링크를 받은 사람은
-            본인의 이메일·비밀번호를 정해 가입합니다.
+            아래 로그인 아이디로 가입하고 비밀번호만 정합니다.
           </CardDescription>
         </CardHeader>
         <form action={formAction}>
@@ -68,6 +70,46 @@ export function InviteForm({ origin }: { origin: string }) {
               {state.fieldErrors?.phone ? (
                 <p className="text-destructive text-sm">
                   {state.fieldErrors.phone[0]}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="loginId">로그인 아이디</Label>
+              <div className="flex gap-2">
+                <Input
+                  id="loginId"
+                  name="loginId"
+                  value={loginId}
+                  onChange={(e) =>
+                    setLoginId(
+                      e.target.value
+                        .toLowerCase()
+                        .replace(/[^a-z0-9_]/g, "")
+                        .slice(0, 20),
+                    )
+                  }
+                  placeholder="kim_driver"
+                  required
+                  minLength={4}
+                  maxLength={20}
+                  className="font-mono"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLoginId(suggestLoginId())}
+                >
+                  자동 추천
+                </Button>
+              </div>
+              <p className="text-muted-foreground text-xs font-medium">
+                영문 소문자·숫자·_ 4~20자. 가입 후 본인이 이 아이디로 로그인합니다.
+              </p>
+              {state.fieldErrors?.loginId ? (
+                <p className="text-destructive text-sm">
+                  {state.fieldErrors.loginId[0]}
                 </p>
               ) : null}
             </div>

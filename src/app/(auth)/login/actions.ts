@@ -4,11 +4,20 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import {
+  isLikelyEmail,
+  isValidLoginId,
+  loginIdToEmail,
+} from "@/lib/auth/login-id";
 import { homePathForRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
 
+// 이메일 또는 로그인 아이디(loginId) 어느 쪽이든 받음.
 const LoginSchema = z.object({
-  email: z.string().email("이메일 형식이 올바르지 않습니다"),
+  identifier: z
+    .string()
+    .trim()
+    .min(1, "이메일 또는 로그인 아이디를 입력해 주세요"),
   password: z.string().min(1, "비밀번호를 입력해 주세요"),
 });
 
@@ -19,7 +28,7 @@ export async function loginAction(
   formData: FormData,
 ): Promise<LoginState> {
   const parsed = LoginSchema.safeParse({
-    email: formData.get("email"),
+    identifier: formData.get("identifier"),
     password: formData.get("password"),
   });
 
@@ -29,13 +38,33 @@ export async function loginAction(
     };
   }
 
+  // identifier가 이메일이면 그대로, 로그인 아이디면 placeholder 이메일로 변환.
+  const { identifier, password } = parsed.data;
+  let email: string;
+  if (isLikelyEmail(identifier)) {
+    const emailParse = z.email().safeParse(identifier);
+    if (!emailParse.success) {
+      return { error: "이메일 형식이 올바르지 않습니다" };
+    }
+    email = emailParse.data;
+  } else {
+    const normalized = identifier.toLowerCase();
+    if (!isValidLoginId(normalized)) {
+      return {
+        error: "로그인 아이디는 영문 소문자·숫자·언더스코어 4~20자입니다",
+      };
+    }
+    email = loginIdToEmail(normalized);
+  }
+
   const supabase = await createClient();
-  const { data: signInData, error } = await supabase.auth.signInWithPassword(
-    parsed.data,
-  );
+  const { data: signInData, error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
 
   if (error) {
-    return { error: "이메일 또는 비밀번호가 올바르지 않습니다" };
+    return { error: "아이디 또는 비밀번호가 올바르지 않습니다" };
   }
 
   // redirectTo가 명시되어 있으면 그대로, 아니면 role 기반 home으로.

@@ -33,6 +33,7 @@ export function AcceptForm({
   invite: {
     name: string;
     role: "OWNER" | "DRIVER" | "HELPER";
+    loginId: string;
     org: { name: string };
   };
 }) {
@@ -41,7 +42,6 @@ export function AcceptForm({
     AcceptInviteState,
     FormData
   >(boundAction, {});
-  // 성공 시 server-side redirect로 이동하므로 클라이언트 useEffect 불필요.
 
   return (
     <Card className="w-full max-w-md">
@@ -51,26 +51,19 @@ export function AcceptForm({
           <span className="font-medium">{invite.org.name}</span>의{" "}
           <span className="font-medium">{ROLE_LABEL[invite.role]}</span>{" "}
           <span className="font-medium">{invite.name}</span>님으로 가입합니다.
-          이메일과 비밀번호만 정해 주세요.
+          비밀번호만 정해 주세요.
         </CardDescription>
       </CardHeader>
       <form action={formAction}>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="email">이메일</Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="driver@example.com"
-              required
-            />
-            {state.fieldErrors?.email ? (
-              <p className="text-destructive text-sm">
-                {state.fieldErrors.email[0]}
-              </p>
-            ) : null}
+            <Label>로그인 아이디</Label>
+            <div className="bg-muted text-foreground rounded-md border px-3 py-2 font-mono text-sm font-bold">
+              {invite.loginId}
+            </div>
+            <p className="text-muted-foreground text-xs font-medium">
+              앞으로 로그인할 때 쓰는 아이디입니다. 학원장·원장님이 정하셨어요.
+            </p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">비밀번호</Label>

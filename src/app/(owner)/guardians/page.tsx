@@ -19,6 +19,7 @@ import {
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 
+import { ResetGuardianPasswordButton } from "./_components/reset-guardian-password-button";
 import { RevokeGuardianInviteButton } from "./_components/revoke-guardian-invite-button";
 import { UnlinkGuardianLinkButton } from "./_components/unlink-guardian-link-button";
 
@@ -34,7 +35,15 @@ export default async function GuardiansPage() {
   const links = await db.guardianLink.findMany({
     where: { student: { orgId } },
     include: {
-      guardian: { select: { id: true, name: true, phone: true, userId: true } },
+      guardian: {
+        select: {
+          id: true,
+          name: true,
+          phone: true,
+          loginId: true,
+          userId: true,
+        },
+      },
       student: { select: { id: true, name: true } },
     },
     orderBy: [{ guardian: { name: "asc" } }],
@@ -45,6 +54,7 @@ export default async function GuardiansPage() {
     id: string;
     name: string;
     phone: string;
+    loginId: string | null;
     userId: string | null;
     children: {
       id: string;
@@ -71,6 +81,7 @@ export default async function GuardiansPage() {
         id: l.guardian.id,
         name: l.guardian.name,
         phone: l.guardian.phone,
+        loginId: l.guardian.loginId,
         userId: l.guardian.userId,
         children: [child],
       });
@@ -121,15 +132,22 @@ export default async function GuardiansPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>이름</TableHead>
+                  <TableHead className="w-32">로그인 아이디</TableHead>
                   <TableHead className="w-40">전화</TableHead>
                   <TableHead>자녀</TableHead>
                   <TableHead className="w-24">상태</TableHead>
+                  <TableHead className="text-right">관리</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {guardians.map((g) => (
                   <TableRow key={g.id}>
                     <TableCell className="font-medium">{g.name}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {g.loginId ?? (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {g.phone}
                     </TableCell>
@@ -157,6 +175,16 @@ export default async function GuardiansPage() {
                     <TableCell className="text-muted-foreground text-sm">
                       {g.userId ? "가입 완료" : "미가입"}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {g.userId && g.loginId ? (
+                        <ResetGuardianPasswordButton
+                          guardianId={g.id}
+                          name={g.name}
+                        />
+                      ) : (
+                        <span className="text-muted-foreground text-xs">—</span>
+                      )}
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -183,6 +211,7 @@ export default async function GuardiansPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>이름</TableHead>
+                  <TableHead className="w-32">로그인 아이디</TableHead>
                   <TableHead className="w-32">관계</TableHead>
                   <TableHead className="w-40">전화</TableHead>
                   <TableHead>자녀</TableHead>
@@ -194,6 +223,11 @@ export default async function GuardiansPage() {
                 {invites.map((i) => (
                   <TableRow key={i.id}>
                     <TableCell className="font-medium">{i.name}</TableCell>
+                    <TableCell className="font-mono text-xs">
+                      {i.loginId ?? (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {i.relation}
                       {i.isPrimary ? " · 주" : ""}

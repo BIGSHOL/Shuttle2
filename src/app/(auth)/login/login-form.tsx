@@ -37,17 +37,21 @@ export function LoginForm({ redirectTo }: { redirectTo?: string }) {
             <input type="hidden" name="redirectTo" value={redirectTo} />
           ) : null}
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-bold">
-              이메일
+            <Label htmlFor="identifier" className="text-xs font-bold">
+              이메일 또는 로그인 아이디
             </Label>
             <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="owner@example.com"
+              id="identifier"
+              name="identifier"
+              type="text"
+              autoComplete="username"
+              placeholder="owner@example.com 또는 kim_driver"
               required
             />
+            <p className="text-muted-foreground text-[11px] font-medium">
+              학원장은 이메일, 기사·동승보호자·학부모는 학원장이 알려준 로그인
+              아이디를 입력하세요.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password" className="text-xs font-bold">

@@ -67,6 +67,22 @@ export default async function AcceptInvitePage({
     );
   }
 
+  if (!invite.loginId) {
+    return (
+      <main className={main}>
+        <Card className="w-full max-w-md">
+          <CardHeader>
+            <CardTitle>이 초대 링크는 사용할 수 없어요</CardTitle>
+            <CardDescription>
+              이전 형식의 초대 링크입니다. 학원장·원장님께 새 초대를 요청해
+              주세요.
+            </CardDescription>
+          </CardHeader>
+        </Card>
+      </main>
+    );
+  }
+
   return (
     <main className={main}>
       <AcceptForm
@@ -74,6 +90,7 @@ export default async function AcceptInvitePage({
         invite={{
           name: invite.name,
           role: invite.role,
+          loginId: invite.loginId,
           org: { name: invite.org.name },
         }}
       />

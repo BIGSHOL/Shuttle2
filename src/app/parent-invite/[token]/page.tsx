@@ -113,6 +113,24 @@ export default async function ParentInvitePage({
     );
   }
 
+  if (!invite.loginId) {
+    return (
+      <main className={SHELL}>
+        <ErrorCard
+          Icon={Link2Off}
+          title="이 초대 링크는 사용할 수 없어요"
+          body={
+            <>
+              이전 형식의 초대 링크입니다.
+              <br />
+              학원장·원장님께 새 초대를 요청해 주세요.
+            </>
+          }
+        />
+      </main>
+    );
+  }
+
   return (
     <main className={SHELL}>
       <ParentAcceptForm
@@ -120,6 +138,7 @@ export default async function ParentInvitePage({
         invite={{
           name: invite.name,
           relation: invite.relation,
+          loginId: invite.loginId,
           org: { name: invite.org.name },
           students: invite.students.map((s) => ({ name: s.student.name })),
         }}

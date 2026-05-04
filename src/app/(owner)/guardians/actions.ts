@@ -7,6 +7,12 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import {
+  generateTempPassword,
+  isValidLoginId,
+  loginIdToEmail,
+  LOGIN_ID_REGEX,
+} from "@/lib/auth/login-id";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
@@ -29,6 +35,14 @@ const InviteInput = z.object({
     .trim()
     .min(1, "관계를 입력해 주세요 (예: 모·부·조부)")
     .max(20),
+  loginId: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .regex(
+      LOGIN_ID_REGEX,
+      "로그인 아이디는 영문 소문자·숫자·_ 4~20자입니다",
+    ),
   isPrimary: z.boolean().default(false),
   studentIds: z
     .array(z.string().min(1))
@@ -49,6 +63,7 @@ export async function createGuardianInviteAction(
     name: formData.get("name"),
     phone: formData.get("phone"),
     relation: formData.get("relation"),
+    loginId: formData.get("loginId"),
     isPrimary: formData.get("isPrimary") === "on",
     studentIds: formData.getAll("studentIds").filter(
       (v): v is string => typeof v === "string",
@@ -74,6 +89,18 @@ export async function createGuardianInviteAction(
     return { error: "선택한 자녀 중 본 기관 소속이 아닌 학생이 있습니다" };
   }
 
+  // loginId 충돌 검사 — Guardian 전체 unique
+  const collision = await db.guardian.findUnique({
+    where: { loginId: data.loginId },
+    select: { id: true },
+  });
+  if (collision) {
+    return {
+      error: "이미 사용 중인 로그인 아이디입니다",
+      fieldErrors: { loginId: ["이미 사용 중인 로그인 아이디입니다"] },
+    };
+  }
+
   const expiresAt = new Date(Date.now() + INVITE_TTL_DAYS * 24 * 3600 * 1000);
   const token = generateToken();
 
@@ -83,6 +110,7 @@ export async function createGuardianInviteAction(
       name: data.name,
       phone: data.phone,
       relation: data.relation,
+      loginId: data.loginId,
       isPrimary: data.isPrimary,
       token,
       expiresAt,
@@ -147,8 +175,8 @@ export async function getGuardianInviteByToken(token: string) {
   });
 }
 
+// 학부모 가입은 invite의 loginId를 그대로 사용. 가입자는 비밀번호 + 동의만.
 const AcceptInput = z.object({
-  email: z.string().email("이메일 형식이 올바르지 않습니다"),
   password: z.string().min(8, "비밀번호는 8자 이상").max(72),
   consentMinor: z
     .string()
@@ -166,7 +194,6 @@ export async function acceptGuardianInviteAction(
   formData: FormData,
 ): Promise<AcceptGuardianInviteState> {
   const parsed = AcceptInput.safeParse({
-    email: formData.get("email"),
     password: formData.get("password"),
     consentMinor: formData.get("consentMinor"),
   });
@@ -185,7 +212,26 @@ export async function acceptGuardianInviteAction(
   if (!invite) return { error: "유효하지 않은 초대 링크입니다" };
   if (invite.acceptedAt) return { error: "이미 사용된 초대입니다" };
   if (invite.expiresAt < new Date()) return { error: "만료된 초대입니다" };
+  if (!invite.loginId || !isValidLoginId(invite.loginId)) {
+    return {
+      error:
+        "이 초대 링크는 더 이상 사용할 수 없어요. 학원장님께 새 초대를 요청해 주세요.",
+    };
+  }
 
+  // loginId 충돌 재검사
+  const loginIdCollision = await db.guardian.findUnique({
+    where: { loginId: invite.loginId },
+    select: { id: true },
+  });
+  if (loginIdCollision) {
+    return {
+      error:
+        "이 로그인 아이디는 다른 사용자가 사용 중입니다. 학원장님께 새 초대를 요청해 주세요.",
+    };
+  }
+
+  const placeholderEmail = loginIdToEmail(invite.loginId);
   const admin = createSupabaseAdmin();
 
   // 기존 Guardian (phone unique) 조회 — 이미 가입된 학부모면 거절
@@ -199,10 +245,10 @@ export async function acceptGuardianInviteAction(
     };
   }
 
-  // 1) Auth 사용자 생성
+  // 1) Auth 사용자 생성 — placeholder 이메일
   const { data: created, error: createError } =
     await admin.auth.admin.createUser({
-      email: parsed.data.email,
+      email: placeholderEmail,
       password: parsed.data.password,
       email_confirm: true,
     });
@@ -217,11 +263,12 @@ export async function acceptGuardianInviteAction(
       const guardian = existingByPhone
         ? await tx.guardian.update({
             where: { id: existingByPhone.id },
-            data: { userId, name: invite.name },
+            data: { userId, name: invite.name, loginId: invite.loginId },
           })
         : await tx.guardian.create({
             data: {
               userId,
+              loginId: invite.loginId,
               name: invite.name,
               phone: invite.phone,
             },
@@ -263,9 +310,52 @@ export async function acceptGuardianInviteAction(
   // 3) 세션 수립
   const supabase = await createClient();
   await supabase.auth.signInWithPassword({
-    email: parsed.data.email,
+    email: placeholderEmail,
     password: parsed.data.password,
   });
 
   redirect("/home");
+}
+
+// ────────────────────────────────────────────────────────────────────
+// 학원장이 학부모 비밀번호 초기화 — admin API로 새 임시 비번 발급.
+// ────────────────────────────────────────────────────────────────────
+
+export type ResetGuardianPasswordResult =
+  | { ok: true; tempPassword: string; loginId: string }
+  | { error: string };
+
+export async function resetGuardianPasswordAction(
+  guardianId: string,
+): Promise<ResetGuardianPasswordResult> {
+  await requireOwner();
+  const orgId = await getOrgId();
+
+  // orgId 검증: 본 기관에 속한 학생을 통해서만 학부모 접근 (학부모는 orgId 없음)
+  const guardian = await db.guardian.findFirst({
+    where: {
+      id: guardianId,
+      links: { some: { student: { orgId } } },
+    },
+    select: { id: true, userId: true, loginId: true },
+  });
+  if (!guardian) return { error: "해당 학부모를 찾을 수 없습니다" };
+  if (!guardian.userId) {
+    return { error: "아직 가입을 완료하지 않은 학부모입니다" };
+  }
+  if (!guardian.loginId) {
+    return { error: "이전 형식 계정이라 초기화 불가. 신규 초대로 재발급해 주세요" };
+  }
+
+  const tempPassword = generateTempPassword(8);
+  const admin = createSupabaseAdmin();
+  const { error } = await admin.auth.admin.updateUserById(guardian.userId, {
+    password: tempPassword,
+  });
+  if (error) {
+    console.error("[guardians] reset password failed:", error);
+    return { error: "비밀번호 초기화에 실패했습니다" };
+  }
+
+  return { ok: true, tempPassword, loginId: guardian.loginId };
 }

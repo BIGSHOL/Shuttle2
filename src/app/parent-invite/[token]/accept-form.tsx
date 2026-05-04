@@ -21,6 +21,7 @@ export function ParentAcceptForm({
   invite: {
     name: string;
     relation: string;
+    loginId: string;
     org: { name: string };
     students: { name: string }[];
   };
@@ -96,28 +97,19 @@ export function ParentAcceptForm({
         <div>
           <h2 className="text-2xl font-extrabold tracking-tight">학부모 가입</h2>
           <p className="text-muted-foreground mt-1 text-sm font-medium">
-            로그인용 이메일·비밀번호를 설정하세요. 자녀 운행 정보·푸시 알림에
-            접근할 수 있게 됩니다.
+            비밀번호만 정해 주세요. 자녀 운행 정보·푸시 알림에 접근할 수 있게
+            됩니다.
           </p>
         </div>
         <form action={formAction} className="mt-5 space-y-4">
           <div className="space-y-1.5">
-            <Label htmlFor="email" className="text-xs font-bold">
-              이메일
-            </Label>
-            <Input
-              id="email"
-              name="email"
-              type="email"
-              autoComplete="email"
-              placeholder="parent@example.com"
-              required
-            />
-            {state.fieldErrors?.email ? (
-              <p className="text-destructive text-xs font-medium">
-                {state.fieldErrors.email[0]}
-              </p>
-            ) : null}
+            <Label className="text-xs font-bold">로그인 아이디</Label>
+            <div className="bg-muted rounded-md border px-3 py-2 font-mono text-sm font-bold">
+              {invite.loginId}
+            </div>
+            <p className="text-muted-foreground text-[11px] font-medium">
+              앞으로 로그인할 때 쓰는 아이디입니다. 학원장·원장님이 정하셨어요.
+            </p>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="password" className="text-xs font-bold">
