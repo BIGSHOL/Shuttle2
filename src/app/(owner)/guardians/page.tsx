@@ -134,6 +134,7 @@ export default async function GuardiansPage() {
                 {guardians.map((g) => (
                   <li key={g.id}>
                     <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                      {/* 상단: 부모 정보 + 비번 초기화 */}
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
@@ -147,31 +148,6 @@ export default async function GuardiansPage() {
                           <p className="text-muted-foreground mt-1.5 text-xs font-medium">
                             ID {g.loginId ?? "—"} · {g.phone}
                           </p>
-                          {/* 자녀 list: 좁은 폭에서도 이름이 단어 중간에서
-                              끊기지 않도록 name+관계를 whitespace-nowrap으로
-                              한 덩어리로 묶고, flex-wrap으로 해제 버튼이 자리
-                              부족 시 자연스럽게 다음 줄로. */}
-                          <ul className="mt-2 space-y-1 text-xs">
-                            {g.children.map((c) => (
-                              <li
-                                key={c.linkId}
-                                className="flex flex-wrap items-center gap-x-1.5 gap-y-1"
-                              >
-                                <span className="whitespace-nowrap">
-                                  <span className="font-medium">{c.name}</span>
-                                  <span className="text-muted-foreground ml-1">
-                                    ({c.relation}
-                                    {c.isPrimary ? "·주" : ""})
-                                  </span>
-                                </span>
-                                <UnlinkGuardianLinkButton
-                                  linkId={c.linkId}
-                                  guardianName={g.name}
-                                  studentName={c.name}
-                                />
-                              </li>
-                            ))}
-                          </ul>
                         </div>
                         {g.userId && g.loginId ? (
                           <div className="shrink-0">
@@ -182,6 +158,31 @@ export default async function GuardiansPage() {
                           </div>
                         ) : null}
                       </div>
+
+                      {/* 자녀 list — 카드 전체 폭. border-t로 부모 정보와
+                          시각적 구분, 각 row는 left=이름, right=해제 버튼으로
+                          justify-between → 우측 빈 공간 활용. */}
+                      <ul className="mt-3 space-y-1.5 border-t pt-2.5 text-xs">
+                        {g.children.map((c) => (
+                          <li
+                            key={c.linkId}
+                            className="flex items-center justify-between gap-2"
+                          >
+                            <span className="min-w-0 truncate">
+                              <span className="font-medium">{c.name}</span>
+                              <span className="text-muted-foreground ml-1">
+                                ({c.relation}
+                                {c.isPrimary ? "·주" : ""})
+                              </span>
+                            </span>
+                            <UnlinkGuardianLinkButton
+                              linkId={c.linkId}
+                              guardianName={g.name}
+                              studentName={c.name}
+                            />
+                          </li>
+                        ))}
+                      </ul>
                     </div>
                   </li>
                 ))}
