@@ -23,6 +23,10 @@ import {
   upsertSafetyCheckAction,
   type SafetyFieldsInput,
 } from "../../run/actions";
+import {
+  EndTripModal,
+  type UnprocessedItem,
+} from "./_components/end-trip-modal";
 import { useGpsTracker } from "./gps-tracker";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
@@ -135,7 +139,46 @@ export function TripRunningView({
   // 운행 종료
   const [endPending, startEndTransition] = useTransition();
   const [endError, setEndError] = useState<string | null>(null);
+  const [endModalOpen, setEndModalOpen] = useState(false);
+
+  // S1: 미처리 학생 계산. 결석 ACKNOWLEDGED 또는 이미 BOARD/ALIGHT 또는
+  // NO_SHOW/NO_DROPOFF 보고된 학생은 처리됨으로 간주.
+  function computeUnprocessed(): UnprocessedItem[] {
+    const issueType = eventType === "BOARD" ? "NO_SHOW" : "NO_DROPOFF";
+    const result: UnprocessedItem[] = [];
+    for (const stop of stops) {
+      for (const s of stop.students) {
+        if (s.absence?.status === "ACKNOWLEDGED") continue;
+        if (s.issue?.type === issueType) continue;
+        if (checkedSet.has(s.id)) continue;
+        result.push({
+          studentId: s.id,
+          studentName: s.name,
+          stopName: stop.name,
+        });
+      }
+    }
+    return result;
+  }
+
+  function doEndTrip() {
+    setEndError(null);
+    startEndTransition(async () => {
+      try {
+        await endTripAction(tripId);
+      } catch (err) {
+        setEndError(err instanceof Error ? err.message : "종료 실패");
+      }
+    });
+  }
+
   function handleEnd() {
+    // S1: 미처리 학생 강제 확인. 학생별로 [탑승]/[미탑승 보고] 처리해야 종료 가능.
+    const unprocessed = computeUnprocessed();
+    if (unprocessed.length > 0) {
+      setEndModalOpen(true);
+      return;
+    }
     if (isKidsMode && !safetyCheck?.allAlightedOk) {
       if (
         !confirm(
@@ -148,14 +191,7 @@ export function TripRunningView({
     ) {
       return;
     }
-    setEndError(null);
-    startEndTransition(async () => {
-      try {
-        await endTripAction(tripId);
-      } catch (err) {
-        setEndError(err instanceof Error ? err.message : "종료 실패");
-      }
-    });
+    doEndTrip();
   }
 
   return (
@@ -422,6 +458,20 @@ export function TripRunningView({
         <p className="text-muted-foreground pt-2 text-center text-xs font-medium">
           동승보호자는 종료할 수 없습니다. 기사님만 운행 종료 가능.
         </p>
+      ) : null}
+
+      {endModalOpen ? (
+        <EndTripModal
+          tripId={tripId}
+          eventType={eventType}
+          items={computeUnprocessed()}
+          onClose={() => setEndModalOpen(false)}
+          onAllResolved={() => {
+            setEndModalOpen(false);
+            // 마지막 학생까지 처리됐으면 안전점검 confirm은 건너뛰고 즉시 종료.
+            doEndTrip();
+          }}
+        />
       ) : null}
     </main>
   );

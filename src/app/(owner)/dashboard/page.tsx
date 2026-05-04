@@ -1,5 +1,6 @@
 import Link from "next/link";
 import {
+  AlertTriangle,
   Bus,
   Calendar,
   GraduationCap,
@@ -48,6 +49,7 @@ export default async function DashboardPage() {
     routeCount,
     pendingAbsenceCount,
     pendingStopChangeCount,
+    todayNoShowCount,
   ] = await Promise.all([
     db.vehicle.count({ where: { orgId } }),
     db.student.count({ where: { orgId } }),
@@ -61,6 +63,13 @@ export default async function DashboardPage() {
     }),
     db.stopChangeRequest.count({
       where: { orgId, status: "PENDING" },
+    }),
+    // 오늘 미탑승·미하차 보고 건수 (학원장 즉시 인지용)
+    db.boardingEvent.count({
+      where: {
+        type: { in: ["NO_SHOW", "NO_DROPOFF"] },
+        trip: { vehicle: { orgId }, date: todayDate },
+      },
     }),
   ]);
 
@@ -198,14 +207,16 @@ export default async function DashboardPage() {
           tone="info"
         />
         <KpiCard
-          label="진행 중 차량"
-          value={runningTrips.length}
+          label="오늘 미탑승·미하차"
+          value={todayNoShowCount}
           subtext={
-            runningTrips.length > 0 ? "지금 운행 중" : "진행 중 운행 없음"
+            todayNoShowCount > 0
+              ? "학생이 정류장에 안 나옴·셔틀에서 안 내림"
+              : "이상 없음"
           }
-          Icon={Route}
-          tone={runningTrips.length > 0 ? "bus" : "muted"}
-          pulse={runningTrips.length > 0}
+          Icon={AlertTriangle}
+          tone={todayNoShowCount > 0 ? "destructive" : "muted"}
+          pulse={todayNoShowCount > 0}
         />
         <KpiCard
           label="대기 요청"
