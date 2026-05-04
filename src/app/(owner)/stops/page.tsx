@@ -60,43 +60,72 @@ export default async function StopsPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="py-0">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead>주소</TableHead>
-                  <TableHead className="w-24">반경</TableHead>
-                  <TableHead className="text-right">관리</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {stops.map((s) => (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {s.address ?? (
-                        <span className="text-muted-foreground/60">
-                          주소 미확인
-                        </span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {s.radiusM}m
-                    </TableCell>
-                    <TableCell className="space-x-2 text-right">
+        <>
+          {/* 모바일/태블릿: 카드 stack — 가로 스크롤 회피 */}
+          <ul className="space-y-2 lg:hidden">
+            {stops.map((s) => (
+              <li key={s.id}>
+                <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="text-sm font-extrabold tracking-tight">
+                        {s.name}
+                      </h3>
+                      <p className="text-muted-foreground mt-1.5 truncate text-xs font-medium">
+                        {s.address ?? "주소 미확인"} · 반경 {s.radiusM}m
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1.5">
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/stops/${s.id}/edit`}>편집</Link>
                       </Button>
                       <DeleteStopButton id={s.id} name={s.name} />
-                    </TableCell>
+                    </div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          {/* 데스크톱: 표 */}
+          <Card className="hidden py-0 lg:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>이름</TableHead>
+                    <TableHead>주소</TableHead>
+                    <TableHead className="w-24">반경</TableHead>
+                    <TableHead className="text-right">관리</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {stops.map((s) => (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-medium">{s.name}</TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {s.address ?? (
+                          <span className="text-muted-foreground/60">
+                            주소 미확인
+                          </span>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {s.radiusM}m
+                      </TableCell>
+                      <TableCell className="space-x-2 text-right">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/stops/${s.id}/edit`}>편집</Link>
+                        </Button>
+                        <DeleteStopButton id={s.id} name={s.name} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
       )}
     </main>
   );

@@ -65,57 +65,101 @@ export default async function RoutesPage() {
           </CardContent>
         </Card>
       ) : (
-        <Card className="py-0">
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead className="w-20">방향</TableHead>
-                  <TableHead className="w-32">차량</TableHead>
-                  <TableHead className="w-28">요일</TableHead>
-                  <TableHead className="w-24">정류장</TableHead>
-                  <TableHead className="text-right">관리</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {routes.map((r) => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.name}</TableCell>
-                    <TableCell>
-                      <span
-                        className={
-                          // -ml-2: 배지 px-2 만큼 당겨서 헤더 텍스트와 정렬.
-                          r.direction === "PICKUP"
-                            ? "bg-success-soft text-success -ml-2 rounded-md px-2 py-0.5 text-xs font-bold"
-                            : "bg-info-soft text-info -ml-2 rounded-md px-2 py-0.5 text-xs font-bold"
-                        }
-                      >
-                        {formatDirection(r.direction)}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      [{r.vehicle.mode === "KIDS" ? "어린이용" : "일반용"}]{" "}
-                      {r.vehicle.plate}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {formatWeekdays(r.weekdays)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {r._count.stops}개
-                    </TableCell>
-                    <TableCell className="space-x-2 text-right">
-                      <Button asChild size="sm" variant="outline">
-                        <Link href={`/routes/${r.id}/edit`}>편집</Link>
-                      </Button>
-                      <DeleteRouteButton id={r.id} name={r.name} />
-                    </TableCell>
+        <>
+          {/* 모바일/태블릿: 카드 stack — 가로 스크롤 회피 */}
+          <ul className="space-y-2 lg:hidden">
+            {routes.map((r) => {
+              const dirCls =
+                r.direction === "PICKUP"
+                  ? "bg-success-soft text-success"
+                  : "bg-info-soft text-info";
+              return (
+                <li key={r.id}>
+                  <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`${dirCls} rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide`}
+                          >
+                            {formatDirection(r.direction)}
+                          </span>
+                          <h3 className="text-sm font-extrabold tracking-tight">
+                            {r.name}
+                          </h3>
+                        </div>
+                        <p className="text-muted-foreground mt-1.5 text-xs font-medium">
+                          [{r.vehicle.mode === "KIDS" ? "어린이용" : "일반용"}]{" "}
+                          {r.vehicle.plate} · {formatWeekdays(r.weekdays)} ·
+                          정류장 {r._count.stops}개
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/routes/${r.id}/edit`}>편집</Link>
+                        </Button>
+                        <DeleteRouteButton id={r.id} name={r.name} />
+                      </div>
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* 데스크톱: 표 */}
+          <Card className="hidden py-0 lg:block">
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>이름</TableHead>
+                    <TableHead className="w-20">방향</TableHead>
+                    <TableHead className="w-32">차량</TableHead>
+                    <TableHead className="w-28">요일</TableHead>
+                    <TableHead className="w-24">정류장</TableHead>
+                    <TableHead className="text-right">관리</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                </TableHeader>
+                <TableBody>
+                  {routes.map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.name}</TableCell>
+                      <TableCell>
+                        <span
+                          className={
+                            // -ml-2: 배지 px-2 만큼 당겨서 헤더 텍스트와 정렬.
+                            r.direction === "PICKUP"
+                              ? "bg-success-soft text-success -ml-2 rounded-md px-2 py-0.5 text-xs font-bold"
+                              : "bg-info-soft text-info -ml-2 rounded-md px-2 py-0.5 text-xs font-bold"
+                          }
+                        >
+                          {formatDirection(r.direction)}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        [{r.vehicle.mode === "KIDS" ? "어린이용" : "일반용"}]{" "}
+                        {r.vehicle.plate}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {formatWeekdays(r.weekdays)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {r._count.stops}개
+                      </TableCell>
+                      <TableCell className="space-x-2 text-right">
+                        <Button asChild size="sm" variant="outline">
+                          <Link href={`/routes/${r.id}/edit`}>편집</Link>
+                        </Button>
+                        <DeleteRouteButton id={r.id} name={r.name} />
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
+        </>
       )}
     </main>
   );

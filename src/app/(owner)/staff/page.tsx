@@ -80,51 +80,37 @@ export default async function StaffPage() {
           <CardDescription>본인 + 가입을 마친 기사·동승자.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>이름</TableHead>
-                <TableHead className="w-32">로그인 아이디</TableHead>
-                <TableHead className="w-32">역할</TableHead>
-                <TableHead className="w-40">전화</TableHead>
-                <TableHead className="w-24">상태</TableHead>
-                <TableHead className="text-right">관리</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {staffs.map((s) => {
-                const isMe = s.id === me.staff.id;
-                return (
-                  <TableRow key={s.id}>
-                    <TableCell className="font-medium">
-                      {s.name}
-                      {isMe ? (
-                        <span className="text-muted-foreground ml-2 text-xs">
-                          (나)
-                        </span>
-                      ) : null}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {s.loginId ?? (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className={ROLE_BADGE[s.role]}>
-                        {ROLE_LABEL[s.role]}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {s.phone || "—"}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {s.userId ? "가입 완료" : "미가입"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {isMe || s.role === "OWNER" ? (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      ) : (
-                        <div className="inline-flex items-start gap-1.5">
+          {/* 모바일/태블릿: 카드 stack — 가로 스크롤 회피 */}
+          <ul className="space-y-2 px-4 pb-4 lg:hidden">
+            {staffs.map((s) => {
+              const isMe = s.id === me.staff.id;
+              return (
+                <li key={s.id}>
+                  <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0 flex-1">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span
+                            className={`${ROLE_BADGE[s.role].replace("-ml-2 ", "")}`}
+                          >
+                            {ROLE_LABEL[s.role]}
+                          </span>
+                          <h3 className="text-sm font-extrabold tracking-tight">
+                            {s.name}
+                            {isMe ? (
+                              <span className="text-muted-foreground ml-1.5 text-[10px] font-medium">
+                                (나)
+                              </span>
+                            ) : null}
+                          </h3>
+                        </div>
+                        <p className="text-muted-foreground mt-1.5 text-xs font-medium">
+                          ID {s.loginId ?? "—"} · {s.phone || "—"} ·{" "}
+                          {s.userId ? "가입 완료" : "미가입"}
+                        </p>
+                      </div>
+                      {!(isMe || s.role === "OWNER") ? (
+                        <div className="flex shrink-0 flex-col items-end gap-1.5">
                           {s.userId && s.loginId ? (
                             <ResetStaffPasswordButton
                               staffId={s.id}
@@ -137,13 +123,83 @@ export default async function StaffPage() {
                             roleLabel={ROLE_LABEL[s.role]}
                           />
                         </div>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      ) : null}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+
+          {/* 데스크톱: 표 */}
+          <div className="hidden lg:block">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>이름</TableHead>
+                  <TableHead className="w-32">로그인 아이디</TableHead>
+                  <TableHead className="w-32">역할</TableHead>
+                  <TableHead className="w-40">전화</TableHead>
+                  <TableHead className="w-24">상태</TableHead>
+                  <TableHead className="text-right">관리</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {staffs.map((s) => {
+                  const isMe = s.id === me.staff.id;
+                  return (
+                    <TableRow key={s.id}>
+                      <TableCell className="font-medium">
+                        {s.name}
+                        {isMe ? (
+                          <span className="text-muted-foreground ml-2 text-xs">
+                            (나)
+                          </span>
+                        ) : null}
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {s.loginId ?? (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <span className={ROLE_BADGE[s.role]}>
+                          {ROLE_LABEL[s.role]}
+                        </span>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {s.phone || "—"}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground text-sm">
+                        {s.userId ? "가입 완료" : "미가입"}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {isMe || s.role === "OWNER" ? (
+                          <span className="text-muted-foreground text-xs">
+                            —
+                          </span>
+                        ) : (
+                          <div className="inline-flex items-start gap-1.5">
+                            {s.userId && s.loginId ? (
+                              <ResetStaffPasswordButton
+                                staffId={s.id}
+                                name={s.name}
+                              />
+                            ) : null}
+                            <DeleteStaffButton
+                              id={s.id}
+                              name={s.name}
+                              roleLabel={ROLE_LABEL[s.role]}
+                            />
+                          </div>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         </CardContent>
       </Card>
 
@@ -161,44 +217,80 @@ export default async function StaffPage() {
               대기 중인 초대가 없습니다.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead className="w-32">로그인 아이디</TableHead>
-                  <TableHead className="w-32">역할</TableHead>
-                  <TableHead className="w-40">전화</TableHead>
-                  <TableHead className="w-32">만료일</TableHead>
-                  <TableHead className="text-right">관리</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* 모바일/태블릿: 카드 stack */}
+              <ul className="space-y-2 px-4 pb-4 lg:hidden">
                 {invites.map((i) => (
-                  <TableRow key={i.id}>
-                    <TableCell className="font-medium">{i.name}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {i.loginId ?? (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <span className={ROLE_BADGE[i.role]}>
-                        {ROLE_LABEL[i.role]}
-                      </span>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {i.phone}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {formatDate(i.expiresAt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <RevokeInviteButton id={i.id} />
-                    </TableCell>
-                  </TableRow>
+                  <li key={i.id}>
+                    <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span
+                              className={`${ROLE_BADGE[i.role].replace("-ml-2 ", "")}`}
+                            >
+                              {ROLE_LABEL[i.role]}
+                            </span>
+                            <h3 className="text-sm font-extrabold tracking-tight">
+                              {i.name}
+                            </h3>
+                          </div>
+                          <p className="text-muted-foreground mt-1.5 text-xs font-medium">
+                            ID {i.loginId ?? "—"} · {i.phone} · 만료{" "}
+                            {formatDate(i.expiresAt)}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <RevokeInviteButton id={i.id} />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
                 ))}
-              </TableBody>
-            </Table>
+              </ul>
+
+              {/* 데스크톱: 표 */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>이름</TableHead>
+                      <TableHead className="w-32">로그인 아이디</TableHead>
+                      <TableHead className="w-32">역할</TableHead>
+                      <TableHead className="w-40">전화</TableHead>
+                      <TableHead className="w-32">만료일</TableHead>
+                      <TableHead className="text-right">관리</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invites.map((i) => (
+                      <TableRow key={i.id}>
+                        <TableCell className="font-medium">{i.name}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {i.loginId ?? (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span className={ROLE_BADGE[i.role]}>
+                            {ROLE_LABEL[i.role]}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {i.phone}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {formatDate(i.expiresAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <RevokeInviteButton id={i.id} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>

@@ -128,67 +128,126 @@ export default async function GuardiansPage() {
               아직 등록된 보호자가 없습니다.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead className="w-32">로그인 아이디</TableHead>
-                  <TableHead className="w-40">전화</TableHead>
-                  <TableHead>자녀</TableHead>
-                  <TableHead className="w-24">상태</TableHead>
-                  <TableHead className="text-right">관리</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* 모바일/태블릿: 카드 stack — 가로 스크롤 회피 */}
+              <ul className="space-y-2 px-4 pb-4 lg:hidden">
                 {guardians.map((g) => (
-                  <TableRow key={g.id}>
-                    <TableCell className="font-medium">{g.name}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {g.loginId ?? (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {g.phone}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      <ul className="space-y-0.5">
-                        {g.children.map((c) => (
-                          <li
-                            key={c.linkId}
-                            className="flex items-center gap-2"
-                          >
-                            <span>{c.name}</span>
-                            <span className="text-muted-foreground text-xs">
-                              ({c.relation}
-                              {c.isPrimary ? " · 주" : ""})
+                  <li key={g.id}>
+                    <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <h3 className="text-sm font-extrabold tracking-tight">
+                              {g.name}
+                            </h3>
+                            <span className="text-muted-foreground text-[10px] font-medium">
+                              {g.userId ? "가입 완료" : "미가입"}
                             </span>
-                            <UnlinkGuardianLinkButton
-                              linkId={c.linkId}
-                              guardianName={g.name}
-                              studentName={c.name}
+                          </div>
+                          <p className="text-muted-foreground mt-1.5 text-xs font-medium">
+                            ID {g.loginId ?? "—"} · {g.phone}
+                          </p>
+                          <ul className="mt-2 space-y-1 text-xs">
+                            {g.children.map((c) => (
+                              <li
+                                key={c.linkId}
+                                className="flex items-center gap-1.5"
+                              >
+                                <span className="font-medium">{c.name}</span>
+                                <span className="text-muted-foreground">
+                                  ({c.relation}
+                                  {c.isPrimary ? " · 주" : ""})
+                                </span>
+                                <UnlinkGuardianLinkButton
+                                  linkId={c.linkId}
+                                  guardianName={g.name}
+                                  studentName={c.name}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                        {g.userId && g.loginId ? (
+                          <div className="shrink-0">
+                            <ResetGuardianPasswordButton
+                              guardianId={g.id}
+                              name={g.name}
                             />
-                          </li>
-                        ))}
-                      </ul>
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {g.userId ? "가입 완료" : "미가입"}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      {g.userId && g.loginId ? (
-                        <ResetGuardianPasswordButton
-                          guardianId={g.id}
-                          name={g.name}
-                        />
-                      ) : (
-                        <span className="text-muted-foreground text-xs">—</span>
-                      )}
-                    </TableCell>
-                  </TableRow>
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </li>
                 ))}
-              </TableBody>
-            </Table>
+              </ul>
+
+              {/* 데스크톱: 표 */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>이름</TableHead>
+                      <TableHead className="w-32">로그인 아이디</TableHead>
+                      <TableHead className="w-40">전화</TableHead>
+                      <TableHead>자녀</TableHead>
+                      <TableHead className="w-24">상태</TableHead>
+                      <TableHead className="text-right">관리</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {guardians.map((g) => (
+                      <TableRow key={g.id}>
+                        <TableCell className="font-medium">{g.name}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {g.loginId ?? (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {g.phone}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          <ul className="space-y-0.5">
+                            {g.children.map((c) => (
+                              <li
+                                key={c.linkId}
+                                className="flex items-center gap-2"
+                              >
+                                <span>{c.name}</span>
+                                <span className="text-muted-foreground text-xs">
+                                  ({c.relation}
+                                  {c.isPrimary ? " · 주" : ""})
+                                </span>
+                                <UnlinkGuardianLinkButton
+                                  linkId={c.linkId}
+                                  guardianName={g.name}
+                                  studentName={c.name}
+                                />
+                              </li>
+                            ))}
+                          </ul>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {g.userId ? "가입 완료" : "미가입"}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {g.userId && g.loginId ? (
+                            <ResetGuardianPasswordButton
+                              guardianId={g.id}
+                              name={g.name}
+                            />
+                          ) : (
+                            <span className="text-muted-foreground text-xs">
+                              —
+                            </span>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
@@ -207,47 +266,84 @@ export default async function GuardiansPage() {
               대기 중인 초대가 없습니다.
             </p>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>이름</TableHead>
-                  <TableHead className="w-32">로그인 아이디</TableHead>
-                  <TableHead className="w-32">관계</TableHead>
-                  <TableHead className="w-40">전화</TableHead>
-                  <TableHead>자녀</TableHead>
-                  <TableHead className="w-32">만료일</TableHead>
-                  <TableHead className="text-right">관리</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
+            <>
+              {/* 모바일/태블릿: 카드 stack */}
+              <ul className="space-y-2 px-4 pb-4 lg:hidden">
                 {invites.map((i) => (
-                  <TableRow key={i.id}>
-                    <TableCell className="font-medium">{i.name}</TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {i.loginId ?? (
-                        <span className="text-muted-foreground">—</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {i.relation}
-                      {i.isPrimary ? " · 주" : ""}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground text-sm">
-                      {i.phone}
-                    </TableCell>
-                    <TableCell className="text-sm">
-                      {i.students.map((s) => s.student.name).join(", ")}
-                    </TableCell>
-                    <TableCell className="font-mono text-xs">
-                      {formatDate(i.expiresAt)}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <RevokeGuardianInviteButton id={i.id} />
-                    </TableCell>
-                  </TableRow>
+                  <li key={i.id}>
+                    <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0 flex-1">
+                          <h3 className="text-sm font-extrabold tracking-tight">
+                            {i.name}{" "}
+                            <span className="text-muted-foreground text-[10px] font-medium">
+                              ({i.relation}
+                              {i.isPrimary ? " · 주" : ""})
+                            </span>
+                          </h3>
+                          <p className="text-muted-foreground mt-1.5 text-xs font-medium">
+                            ID {i.loginId ?? "—"} · {i.phone} · 만료{" "}
+                            {formatDate(i.expiresAt)}
+                          </p>
+                          <p className="text-muted-foreground mt-1 text-xs">
+                            자녀:{" "}
+                            {i.students.map((s) => s.student.name).join(", ")}
+                          </p>
+                        </div>
+                        <div className="shrink-0">
+                          <RevokeGuardianInviteButton id={i.id} />
+                        </div>
+                      </div>
+                    </div>
+                  </li>
                 ))}
-              </TableBody>
-            </Table>
+              </ul>
+
+              {/* 데스크톱: 표 */}
+              <div className="hidden lg:block">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>이름</TableHead>
+                      <TableHead className="w-32">로그인 아이디</TableHead>
+                      <TableHead className="w-32">관계</TableHead>
+                      <TableHead className="w-40">전화</TableHead>
+                      <TableHead>자녀</TableHead>
+                      <TableHead className="w-32">만료일</TableHead>
+                      <TableHead className="text-right">관리</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invites.map((i) => (
+                      <TableRow key={i.id}>
+                        <TableCell className="font-medium">{i.name}</TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {i.loginId ?? (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {i.relation}
+                          {i.isPrimary ? " · 주" : ""}
+                        </TableCell>
+                        <TableCell className="text-muted-foreground text-sm">
+                          {i.phone}
+                        </TableCell>
+                        <TableCell className="text-sm">
+                          {i.students.map((s) => s.student.name).join(", ")}
+                        </TableCell>
+                        <TableCell className="font-mono text-xs">
+                          {formatDate(i.expiresAt)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <RevokeGuardianInviteButton id={i.id} />
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </>
           )}
         </CardContent>
       </Card>
