@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   AlertTriangle,
   Check,
@@ -97,6 +97,36 @@ export function TripRunningView({
   // Wake Lock — 화면 자동 꺼짐 방지
   const wakeLock = useWakeLock(true);
 
+  // M1: 정류장 통과 후 60초가 지났는데도 미처리(미체크 + issue 없음 + 결석 ACK 아님)
+  // 학생을 노란 강조로 알림. 기사가 학생 처리를 잊은 케이스 시각 보강.
+  // S1(종료 모달 강제)과 함께 NO_SHOW 누락 위험을 다층으로 차단.
+  const [stopExpired, setStopExpired] = useState<Set<string>>(new Set());
+  const expireTimeoutsRef = useRef<Map<string, number>>(new Map());
+
+  const handleStopPassed = useCallback((stopId: string) => {
+    // 같은 정류장에 timeout이 이미 등록돼 있으면 무시 (idempotent)
+    if (expireTimeoutsRef.current.has(stopId)) return;
+    const id = window.setTimeout(() => {
+      setStopExpired((prev) => {
+        if (prev.has(stopId)) return prev;
+        const next = new Set(prev);
+        next.add(stopId);
+        return next;
+      });
+      expireTimeoutsRef.current.delete(stopId);
+    }, 60_000);
+    expireTimeoutsRef.current.set(stopId, id);
+  }, []);
+
+  // unmount 시 timeout 모두 cleanup (메모리 누수 방지)
+  useEffect(() => {
+    const m = expireTimeoutsRef.current;
+    return () => {
+      for (const tid of m.values()) window.clearTimeout(tid);
+      m.clear();
+    };
+  }, []);
+
   // GPS 추적
   const gps = useGpsTracker({
     tripId,
@@ -109,6 +139,7 @@ export function TripRunningView({
       radiusM: s.radiusM,
       order: s.order,
     })),
+    onStopPassed: handleStopPassed,
   });
 
   // 경과 시간
@@ -406,6 +437,7 @@ export function TripRunningView({
                         gpsLng={gps.fix?.longitude ?? null}
                         absence={st.absence}
                         issue={st.issue}
+                        stopPassedExpired={stopExpired.has(s.id)}
                       />
                     ))}
                   </ul>
@@ -611,6 +643,7 @@ function BoardingRow({
   gpsLng,
   absence,
   issue,
+  stopPassedExpired,
 }: {
   tripId: string;
   studentId: string;
@@ -631,6 +664,8 @@ function BoardingRow({
         reason: string | null;
       }
     | null;
+  // M1: 정류장 통과 후 60초가 지났는데도 처리되지 않은 학생 강조 플래그.
+  stopPassedExpired: boolean;
 }) {
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -782,9 +817,18 @@ function BoardingRow({
     );
   }
 
+  // M1: 정류장 통과 후 60초 미처리이면 노란 깜빡임 + "처리 누락" 배지 강조.
+  const expiredHighlight = stopPassedExpired && !checked;
+
   return (
     <li>
-      <div className="flex items-center gap-1.5">
+      <div
+        className={
+          expiredHighlight
+            ? "ring-warning relative flex animate-pulse items-center gap-1.5 rounded-xl ring-2 ring-offset-1"
+            : "flex items-center gap-1.5"
+        }
+      >
         <button
           type="button"
           disabled={pending}
@@ -792,19 +836,28 @@ function BoardingRow({
           className={
             checked
               ? "border-success bg-success-soft text-success flex flex-1 items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
-              : "border-input bg-background hover:bg-muted active:bg-muted flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
+              : expiredHighlight
+                ? "border-warning bg-warning-soft hover:bg-warning-soft/80 active:bg-warning-soft/80 text-foreground flex flex-1 items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
+                : "border-input bg-background hover:bg-muted active:bg-muted flex flex-1 items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
           }
         >
           <span
             className={
               checked
                 ? "bg-success text-success-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
-                : "border-input flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
+                : expiredHighlight
+                  ? "border-warning bg-background flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2"
+                  : "border-input flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
             }
           >
             {checked ? <Check className="h-3.5 w-3.5" /> : null}
           </span>
           <span className="min-w-0 flex-1 truncate">{studentName}</span>
+          {expiredHighlight ? (
+            <span className="bg-warning text-warning-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide whitespace-nowrap">
+              처리 누락
+            </span>
+          ) : null}
           <span className="text-muted-foreground text-xs font-bold whitespace-nowrap">
             {action}
           </span>
