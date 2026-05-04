@@ -106,7 +106,7 @@ export default function PricingPage() {
                 셔틀이
               </h1>
               <p className="text-muted-foreground text-[10px] font-medium">
-                Shuttlee · 셔틀 운영 SaaS
+                Shuttlee · 셔틀 운영 서비스
               </p>
             </div>
           </Link>

@@ -21,7 +21,7 @@ const PAIN_POINTS = [
   {
     Icon: ClipboardCheck,
     title: "분기마다 운행기록 정리에 한 주",
-    body: "도교법 §53⑦ 별지 제20호의2 서식을 차량별·운행별로 직접 입력. 기록 누락 시 과태료 + 사고 시 면책 자료 부재.",
+    body: "법정 양식(별지 제20호의2)을 차량별·운행별로 직접 입력. 기록 누락 시 과태료 + 사고 시 면책 자료 부재.",
     tone: "destructive" as const,
   },
   {
@@ -32,7 +32,7 @@ const PAIN_POINTS = [
   },
   {
     Icon: Shield,
-    title: "스쿨붕붕이는 GPS 끊김·UI 답답함",
+    title: "기존 셔틀 앱은 GPS 끊김·UI 답답함",
     body: "기존 솔루션은 안정성 약하고, 안전운행기록 기능은 따로 또 입력. 이중 작업.",
     tone: "info" as const,
   },
@@ -43,7 +43,7 @@ const FEATURES = [
     Icon: FileCheck,
     title: "안전운행기록 자동 생성",
     body: "매 운행마다 좌석안전띠·동승보호자·전원하차 체크가 자동 누적되어 분기마다 별지 제20호의2 PDF로 한 번에 추출.",
-    tag: "도교법 §53⑦",
+    tag: "법정 양식 자동",
   },
   {
     Icon: MapPin,
@@ -131,7 +131,7 @@ export default function MarketingPage() {
                 셔틀이
               </h1>
               <p className="text-muted-foreground text-[10px] font-medium">
-                Shuttlee · 셔틀 운영 SaaS
+                Shuttlee · 셔틀 운영 서비스
               </p>
             </div>
           </Link>
@@ -165,7 +165,7 @@ export default function MarketingPage() {
             <div className="space-y-6">
               <span className="bg-bus-soft text-bus-foreground inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold tracking-wide">
                 <Sparkles className="h-3.5 w-3.5" />
-                도교법 의무 + 학부모 만족 한 번에
+                법정 의무 + 학부모 만족 한 번에
               </span>
               <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
                 셔틀버스 운영,
@@ -178,7 +178,7 @@ export default function MarketingPage() {
               <p className="text-muted-foreground max-w-xl text-base font-medium sm:text-lg">
                 매 운행 자동 누적되는 안전점검·운행 기록을 분기마다 PDF로
                 추출하고, 학부모는 카카오맵에서 셔틀 위치를 실시간으로 봅니다.
-                도로교통법 §53⑦ 의무를 자동으로 충족시키는 셔틀 운영 SaaS.
+                어린이통학버스 안전운행기록 의무를 자동으로 충족시키는 셔틀 운영 서비스.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button asChild size="lg" className="text-base font-extrabold">
@@ -319,8 +319,8 @@ export default function MarketingPage() {
               안전 + 알림, 두 축을 자동화
             </h3>
             <p className="text-muted-foreground mt-3 text-base font-medium">
-              KIDS 모드 차량은 도교법 의무를 자동 충족하고, 모든 차량은 학부모
-              실시간 알림을 기본 제공합니다.
+              KIDS 모드 차량은 법정 안전운행 의무를 자동 충족하고, 모든 차량은
+              학부모 실시간 알림을 기본 제공합니다.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">

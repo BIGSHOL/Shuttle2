@@ -14,7 +14,7 @@ export default function TermsPage() {
       <LegalSection title="제1조 (목적)">
         <p>
           이 약관은 셔틀이(Shuttlee, 이하 “회사”)가 제공하는 셔틀버스 운영
-          SaaS 서비스(이하 “서비스”)의 이용에 관하여 회사와 회원 간의 권리,
+          서비스(이하 “서비스”)의 이용에 관하여 회사와 회원 간의 권리,
           의무, 책임사항을 정함을 목적으로 합니다.
         </p>
       </LegalSection>

@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     template: "%s · 셔틀이",
   },
   description:
-    "학원·교습소·어린이집·유치원 셔틀버스 운영을 위한 SaaS. 분기별 안전운행기록 자동 생성과 실시간 GPS 위치 추적.",
+    "학원·교습소·어린이집·유치원 셔틀버스 운영 서비스. 분기별 안전운행기록 자동 생성과 실시간 GPS 위치 추적.",
   applicationName: "셔틀이",
   keywords: [
     "셔틀버스",
