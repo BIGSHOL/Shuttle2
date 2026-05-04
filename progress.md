@@ -517,6 +517,10 @@
   적용 (다른 폼은 점진).
 - **표 카드 위·아래 여백 제거**: shadcn Card 기본 `py-4`가 Table 위·아래 16px
   여백 만듦. owner Table 6개 페이지에 `<Card className="py-0">`.
+- **정류장 등록 검색·내 위치** (`2821ee0`): 위도·경도 직접 입력 input 제거
+  (학원장이 좌표를 직접 알 일 거의 없음). 카카오 services.Places.keywordSearch
+  로 키워드(장소·주소) 검색 → 결과 list 5개. navigator.geolocation으로 "내
+  위치" 버튼 — enableHighAccuracy. 작은 caption으로 현재 좌표 4자리만 참고용.
 
 ### W18-H Layout 진입 가드 redirect (`c9befca`, `1246bff`)
 
