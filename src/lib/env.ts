@@ -1,7 +1,16 @@
+import "server-only";
+
 import { z } from "zod";
 
-// SUPABASE_SERVICE_ROLE_KEY는 서버 코드에서만 import할 것 (클라이언트 번들 노출 금지).
-// W6+ server-only 분리 리팩터 예정.
+// 이 파일은 server-only. client에서 import 시도하면 Next.js가 빌드 시점에
+// 차단함 (server-only 패키지의 React Server Components 가드).
+//
+// CLIENT 컴포넌트("use client")에서 NEXT_PUBLIC_* 변수가 필요하면:
+//   const key = process.env.NEXT_PUBLIC_FOO ?? "";
+//
+// process.env.NEXT_PUBLIC_*은 Next.js가 빌드 타임에 client 번들로 inline.
+// envSchema에는 SUPABASE_SERVICE_ROLE_KEY 같은 server-only 변수가 섞여 있어
+// client에서 env Proxy 호출 시 zod parse 실패 → "Invalid environment variables".
 const envSchema = z.object({
   NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
   NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),

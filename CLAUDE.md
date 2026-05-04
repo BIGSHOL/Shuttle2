@@ -240,6 +240,14 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - W17-C: 학부모 BottomTabBar (홈·알림·결석·정류장 4탭)
 - W17-D: 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화)
 - W17-E: `SHUTTLE_NEAR_CHILD` 알림 카테고리 + 안전운행기록 PDF에 GPS 누적거리
+- W18: 베타 직전 패키지 — 안전교육 이수증 Storage 업로드, NO_SHOW S1·S2·M1·M2,
+  Prisma pooler 전환·DB 인덱스·Promise.all 병렬화, loginId+recoveryEmail 도입,
+  데이터 고도화 #1·#2·#10 (NO_SHOW 빈도·SaaS KPI·ETA 학습)
+- W18-B: 사용자 노출 영어 광범위 한글화 (LIVE/ETA/GPS/PWA/Lite·Standard·Pro
+  /Web Push/User Agent/endpoint/broadcast → 운행 중·도착 예상·위치·앱·라이트·
+  스탠다드·프로·푸시 알림·브라우저 종류·구독 주소·실시간 위치 전송)
+- W18-C: layout 진입 가드를 throw → redirect (driver/helper/owner 모두
+  비-역할 사용자가 영어 stack trace 보지 않게 본인 home으로 redirect)
 
 ### 알려진 미해결 (다음 세션)
 
@@ -248,9 +256,47 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - 가입 확인 메일 한국어 (W17-B, email_confirm bypass 해제 시)
 - 결제 통합 (Toss Payments 또는 Stripe)
 
-### 환경 변수 가드레일 (W15-D 트러블슈팅 결과)
+### 환경 변수 가드레일 (W15-D·W18 트러블슈팅 결과)
 
-- `lib/env.ts` proxy는 `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` 등 server-only 변수까지 검증
-- 따라서 **Client Component에서는 `env.X` 사용 금지** — `process.env.NEXT_PUBLIC_*`을 직접 사용
-- `lib/supabase/client.ts`가 모범 예시 (process.env 직접)
+- `lib/env.ts`는 **`import "server-only"`로 보호**됨 — client에서 import 시도 시
+  Next.js가 빌드 시점 차단 (React Server Components 가드).
+- `lib/env.ts` proxy는 `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` 등 server-only
+  변수까지 검증하므로 client에서 호출되면 zod parse 실패 → 화면에
+  "Invalid environment variables: {}" 에러.
+- 따라서 **Client Component에서는 `env.X` 사용 금지** — `process.env.NEXT_PUBLIC_*`을
+  직접 사용 (Next.js가 빌드 타임에 client 번들로 inline).
+- 모범 예시:
+  - `lib/supabase/client.ts` (process.env 직접)
+  - `lib/map/stop-map-picker-inner.tsx` (W18 fix)
+  - `lib/map/trip-live-map-inner.tsx` (W18 fix)
+- Server Component / Server Action / Route Handler에서만 `env.X` 사용
+
+### 인증 식별자 (W18 loginId 도입)
+
+- Supabase Auth는 이메일 기반이지만 우리 layer에서 loginId(영문·숫자·_ 4~20자)
+  매핑. `${loginId}@shuttlee.local`이라는 placeholder 이메일이 Auth user.email에
+  저장됨 (`.local`은 RFC 6762 mDNS 예약 — 외부 SMTP 라우팅 불가).
+- 가입 시 `recoveryEmail` 입력하면 그 이메일이 Auth user.email로 저장돼
+  `/forgot-password`에서 본인이 reset 메일을 받음. 미입력자는 학원장 admin
+  reset만 가능.
+- 로그인 폼은 단일 input ("이메일 또는 로그인 아이디") — `@` 포함이면 이메일,
+  아니면 DB에서 loginId → recoveryEmail 또는 placeholder 이메일 lookup.
+
+### Layout 진입 가드 패턴 (W18-C)
+
+각 role 그룹의 layout이 **throw 대신 redirect**로 잘못된 역할 진입 처리:
+
+```ts
+const user = await getCurrentUser();
+if (!user) {
+  const guardian = await getCurrentGuardian();
+  if (guardian) redirect("/home");
+  redirect("/login?redirectTo=<role-home>");
+}
+if (user.staff.role !== "<EXPECTED>") {
+  redirect(homePathForRole(user.staff.role));
+}
+```
+
+새 role 그룹 추가 시 이 패턴 따라야 영어 stack trace가 사용자에게 노출 안 됨.
 - Server Component / Server Action / Route Handler에서만 `env.X` 사용

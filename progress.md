@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-03 (W16 학원장 trip 상세 실시간 자동 갱신)
+> 마지막 업데이트: 2026-05-04 (W18+ 베타 직전 sweep — 한글화·loginId·데이터 고도화·env 가드)
 
 ## 완료된 마일스톤
 
@@ -410,7 +410,146 @@
 - DB에 마이그레이션 적용: `pnpm db:migrate deploy` (운영) 또는
   `pnpm db:migrate dev` (로컬).
 
-## 다음 우선순위 (W17-B+)
+## W18 베타 직전 패키지 (2026-05-04)
+
+이번 세션 누적 22+ 커밋. 베타 운영 직전 안정화·UX·정책 정리.
+
+### W18-A 안전교육 이수증 Storage (`ba3e1bc`)
+
+- Supabase Storage `training-certificates` 버킷 (Private + signed URL).
+- TrainingRecord에 `certificateFile String?` 컬럼 추가 (`certificateUrl`은 외부 URL용 그대로).
+- 가입 폼에 모드 토글: "첨부 안 함 / 외부 URL / 파일 업로드".
+- PDF·JPG·PNG, 5MB 제한. magic-byte 검증으로 .exe rename 차단.
+- Next.js 16 server action body 한도 `bodySizeLimit = '6mb'` (5MB + multipart 여유).
+- 신규 `getCertificateSignedUrlAction(recordId)` 1시간 임시 link.
+- `deleteTrainingRecordAction` 확장 — DB delete 전 Storage cleanup.
+
+### W18-B NO_SHOW 시나리오 강화 (`40d0e74`, `1fec2ab`, `ad34629`)
+
+- **S1 운행 종료 강제 모달** (driver): 미처리 학생 1명이라도 있으면 종료 차단.
+  학생별 `[탑승]` / `[미탑승 보고 + 사유]` 처리해야 종료 가능.
+- **S2 학원장 KPI 카드** (dashboard): "오늘 미탑승·미하차 N건" — destructive
+  pulse + 주 보호자 이름·전화번호 같이 표시.
+- **M1 정류장 통과 60s 강조** (driver): 통과 후 60초 미처리 학생 노란 ring +
+  "처리 누락" 배지 + animate-pulse.
+- **M2 학부모 빠른 응답** (parent): NO_SHOW 알림에 "지금 데려다 드릴게요" 버튼.
+  응답 시 기사·학원장에게 즉시 푸시 (오늘 진행 중 NO_SHOW 보고 자동 매칭).
+
+### W18-C 성능 최적화 (`9810be2`, `0f1e997`)
+
+- **Prisma pooler 전환**: `lib/db.ts`의 connectionString을 DIRECT_URL(5432) →
+  DATABASE_URL(6543 transaction pooler, `pgbouncer=true`). Vercel cold start
+  TLS handshake 절감, connection 한도 회피.
+- **쿼리 병렬화**: owner dashboard 5개 sequential await → Promise.all (4개 묶음 +
+  boardingEvent 의존만 그 후), parent home 3개 sequential → Promise.all.
+- **DB 인덱스 10개**: Staff/Guardian(userId)·Vehicle/Staff/Stop/Student(orgId)·
+  Route(vehicleId)·RouteStudent(studentId)·Trip(driverId,date)·BoardingEvent(tripId,type).
+- **Geist_Mono 제거**: 한국어 앱이라 미사용. layout.tsx에서 import 제거,
+  globals.css의 `--font-mono`는 시스템 monospace로 fallback.
+
+### W18-D 인증 식별자 도입 (`367fb3b`, `d7062df`)
+
+- **loginId**: Staff·Guardian·StaffInvite·GuardianInvite에 `loginId String? @unique`.
+  영문·숫자·_ 4~20자. Supabase Auth는 placeholder 이메일 `${loginId}@shuttlee.local`
+  로 저장 (외부 SMTP 라우팅 불가, RFC 6762 mDNS 예약).
+- **recoveryEmail**: Staff·Guardian에 `recoveryEmail String?`. 가입 시 입력하면
+  그 이메일이 Auth user.email이 되어 본인이 `/forgot-password`에서 reset 메일 수신.
+  미입력자는 학원장 admin reset만 가능.
+- **로그인 폼 통합**: 단일 input "이메일 또는 로그인 아이디" — `@` 포함이면 이메일,
+  아니면 loginId → DB lookup으로 placeholder 또는 recoveryEmail 매핑.
+- **초대 흐름**: 학원장이 발급 시 loginId 직접 입력 또는 `suggestLoginId()` 자동
+  추천. 가입자는 비번·(선택)recoveryEmail만 입력.
+- **비번 초기화**: `/staff`·`/guardians` 학원장 페이지에 [비번 초기화] 버튼.
+  `admin.auth.admin.updateUserById`로 임시 비번 8자 발급 → 학원장이 카톡 공유.
+
+### W18-E 데이터 고도화 (`603b974`, `6583d10`)
+
+- **#1 NO_SHOW 빈도 학생 탐지** (dashboard): 최근 30일 3건 이상 학생 + 주 보호자
+  연락처 표시. 학원장이 학부모 면담 trigger.
+- **#10 SaaS 운영 KPI** (`/admin/kpi`, 화이트리스트): 등록 학원·학생·차량·
+  최근 30일 운행·NO_SHOW 비율·요금제·기관 유형 분포.
+- **#2 ETA 정시성 분석** (학부모 trip-live): `lib/eta/route-stats.ts`의
+  `getRouteStopArrivalStats()` — Trip.startedAt 기준 정류장별 평균 통과 분.
+  sample ≥ 3건 누적되면 "예상 HH:mm 도착 (정시 대비 +N분)" 표시,
+  부족하면 RouteStop.scheduledAt 기반 fallback.
+
+### W18-F 사용자 노출 영어 한글화 (`cca9fac`, `cfcb616`, `3b58c42`, `8cb83d9`, `c2bdaf2`, `3571df0`)
+
+베타 사용자는 비-IT 친화적인 학원장·기사·학부모. 영어 단어 노출이 마찰.
+
+- KIDS·GENERAL → 어린이용·일반용 (mode-badge·routes·students·safety-report PDF)
+- OWNER → 학원장·원장 (driver-notification-toggle·staff actions 에러)
+- LIVE → 운행 중 (4곳: marketing hero mock·home·trip-live·owner trip 상세)
+- ETA → 도착 예상
+- 도교법 → 도로교통법 (사용자 노출 + 코드 주석)
+- GPS → 위치 (driver "위치 수신중", owner trip "기사 폰 위치"; 약관 페이지는
+  "위치 정보를 기반으로"로 풀어쓰기)
+- PWA → 앱 설치 없이 바로 사용
+- iOS Safari → 아이폰 사파리
+- Lite/Standard/Pro → 라이트/스탠다드/프로
+- Web Push → 푸시 알림·브라우저 표준
+- broadcast → 실시간 위치 전송
+- LocationPing 테이블 → 위치 기록 데이터베이스
+- User Agent → 브라우저 종류·버전
+- endpoint → 구독 주소
+- ON/OFF → 켜짐/꺼짐
+- 기술 약어들도 외래어 표기 (CDN → 콘텐츠 전송 네트워크)
+
+코드 enum/주석/throw Error는 stack trace용 개발자 로그라 영어 유지.
+
+### W18-G UX·UI 폴리싱 (`cfcb616`, `36ea4e3`, `c665a60`, `01c4342`)
+
+- **헤더 짤림 fix**: OwnerHeader·DriverHeader·ParentHeader DropdownMenuContent에
+  `min-w-[220px]` + 이메일 p에 `break-all`. loginId placeholder 이메일도
+  `.local`까지 안 잘림.
+- **Vercel Speed Insights 활성화**: `@vercel/speed-insights/next`로 TTFB·LCP·INP
+  자동 수집.
+- **정류장 좌표 한 컬럼 + 4자리**: `/stops` 페이지에서 위도·경도 두 컬럼(6자리)
+  → "좌표" 한 컬럼(4자리, 약 11m 정확도). 학원장이 좌표 직접 검토할 일 거의 없음.
+- **한국어 줄바꿈**: globals.css `body { word-break: keep-all; overflow-wrap:
+  break-word; }` 글로벌 적용. "별/지" 단어 중간 끊김·"다." orphan 방지.
+- **날짜 입력 연도 차단**: `<input type="date">` 4자리 초과 연도(예: 262026)
+  허용 이슈. client `min/max="2099-12-31"` + server zod refine 이중 차단.
+  vehicle 보험 만료일·absence·stop-change·training 모두 적용.
+- **차량 모드 안내문**: "어린이도 태우나요?" 질문형 + helper text "병행 운영도
+  어린이용으로 등록 (도로교통법 의무)".
+- **필수 필드 빨간 ***: shadcn Label에 `required` boolean prop 추가. vehicle-form
+  적용 (다른 폼은 점진).
+- **표 카드 위·아래 여백 제거**: shadcn Card 기본 `py-4`가 Table 위·아래 16px
+  여백 만듦. owner Table 6개 페이지에 `<Card className="py-0">`.
+
+### W18-H Layout 진입 가드 redirect (`c9befca`, `1246bff`)
+
+- (parent)·(driver)·(helper)·(owner) layout 모두 동일 패턴:
+  - `getCurrentUser()` null → guardian이면 `/home`, 없으면 `/login?redirectTo=...`
+  - 다른 role이면 `homePathForRole(role)`로 본인 home redirect
+- 이전엔 `requireOwner/Driver/Helper/Guardian()` throw가 영어 stack trace를
+  사용자에게 노출 가능했음. 이제 사전 redirect로 차단.
+
+### W18-I 정류장 등록 env 에러 fix (`309d049`)
+
+- 증상: `/stops/new` 진입 시 "Invalid environment variables: {}" 에러.
+- 원인: `lib/env.ts` Proxy가 server-only 변수까지 zod 검증 → client component
+  (stop-map-picker-inner.tsx, trip-live-map-inner.tsx)에서 호출 시 throw.
+- fix: client에서 `env.NEXT_PUBLIC_KAKAO_MAP_KEY` → `process.env.NEXT_PUBLIC_KAKAO_MAP_KEY`
+  직접 사용 (Next.js 빌드 타임 inline).
+- **재발 방지**: `lib/env.ts`에 `import "server-only";` 추가 — client에서 import
+  시도 시 빌드 시점 차단.
+
+### W18-J seed 확장 + E2E 검증 (`3b58c42`)
+
+- `prisma/seed.ts`에 Supabase Auth user 생성 추가 — demo OWNER·DRIVER·HELPER·
+  GUARDIAN×5 (총 8개 계정), 모두 비번 `demo1234!`.
+- email pattern: `@shuttlee-demo.local` (OWNER) / `@shuttlee.local` (loginId users).
+- cleanup 시 해당 도메인의 Auth users도 같이 삭제 (raw listUsers 페이지네이션).
+- 브라우저 자동화로 핵심 흐름 검증 완료:
+  1. demo OWNER 로그인 → dashboard·CRUD 페이지·초대 발급 정상
+  2. demo_driver 로그인 → /run 진입·운행 시작·NO_SHOW 보고 정상
+  3. demo_parent2 로그인 → /notifications NO_SHOW 알림·"지금 데려다 드릴게요"
+     응답 → demo OWNER dashboard에 KPI "1" 자동 갱신
+  4. 신규 직원 초대 → loginId·recoveryEmail 가입 → 자동 로그인 정상
+
+## 다음 우선순위 (W19+)
 
 ### W17-B: 가입 확인 메일 한국어 (선택)
 
