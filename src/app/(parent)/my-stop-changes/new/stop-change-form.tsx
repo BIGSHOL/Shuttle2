@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { StopMapPicker } from "@/lib/map/stop-map-picker";
 
 import {
@@ -94,27 +101,28 @@ export function StopChangeForm({ items }: { items: Item[] }) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="combined">자녀·기존 정류장</Label>
-            <select
-              id="combined"
-              required
+            <Select
               value={selectedKey}
-              onChange={(e) => {
-                const key = e.target.value;
+              onValueChange={(key) => {
                 setSelectedKey(key);
                 const item = items.find((it) => it.routeStudentId === key);
                 if (item) {
                   setPos({ lat: item.fromStopLat, lng: item.fromStopLng });
                 }
               }}
-              className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
             >
-              {items.map((it) => (
-                <option key={it.routeStudentId} value={it.routeStudentId}>
-                  {it.studentName} · {DIRECTION_LABEL[it.direction]}{" "}
-                  {it.routeName} · 현재 {it.fromStopName}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="combined">
+                <SelectValue placeholder="자녀·정류장 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {items.map((it) => (
+                  <SelectItem key={it.routeStudentId} value={it.routeStudentId}>
+                    {it.studentName} · {DIRECTION_LABEL[it.direction]}{" "}
+                    {it.routeName} · 현재 {it.fromStopName}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <input
               type="hidden"
               name="studentId"

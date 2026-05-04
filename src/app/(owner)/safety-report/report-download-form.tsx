@@ -3,6 +3,13 @@
 import { useState } from "react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import type { Quarter } from "@/lib/pdf/quarter";
 
@@ -22,18 +29,24 @@ export function ReportDownloadForm({ options }: { options: Option[] }) {
         <label htmlFor="quarter" className="text-sm font-medium">
           분기
         </label>
-        <select
-          id="quarter"
-          value={selected}
-          onChange={(e) => setSelected(Number(e.target.value))}
-          className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
+        <Select
+          value={String(selected)}
+          onValueChange={(v) => setSelected(Number(v))}
         >
-          {options.map((o, i) => (
-            <option key={`${o.value.year}-${o.value.quarter}`} value={i}>
-              {o.label}
-            </option>
-          ))}
-        </select>
+          <SelectTrigger id="quarter">
+            <SelectValue placeholder="분기 선택" />
+          </SelectTrigger>
+          <SelectContent>
+            {options.map((o, i) => (
+              <SelectItem
+                key={`${o.value.year}-${o.value.quarter}`}
+                value={String(i)}
+              >
+                {o.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
       <Button asChild className="w-full">

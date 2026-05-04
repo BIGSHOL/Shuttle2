@@ -13,6 +13,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import type { RouteFormState } from "../actions";
 import { WEEKDAYS } from "../_lib/weekdays";
@@ -100,19 +107,22 @@ export function RouteForm({
               해야 노선을 만들 수 있습니다.
             </p>
           ) : (
-            <select
-              id="vehicleId"
+            <Select
               name="vehicleId"
               defaultValue={initial.vehicleId || vehicles[0]?.id}
               required
-              className="border-input bg-background ring-offset-background focus:ring-ring flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs focus:ring-1 focus:outline-none"
             >
-              {vehicles.map((v) => (
-                <option key={v.id} value={v.id}>
-                  [{v.mode}] {v.plate}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="vehicleId">
+                <SelectValue placeholder="차량 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {vehicles.map((v) => (
+                  <SelectItem key={v.id} value={v.id}>
+                    [{v.mode === "KIDS" ? "어린이용" : "일반용"}] {v.plate}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           )}
           {state.fieldErrors?.vehicleId ? (
             <p className="text-destructive text-sm">

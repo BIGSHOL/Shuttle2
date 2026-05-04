@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { preRegisterAction, type PreRegisterState } from "./actions";
 
@@ -51,17 +58,16 @@ export function PreRegisterForm() {
             </div>
             <div className="space-y-1">
               <Label htmlFor="orgType">기관 유형</Label>
-              <select
-                id="orgType"
-                name="orgType"
-                required
-                defaultValue="ACADEMY"
-                className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
-              >
-                <option value="ACADEMY">학원·교습소</option>
-                <option value="DAYCARE">어린이집</option>
-                <option value="KINDERGARTEN">유치원</option>
-              </select>
+              <Select name="orgType" required defaultValue="ACADEMY">
+                <SelectTrigger id="orgType">
+                  <SelectValue placeholder="기관 유형 선택" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ACADEMY">학원·교습소</SelectItem>
+                  <SelectItem value="DAYCARE">어린이집</SelectItem>
+                  <SelectItem value="KINDERGARTEN">유치원</SelectItem>
+                </SelectContent>
+              </Select>
               {state.fieldErrors?.orgType ? (
                 <p className="text-destructive text-xs">
                   {state.fieldErrors.orgType[0]}

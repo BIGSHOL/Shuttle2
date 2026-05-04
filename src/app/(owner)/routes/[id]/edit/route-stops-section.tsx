@@ -7,6 +7,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -92,19 +99,18 @@ export function RouteStopsSection({
                 <Label htmlFor="stopId" className="text-xs">
                   정류장
                 </Label>
-                <select
-                  id="stopId"
-                  name="stopId"
-                  required
-                  defaultValue={stops[0]?.id}
-                  className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
-                >
-                  {stops.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                <Select name="stopId" required defaultValue={stops[0]?.id}>
+                  <SelectTrigger id="stopId">
+                    <SelectValue placeholder="정류장 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stops.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 {state.fieldErrors?.stopId ? (
                   <p className="text-destructive text-xs">
                     {state.fieldErrors.stopId[0]}

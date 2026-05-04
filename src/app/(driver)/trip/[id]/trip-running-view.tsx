@@ -12,6 +12,13 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useWakeLock } from "@/lib/wake-lock/use-wake-lock";
 
 import {
@@ -997,22 +1004,30 @@ function HelperPicker({
     );
   }
 
+  // radix Select는 빈 문자열 값을 허용하지 않으므로 "__none__" sentinel로 대체.
+  const NONE = "__none__";
   return (
     <section className="bg-card rounded-2xl border p-4 shadow-sm">
       <h3 className="text-sm font-extrabold tracking-tight">동승보호자 지정</h3>
-      <select
-        value={value}
-        disabled={pending}
-        onChange={(e) => commit(e.target.value)}
-        className="border-input bg-background mt-2 flex h-10 w-full rounded-xl border px-3 py-1 text-sm font-medium shadow-xs"
-      >
-        <option value="">— 동승자 없음 —</option>
-        {options.map((o) => (
-          <option key={o.id} value={o.id}>
-            {o.name}
-          </option>
-        ))}
-      </select>
+      <div className="mt-2">
+        <Select
+          value={value === "" ? NONE : value}
+          disabled={pending}
+          onValueChange={(v) => commit(v === NONE ? "" : v)}
+        >
+          <SelectTrigger className="h-10 rounded-xl">
+            <SelectValue placeholder="동승자 선택" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>— 동승자 없음 —</SelectItem>
+            {options.map((o) => (
+              <SelectItem key={o.id} value={o.id}>
+                {o.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
       {error ? (
         <p className="text-destructive mt-1.5 text-xs font-medium" role="alert">
           {error}

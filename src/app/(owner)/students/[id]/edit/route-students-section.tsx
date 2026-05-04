@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -108,37 +115,35 @@ export function RouteStudentsSection({
                 <Label htmlFor="routeId" className="text-xs">
                   노선
                 </Label>
-                <select
-                  id="routeId"
-                  name="routeId"
-                  required
-                  defaultValue={routes[0]?.id}
-                  className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
-                >
-                  {routes.map((r) => (
-                    <option key={r.id} value={r.id}>
-                      [{r.direction === "PICKUP" ? "등원" : "하원"}] {r.name}
-                    </option>
-                  ))}
-                </select>
+                <Select name="routeId" required defaultValue={routes[0]?.id}>
+                  <SelectTrigger id="routeId">
+                    <SelectValue placeholder="노선 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {routes.map((r) => (
+                      <SelectItem key={r.id} value={r.id}>
+                        [{r.direction === "PICKUP" ? "등원" : "하원"}] {r.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1">
                 <Label htmlFor="stopId" className="text-xs">
                   정류장
                 </Label>
-                <select
-                  id="stopId"
-                  name="stopId"
-                  required
-                  defaultValue={stops[0]?.id}
-                  className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
-                >
-                  {stops.map((s) => (
-                    <option key={s.id} value={s.id}>
-                      {s.name}
-                    </option>
-                  ))}
-                </select>
+                <Select name="stopId" required defaultValue={stops[0]?.id}>
+                  <SelectTrigger id="stopId">
+                    <SelectValue placeholder="정류장 선택" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {stops.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>
+                        {s.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="flex items-end">
                 <Button type="submit" disabled={pending} className="w-full">

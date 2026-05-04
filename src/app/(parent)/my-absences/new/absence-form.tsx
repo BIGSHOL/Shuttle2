@@ -14,6 +14,13 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import {
   createAbsenceRequestAction,
@@ -49,19 +56,22 @@ export function AbsenceForm({
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="studentId">자녀</Label>
-            <select
-              id="studentId"
+            <Select
               name="studentId"
               required
               defaultValue={students[0]?.id ?? ""}
-              className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
             >
-              {students.map((s) => (
-                <option key={s.id} value={s.id}>
-                  {s.name} · {s.org.name}
-                </option>
-              ))}
-            </select>
+              <SelectTrigger id="studentId">
+                <SelectValue placeholder="자녀 선택" />
+              </SelectTrigger>
+              <SelectContent>
+                {students.map((s) => (
+                  <SelectItem key={s.id} value={s.id}>
+                    {s.name} · {s.org.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {state.fieldErrors?.studentId ? (
               <p className="text-destructive text-sm">
                 {state.fieldErrors.studentId[0]}

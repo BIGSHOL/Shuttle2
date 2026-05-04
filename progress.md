@@ -557,6 +557,27 @@
 - **재발 방지**: `lib/env.ts`에 `import "server-only";` 추가 — client에서 import
   시도 시 빌드 시점 차단.
 
+### W18-K 드롭다운·학년 선택기 (이번 커밋)
+
+- **shadcn Select 도입**: 기존 native `<select>` 8곳 모두 radix Select 기반
+  shadcn 컴포넌트로 교체. 사용자 피드백 "버튼은 라운드인데 드랍다운은 직사각형
+  이라 굉장히 디자인적으로 어색함" 반영. 닫힘 상태 + 열림 popover 모두 디자인
+  토큰 + `rounded-md`/`rounded-lg` 일관 적용.
+  - 적용 파일: `routes/[id]/edit/route-stops-section`, `routes/_components/route-form`,
+    `students/[id]/edit/route-students-section`, `students/_components/student-form`,
+    `parent/my-absences/new/absence-form`, `parent/my-stop-changes/new/stop-change-form`,
+    `driver/trip/[id]/trip-running-view` (HelperPicker), `owner/safety-report/report-download-form`,
+    `marketing/pre-register-form`.
+  - `route-form` vehicle option label `[GENERAL]/[KIDS]` → `[일반용]/[어린이용]`
+    한글로 동시 교체 (사용자 피드백 "여전히 영문 혼재함").
+  - radix Select는 빈 문자열 value 금지 — HelperPicker "동승자 없음"은 `__none__`
+    sentinel로 우회.
+- **학년 → 출생연도 자동 산출**: 사용자 피드백 "출생연도 말고 학제/학년으로 판단할
+  수 있도록". `student-form`에서 18개 학제·학년 옵션 (미취학 만 3-7세, 초1~6,
+  중1~3, 고1~3, 대학생·성인) Select + 직접입력 fallback. offset 매핑으로
+  `birthYear = CURRENT_YEAR - offset` 자동 계산, hidden input으로 form submit.
+  실시간 hint "→ 2019년생 자동 산출 · 어린이용 모드 대상" 표시.
+
 ### W18-J seed 확장 + E2E 검증 (`3b58c42`)
 
 - `prisma/seed.ts`에 Supabase Auth user 생성 추가 — demo OWNER·DRIVER·HELPER·
