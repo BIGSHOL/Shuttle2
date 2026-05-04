@@ -220,7 +220,7 @@ export function SafetyReportPdf({ data }: { data: SafetyReportData }) {
           </Text>
           <Text style={styles.subtitle}>
             {data.org.name} · {ORG_TYPE_LABEL[data.org.type]} · 어린이통학버스
-            (KIDS 모드)
+            (어린이용 모드)
           </Text>
           <View style={styles.meta}>
             <Text>
@@ -241,8 +241,8 @@ export function SafetyReportPdf({ data }: { data: SafetyReportData }) {
 
         {data.vehicles.length === 0 ? (
           <Text style={styles.emptyRow}>
-            등록된 KIDS 모드 차량이 없습니다. 차량 모드를 KIDS로 설정하면 운행
-            기록이 이 문서에 누적됩니다.
+            등록된 어린이용 모드 차량이 없습니다. 차량 모드를 어린이용으로
+            설정하면 운행 기록이 이 문서에 누적됩니다.
           </Text>
         ) : (
           data.vehicles.map((v) => <VehicleSection key={v.plate} vehicle={v} />)

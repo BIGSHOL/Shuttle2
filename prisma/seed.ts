@@ -1,21 +1,45 @@
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "../src/generated/prisma/client";
 
 // 데모 데이터: 학원 1개(혼합형) + KIDS 차량 1대 + GENERAL 차량 1대
 // 노선 2개(등원·하원), 정류장 4개(서울 강남역 부근), 학생·보호자 각 5명, 기사·동승자·학원장 각 1명
+//
+// E2E 테스트 가능하도록 Supabase Auth user도 함께 생성. 모두 비번 demo1234! 통일.
+// loginId/recoveryEmail은 실제 흐름 검증용.
+//
+// ⚠️ cleanup 시 @shuttlee-demo.local·@shuttlee.local 도메인의 Auth user만 삭제.
+// 실 사용자 데이터에 영향 X. 그래도 production DB에 데모 데이터 들어가는 점 주의.
 
 const adapter = new PrismaPg({
   connectionString: process.env.DIRECT_URL,
 });
 const db = new PrismaClient({ adapter });
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error(
+    "❌ NEXT_PUBLIC_SUPABASE_URL·SUPABASE_SERVICE_ROLE_KEY 환경변수가 없습니다",
+  );
+  process.exit(1);
+}
+const admin = createSupabaseClient(supabaseUrl, supabaseServiceKey, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
 const DEMO_ORG_NAME = "데모 학원·어린이집 (시드)";
+const DEMO_PASSWORD = "demo1234!";
+const DEMO_OWNER_EMAIL = "demo-owner@shuttlee-demo.local";
+
+function loginIdEmail(loginId: string): string {
+  return `${loginId.toLowerCase()}@shuttlee.local`;
+}
 
 async function main() {
   console.log("🌱 Seeding demo data…");
 
-  // 기존 데모 데이터 정리 (cascade 안 걸려 있어서 자식부터 직접 제거).
-  // ⚠️ 모든 deleteMany는 반드시 demo orgId로 필터해야 함 — 실사용자 데이터 보호.
+  // ─── 기존 데모 데이터 정리 (cascade 미설정이라 자식부터 직접) ───
   const existing = await db.organization.findFirst({
     where: { name: DEMO_ORG_NAME },
   });
@@ -40,7 +64,6 @@ async function main() {
     });
     await db.routeStop.deleteMany({ where: { route: { vehicle: { orgId } } } });
     await db.guardianLink.deleteMany({ where: { student: { orgId } } });
-    // Guardian은 orgId 컬럼이 없음. 데모가 만든 010-2000-* 번호만 남은 link 없을 때 삭제.
     await db.guardian.deleteMany({
       where: { phone: { startsWith: "010-2000-" }, links: { none: {} } },
     });
@@ -53,6 +76,12 @@ async function main() {
     await db.organization.delete({ where: { id: orgId } });
   }
 
+  // ─── 데모 Auth user 정리 (@shuttlee*.local 도메인만) ───
+  // raw SQL로 직접 삭제. CASCADE로 sessions·identities도 같이 정리됨.
+  const { rowsDeleted } = await deleteDemoAuthUsers();
+  console.log(`  ↺ Cleaned up ${rowsDeleted} demo auth users`);
+
+  // ─── 새 demo data ───
   const org = await db.organization.create({
     data: {
       name: DEMO_ORG_NAME,
@@ -84,32 +113,43 @@ async function main() {
     `  ✓ Vehicles: KIDS ${kidsVehicle.id}, GENERAL ${generalVehicle.id}`,
   );
 
-  const [owner, driver, helper] = await Promise.all([
-    db.staff.create({
-      data: {
-        orgId: org.id,
-        name: "데모 학원장",
-        phone: "010-1000-0001",
-        role: "OWNER",
-      },
-    }),
-    db.staff.create({
-      data: {
-        orgId: org.id,
-        name: "데모 기사",
-        phone: "010-1000-0002",
-        role: "DRIVER",
-      },
-    }),
-    db.staff.create({
-      data: {
-        orgId: org.id,
-        name: "데모 동승자",
-        phone: "010-1000-0003",
-        role: "HELPER",
-      },
-    }),
-  ]);
+  // OWNER — 이메일 가입 (demo OWNER, 실 사용자와 별개)
+  const ownerUser = await createDemoAuthUser(DEMO_OWNER_EMAIL);
+  const owner = await db.staff.create({
+    data: {
+      orgId: org.id,
+      userId: ownerUser.id,
+      name: "데모 학원장",
+      phone: "010-1000-0001",
+      role: "OWNER",
+    },
+  });
+
+  // DRIVER — loginId 가입 (placeholder 이메일)
+  const driverUser = await createDemoAuthUser(loginIdEmail("demo_driver"));
+  const driver = await db.staff.create({
+    data: {
+      orgId: org.id,
+      userId: driverUser.id,
+      loginId: "demo_driver",
+      name: "데모 기사",
+      phone: "010-1000-0002",
+      role: "DRIVER",
+    },
+  });
+
+  // HELPER — loginId 가입
+  const helperUser = await createDemoAuthUser(loginIdEmail("demo_helper"));
+  const helper = await db.staff.create({
+    data: {
+      orgId: org.id,
+      userId: helperUser.id,
+      loginId: "demo_helper",
+      name: "데모 동승자",
+      phone: "010-1000-0003",
+      role: "HELPER",
+    },
+  });
   console.log(`  ✓ Staff: ${owner.name}, ${driver.name}, ${helper.name}`);
 
   // 정류장 4개 — 서울 강남역 부근 (lat=37.4979, lng=127.0276 베이스)
@@ -179,7 +219,7 @@ async function main() {
   console.log(`  ✓ RouteStops: 8`);
 
   // 학생 5명 + 보호자 5명 (1:1 매핑, 모두 primary)
-  // birthYear는 KIDS 모드 (13세 미만)에 맞도록 2018~2020년 사이
+  // 보호자는 각자 demo loginId로 Auth user 생성
   const students = await Promise.all(
     [
       { name: "데모 학생 1", birthYear: 2018, stopIdx: 0 },
@@ -195,14 +235,18 @@ async function main() {
   );
 
   const guardians = await Promise.all(
-    students.map((s, i) =>
-      db.guardian.create({
+    students.map(async (s, i) => {
+      const loginId = `demo_parent${i + 1}`;
+      const user = await createDemoAuthUser(loginIdEmail(loginId));
+      return db.guardian.create({
         data: {
+          userId: user.id,
+          loginId,
           name: `${s.name}의 보호자`,
           phone: `010-2000-000${i + 1}`,
         },
-      }),
-    ),
+      });
+    }),
   );
 
   await Promise.all(
@@ -218,7 +262,7 @@ async function main() {
     ),
   );
   console.log(
-    `  ✓ Students: ${students.length}, Guardians: ${guardians.length}`,
+    `  ✓ Students: ${students.length}, Guardians: ${guardians.length} (with Auth users)`,
   );
 
   // 학생-노선 연결: 각 학생이 등원·하원 모두 같은 정류장 사용 (간단화)
@@ -243,7 +287,53 @@ async function main() {
   );
   console.log(`  ✓ RouteStudents: ${students.length * 2}`);
 
-  console.log("✅ Seed complete.");
+  console.log("\n✅ Seed complete.\n");
+  console.log("📋 Demo accounts (모두 비번 demo1234!):");
+  console.log(`  - OWNER:    ${DEMO_OWNER_EMAIL}`);
+  console.log(`  - DRIVER:   loginId=demo_driver`);
+  console.log(`  - HELPER:   loginId=demo_helper`);
+  console.log(`  - GUARDIAN: loginId=demo_parent1 ~ demo_parent5`);
+  console.log("");
+}
+
+// ─── helpers ───
+
+async function createDemoAuthUser(email: string) {
+  const { data, error } = await admin.auth.admin.createUser({
+    email,
+    password: DEMO_PASSWORD,
+    email_confirm: true,
+  });
+  if (error || !data.user) {
+    throw new Error(
+      `[seed] createUser failed for ${email}: ${error?.message ?? "unknown"}`,
+    );
+  }
+  return data.user;
+}
+
+async function deleteDemoAuthUsers(): Promise<{ rowsDeleted: number }> {
+  // Supabase admin API는 list + delete 패턴. listUsers는 페이지네이션.
+  let deleted = 0;
+  let page = 1;
+  const perPage = 200;
+  while (true) {
+    const { data, error } = await admin.auth.admin.listUsers({ page, perPage });
+    if (error) {
+      console.error(`[seed] listUsers failed: ${error.message}`);
+      break;
+    }
+    const candidates = data.users.filter((u) =>
+      /@shuttlee(-demo)?\.local$/.test(u.email ?? ""),
+    );
+    for (const u of candidates) {
+      const { error: delErr } = await admin.auth.admin.deleteUser(u.id);
+      if (!delErr) deleted++;
+    }
+    if (data.users.length < perPage) break;
+    page++;
+  }
+  return { rowsDeleted: deleted };
 }
 
 main()

@@ -94,7 +94,8 @@ export default async function RoutesPage() {
                       </span>
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
-                      [{r.vehicle.mode}] {r.vehicle.plate}
+                      [{r.vehicle.mode === "KIDS" ? "어린이용" : "일반용"}]{" "}
+                      {r.vehicle.plate}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {formatWeekdays(r.weekdays)}

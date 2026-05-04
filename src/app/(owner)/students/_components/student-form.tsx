@@ -86,7 +86,7 @@ export function StudentForm({
             required
           />
           <p className="text-muted-foreground text-xs">
-            만 13세 미만 (=KIDS 모드 대상) 자동 판정에 사용됩니다.
+            만 13세 미만 (=어린이용 모드 대상) 자동 판정에 사용됩니다.
           </p>
           {state.fieldErrors?.birthYear ? (
             <p className="text-destructive text-sm">

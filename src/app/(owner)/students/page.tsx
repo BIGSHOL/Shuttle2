@@ -43,8 +43,8 @@ export default async function StudentsPage() {
         <div>
           <h2 className="text-2xl font-semibold">{term}</h2>
           <p className="text-muted-foreground text-sm">
-            {term}을 등록하고 노선·정류장을 배정합니다. 만 13세 미만은 KIDS 모드
-            안전점검 대상입니다.
+            {term}을 등록하고 노선·정류장을 배정합니다. 만 13세 미만은 어린이용
+            모드 안전점검 대상입니다.
           </p>
         </div>
         <Button asChild>
@@ -98,7 +98,7 @@ export default async function StudentsPage() {
                               : "bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-medium"
                           }
                         >
-                          {age}세 {isKids ? "· KIDS" : ""}
+                          {age}세 {isKids ? "· 어린이용" : ""}
                         </span>
                       </TableCell>
                       <TableCell className="text-muted-foreground text-sm">
