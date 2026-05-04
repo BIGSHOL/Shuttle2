@@ -11,6 +11,7 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { requireGuardianTripAccess } from "@/lib/auth/guardian-trip-access";
+import { getChildStopEta } from "@/lib/eta/route-stats";
 
 import { TripLiveShell } from "./_components/trip-live-shell";
 
@@ -117,6 +118,16 @@ export default async function TripLivePage({
     );
   }
 
+  // 진행 중일 때만 ETA 학습 데이터 조회 (베타에 데이터 부족하면 null fallback)
+  const childEta = trip.startedAt
+    ? await getChildStopEta({
+        tripId: trip.id,
+        routeId: trip.routeId,
+        childStopId: access.childStudent.stopId,
+        startedAtMs: trip.startedAt.getTime(),
+      })
+    : null;
+
   // 진행 중·예정 trip — 풀스크린 shell
   return (
     <TripLiveShell
@@ -140,6 +151,7 @@ export default async function TripLivePage({
       }))}
       passedStopIds={Array.from(passedStopIds)}
       startedAtISO={trip.startedAt?.toISOString() ?? null}
+      childEta={childEta}
     />
   );
 }
