@@ -27,6 +27,13 @@ const StopInput = z.object({
     .min(10, "반경은 10m 이상")
     .max(500, "반경은 500m 이하")
     .default(50),
+  // 카카오 reverse geocoding 결과를 client에서 hidden input으로 함께 전달.
+  // 빈 문자열은 null로 정규화 (API 응답이 좌표 외 지역인 경우).
+  address: z
+    .string()
+    .max(200)
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : null)),
 });
 
 export type StopFormState = {
@@ -40,6 +47,7 @@ function parseFormData(formData: FormData) {
     lat: formData.get("lat"),
     lng: formData.get("lng"),
     radiusM: formData.get("radiusM"),
+    address: formData.get("address"),
   });
 }
 

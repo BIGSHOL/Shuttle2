@@ -27,6 +27,7 @@ export type StopInitial = {
   lat: number;
   lng: number;
   radiusM: number;
+  address?: string | null;
 };
 
 // 강남역 4번 출구 — 시드 데이터의 base와 동일
@@ -35,6 +36,7 @@ const DEFAULT_INITIAL: StopInitial = {
   lat: 37.4979,
   lng: 127.0276,
   radiusM: 50,
+  address: null,
 };
 
 export function StopForm({
@@ -59,6 +61,9 @@ export function StopForm({
     lng: initial.lng,
   });
   const [radiusM, setRadiusM] = useState(initial.radiusM);
+  const [address, setAddress] = useState<string | null>(
+    initial.address ?? null,
+  );
 
   return (
     <Card className="w-full max-w-5xl">
@@ -91,6 +96,7 @@ export function StopForm({
 
               <input type="hidden" name="lat" value={position.lat} />
               <input type="hidden" name="lng" value={position.lng} />
+              <input type="hidden" name="address" value={address ?? ""} />
 
               <div className="space-y-2">
                 <Label htmlFor="radiusM" required>
@@ -118,10 +124,15 @@ export function StopForm({
                 ) : null}
               </div>
 
-              <p className="text-muted-foreground border-t pt-3 text-[11px] font-medium">
-                현재 좌표 ({position.lat.toFixed(4)}, {position.lng.toFixed(4)})
-                — 지도에서 위치를 클릭하거나 검색·내 위치 버튼을 사용하세요.
-              </p>
+              <div className="border-t pt-3">
+                <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
+                  현재 위치
+                </p>
+                <p className="text-foreground mt-1 text-sm font-medium">
+                  {address ??
+                    "지도에서 위치를 클릭하거나 검색·내 위치 버튼을 사용하세요."}
+                </p>
+              </div>
 
               {state.error ? (
                 <p className="text-destructive text-sm" role="alert">
@@ -134,6 +145,7 @@ export function StopForm({
               position={position}
               radiusM={radiusM}
               onPick={(next) => setPosition(next)}
+              onAddressChange={(addr) => setAddress(addr)}
             />
           </div>
         </CardContent>

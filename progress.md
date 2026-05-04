@@ -530,6 +530,14 @@
   `absolute top-full z-20`로 검색 input 바로 아래에 dropdown 형태 overlay.
   지도 본체는 항상 같은 자리. "검색 결과 N건" 헤더 + ✕ 닫기 버튼,
   Esc 키로도 닫힘. max-h-64 overflow-y-auto.
+- **좌표 → 주소 (reverse geocoding)**: 사용자에게 위도·경도(35.8881, 128.5910)
+  같은 숫자는 알아보기 어렵다는 피드백. Stop 모델에 `address String?` 컬럼
+  추가 (migration `20260504200000_stop_address`). stop-map-picker-inner이
+  카카오 `services.Geocoder.coord2Address`로 좌표 변경마다 reverse geocode
+  → onAddressChange callback. stop-form은 hidden input으로 form submit에
+  포함, "현재 위치" 카드에 도로명·지번 주소 표시. /stops 목록 좌표 컬럼도
+  주소 컬럼으로 교체. academy-app 참고하여 검증된 패턴 (네이버 SDK도
+  reverseGeocode 동일 흐름).
 
 ### W18-H Layout 진입 가드 redirect (`c9befca`, `1246bff`)
 

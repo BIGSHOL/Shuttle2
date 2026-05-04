@@ -66,7 +66,7 @@ export default async function StopsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>이름</TableHead>
-                  <TableHead className="w-44">좌표</TableHead>
+                  <TableHead>주소</TableHead>
                   <TableHead className="w-24">반경</TableHead>
                   <TableHead className="text-right">관리</TableHead>
                 </TableRow>
@@ -75,8 +75,12 @@ export default async function StopsPage() {
                 {stops.map((s) => (
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.name}</TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">
-                      {s.lat.toFixed(4)}, {s.lng.toFixed(4)}
+                    <TableCell className="text-muted-foreground text-sm">
+                      {s.address ?? (
+                        <span className="text-muted-foreground/60">
+                          주소 미확인
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {s.radiusM}m

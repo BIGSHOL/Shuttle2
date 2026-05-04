@@ -189,6 +189,9 @@ model Stop {
   name    String // "○○아파트 정문"
   lat     Float
   lng     Float
+  // 카카오 reverse geocoding으로 등록·수정 시점에 같이 저장한 도로명 또는 지번 주소.
+  // 사용자 노출은 좌표 대신 이 값. nullable — 등록 후 카카오 일시 장애·외국 좌표 등.
+  address String?
   radiusM Int          @default(50) // 도착 판정 반경 (미터)
 
   routes              RouteStop[]

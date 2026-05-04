@@ -36,6 +36,7 @@ export default async function EditStopPage({
           lat: stop.lat,
           lng: stop.lng,
           radiusM: stop.radiusM,
+          address: stop.address,
         }}
       />
     </main>

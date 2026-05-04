@@ -4,16 +4,16 @@ import { useEffect, useState } from "react";
 
 import type { LatLng } from "./types";
 
-export function StopMapPicker(props: {
+type StopMapPickerProps = {
   position: LatLng;
   radiusM: number;
   onPick: (next: LatLng) => void;
-}) {
-  const [Inner, setInner] = useState<React.ComponentType<{
-    position: LatLng;
-    radiusM: number;
-    onPick: (next: LatLng) => void;
-  }> | null>(null);
+  onAddressChange?: (address: string | null) => void;
+};
+
+export function StopMapPicker(props: StopMapPickerProps) {
+  const [Inner, setInner] =
+    useState<React.ComponentType<StopMapPickerProps> | null>(null);
 
   useEffect(() => {
     let mounted = true;

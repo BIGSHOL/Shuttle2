@@ -1,7 +1,7 @@
 "use client";
 
 import { LocateFixed, Search } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Circle, Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk";
 
 import { Button } from "@/components/ui/button";
@@ -22,11 +22,23 @@ type KakaoPlace = {
   y: string; // lat
 };
 
+type KakaoCoord2AddressResult = {
+  road_address: { address_name: string } | null;
+  address: { address_name: string } | null;
+};
+
 type KakaoServices = {
   Places: new () => {
     keywordSearch: (
       keyword: string,
       callback: (data: KakaoPlace[], status: string) => void,
+    ) => void;
+  };
+  Geocoder: new () => {
+    coord2Address: (
+      lng: number,
+      lat: number,
+      callback: (data: KakaoCoord2AddressResult[], status: string) => void,
     ) => void;
   };
   Status: { OK: string };
@@ -42,10 +54,12 @@ export function StopMapPickerInner({
   position,
   radiusM,
   onPick,
+  onAddressChange,
 }: {
   position: LatLng;
   radiusM: number;
   onPick: (next: LatLng) => void;
+  onAddressChange?: (address: string | null) => void;
 }) {
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "",
@@ -57,6 +71,27 @@ export function StopMapPickerInner({
   const [searchError, setSearchError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
   const [lastAccuracy, setLastAccuracy] = useState<number | null>(null);
+  const [address, setAddress] = useState<string | null>(null);
+
+  // 좌표가 바뀔 때마다 reverse geocoding — 사용자 노출은 좌표 대신 이 주소.
+  useEffect(() => {
+    if (loading || error) return;
+    const services = window.kakao?.maps?.services;
+    if (!services) return;
+    const geocoder = new services.Geocoder();
+    geocoder.coord2Address(position.lng, position.lat, (result, status) => {
+      if (status !== services.Status.OK) {
+        setAddress(null);
+        onAddressChange?.(null);
+        return;
+      }
+      const r = result[0];
+      const addr =
+        r?.road_address?.address_name ?? r?.address?.address_name ?? null;
+      setAddress(addr);
+      onAddressChange?.(addr);
+    });
+  }, [position.lat, position.lng, loading, error, onAddressChange]);
 
   function handleSearch() {
     setSearchError(null);
@@ -216,6 +251,12 @@ export function StopMapPickerInner({
           {lastAccuracy > 100
             ? " · 데스크톱에서는 위성 신호 대신 WiFi·IP로 추정해 부정확할 수 있어요. 지도에서 정확한 위치를 클릭해 보정해 주세요."
             : null}
+        </p>
+      ) : null}
+
+      {address ? (
+        <p className="text-muted-foreground border-l-bus border-l-2 bg-muted/30 px-3 py-1.5 text-xs font-medium">
+          <span className="text-foreground font-bold">현재 위치</span> {address}
         </p>
       ) : null}
 
