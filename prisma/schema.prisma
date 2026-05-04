@@ -106,6 +106,8 @@ model Vehicle {
 
   routes Route[]
   trips  Trip[]
+
+  @@index([orgId])
 }
 
 enum VehicleMode {
@@ -126,6 +128,9 @@ model Staff {
   driverTrips       Trip[]                  @relation("DriverTrips")
   helperTrips       Trip[]                  @relation("HelperTrips")
   pushSubscriptions StaffPushSubscription[]
+
+  @@index([orgId])
+  @@index([userId])
 }
 
 enum StaffRole {
@@ -164,6 +169,8 @@ model Route {
   stops    RouteStop[]
   students RouteStudent[]
   trips    Trip[]
+
+  @@index([vehicleId])
 }
 
 enum RouteDirection {
@@ -184,6 +191,8 @@ model Stop {
   students            RouteStudent[]
   changeRequestsFrom  StopChangeRequest[] @relation("StopChangeFrom")
   changeRequestsResult StopChangeRequest[] @relation("StopChangeResult")
+
+  @@index([orgId])
 }
 
 model RouteStop {
@@ -212,6 +221,8 @@ model Student {
   absences           AbsenceRequest[]
   guardianInvites    GuardianInviteStudent[]
   stopChangeRequests StopChangeRequest[]
+
+  @@index([orgId])
 }
 
 model Guardian {
@@ -224,6 +235,8 @@ model Guardian {
   absences           AbsenceRequest[]
   pushSubscriptions  PushSubscription[]
   stopChangeRequests StopChangeRequest[]
+
+  @@index([userId])
 }
 
 model GuardianLink {
@@ -248,6 +261,7 @@ model RouteStudent {
   stop      Stop    @relation(fields: [stopId], references: [id])
 
   @@unique([routeId, studentId])
+  @@index([studentId])
 }
 
 // === 일별 운행 ===
@@ -276,6 +290,7 @@ model Trip {
   pings       LocationPing[]
 
   @@unique([vehicleId, routeId, date])
+  @@index([driverId, date])
 }
 
 model BoardingEvent {
@@ -289,6 +304,8 @@ model BoardingEvent {
   lat       Float?
   lng       Float?
   notes     String?
+
+  @@index([tripId, type])
 }
 
 enum BoardingType {
