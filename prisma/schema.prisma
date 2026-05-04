@@ -136,13 +136,14 @@ enum StaffRole {
 
 // 안전교육 이수 기록 (운영자·운전자·동승자 2년마다)
 model TrainingRecord {
-  id             String           @id @default(cuid())
-  staffId        String
-  staff          Staff            @relation(fields: [staffId], references: [id])
-  category       TrainingCategory
-  completedOn    DateTime
-  expiresOn      DateTime // completedOn + 2년 (해당 연도 12/31)
-  certificateUrl String?
+  id              String           @id @default(cuid())
+  staffId         String
+  staff           Staff            @relation(fields: [staffId], references: [id])
+  category        TrainingCategory
+  completedOn     DateTime
+  expiresOn       DateTime // completedOn + 2년 (해당 연도 12/31)
+  certificateUrl  String? // 외부 URL (선택)
+  certificateFile String? // Supabase Storage object key, e.g. "{orgId}/{recordId}/{uuid}.pdf"
 }
 
 enum TrainingCategory {

@@ -11,6 +11,7 @@ import {
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 
+import { CertificateViewButton } from "./_components/certificate-view-button";
 import { DeleteTrainingButton } from "./_components/delete-training-button";
 
 const CATEGORY_LABEL = {
@@ -42,6 +43,7 @@ export default async function TrainingPage() {
           completedOn: true,
           expiresOn: true,
           certificateUrl: true,
+          certificateFile: true,
         },
       },
     },
@@ -56,7 +58,7 @@ export default async function TrainingPage() {
         <div>
           <h2 className="text-2xl font-semibold">안전교육 기록</h2>
           <p className="text-muted-foreground mt-1 text-sm">
-            도교법상 운영자·기사·동승보호자는 2년마다 안전교육 이수 의무가
+            법령상 운영자·기사·동승보호자는 2년마다 안전교육 이수 의무가
             있습니다. 이수증을 받으면 여기에 기록을 추가해 두세요.
           </p>
         </div>
@@ -132,7 +134,9 @@ export default async function TrainingPage() {
                             </span>
                           </div>
                           <div className="flex items-center gap-2">
-                            {t.certificateUrl ? (
+                            {t.certificateFile ? (
+                              <CertificateViewButton recordId={t.id} />
+                            ) : t.certificateUrl ? (
                               <a
                                 href={t.certificateUrl}
                                 target="_blank"
