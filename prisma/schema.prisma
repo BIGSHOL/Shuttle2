@@ -340,7 +340,7 @@ enum PingSource {
   END // 운행 종료 시점
 }
 
-// KIDS 모드: 매 운행 안전점검 (도교법 §53⑦ 안전운행기록 원천 데이터)
+// KIDS 모드: 매 운행 안전점검 (도로교통법 §53⑦ 안전운행기록 원천 데이터)
 model SafetyCheck {
   id                String    @id @default(cuid())
   tripId            String    @unique

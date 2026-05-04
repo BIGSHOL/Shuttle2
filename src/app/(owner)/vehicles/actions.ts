@@ -30,7 +30,7 @@ const VehicleInput = z
   })
   .refine(
     (data) => {
-      // KIDS 모드면 신고증명서 번호 + 보험 만료일 필수 (도교법 §52 의무)
+      // KIDS 모드면 신고증명서 번호 + 보험 만료일 필수 (도로교통법 §52 의무)
       if (data.mode === "KIDS") {
         return !!data.reportNo && !!data.insuranceUntil;
       }

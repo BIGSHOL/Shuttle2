@@ -241,7 +241,7 @@ export function TripRunningView({
         </div>
       ) : null}
 
-      {/* KIDS 모드 동승자 미선택 — 도교법 §53⑦ */}
+      {/* KIDS 모드 동승자 미선택 — 도로교통법 §53⑦ */}
       {isKidsMode &&
       !helper &&
       stops.reduce((acc, s) => acc + s.students.length, 0) >= 1 ? (

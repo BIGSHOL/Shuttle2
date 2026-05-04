@@ -115,9 +115,9 @@ export function OwnerHeader({
                 {email.split("@")[0]} ▾
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="min-w-[220px]">
               <DropdownMenuLabel className="font-normal">
-                <p className="text-sm font-medium">{email}</p>
+                <p className="text-sm font-medium break-all">{email}</p>
                 <p className="text-muted-foreground text-xs">학원장·원장</p>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />

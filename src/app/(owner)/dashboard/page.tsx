@@ -316,7 +316,7 @@ export default async function DashboardPage() {
                   안전교육 만료 임박·미입력 ({trainingAlerts.length}명)
                 </h3>
                 <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-                  도교법상 운영자·기사·동승보호자는 2년마다 이수 의무.
+                  도로교통법상 운영자·기사·동승보호자는 2년마다 이수 의무.
                 </p>
               </div>
             </div>

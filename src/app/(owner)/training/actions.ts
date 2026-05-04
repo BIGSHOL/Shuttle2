@@ -9,7 +9,7 @@ import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { createSupabaseAdmin } from "@/lib/supabase/admin";
 
-// 안전교육 이수 기록. 도교법상 운영자·기사·동승자는 2년마다 이수 의무.
+// 안전교육 이수 기록. 도로교통법상 운영자·기사·동승자는 2년마다 이수 의무.
 // expiresOn은 입력값 그대로 (사용자가 "만료일 = 다음 의무 이수일"을 직접 지정).
 
 const STORAGE_BUCKET = "training-certificates";
