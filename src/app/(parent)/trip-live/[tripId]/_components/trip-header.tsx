@@ -42,7 +42,7 @@ export function TripHeader({
       {isLive ? (
         <span className="border-bus/40 bg-bus/10 text-bus-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold">
           <LivePulseDot />
-          LIVE
+          운행 중
         </span>
       ) : (
         <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-[11px] font-bold">

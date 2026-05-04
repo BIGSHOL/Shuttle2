@@ -390,9 +390,9 @@ export default async function OwnerTripDetailPage({
               <h3 className="text-sm font-extrabold tracking-tight">
                 실시간 위치
               </h3>
-              <span className="bg-bus-soft text-bus inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+              <span className="bg-bus-soft text-bus inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
                 <span className="bg-bus inline-block h-1.5 w-1.5 animate-pulse rounded-full" />
-                LIVE
+                운행 중
               </span>
             </div>
             <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">

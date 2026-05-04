@@ -49,7 +49,7 @@ export function LiveTripCard({
         </div>
         <span className="border-bus/40 bg-bus/20 text-bus inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold">
           <LivePulseDot />
-          LIVE
+          운행 중
         </span>
       </div>
 

@@ -48,7 +48,7 @@ const FEATURES = [
   {
     Icon: MapPin,
     title: "실시간 셔틀 위치",
-    body: "기사 폰 GPS가 5초마다 학부모 앱에 셔틀 위치를 전송. 카카오맵에 마커가 움직이고 다음 정류장 ETA 표시.",
+    body: "기사 폰의 위치를 5초마다 학부모 앱에 전송. 카카오맵에 마커가 움직이고 다음 정류장 도착 예상 시각도 함께 표시.",
     tag: "실시간",
   },
   {
@@ -233,7 +233,7 @@ export default function MarketingPage() {
                     <div className="flex items-center gap-2">
                       <span className="bg-bus text-bus-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[9px] font-extrabold tracking-wide uppercase">
                         <span className="bg-bus-foreground inline-block h-1 w-1 animate-pulse rounded-full" />
-                        LIVE
+                        운행 중
                       </span>
                       <span className="text-[9px] font-bold opacity-70">
                         다음 정류장까지
