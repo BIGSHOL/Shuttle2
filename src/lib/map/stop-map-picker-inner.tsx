@@ -2,10 +2,10 @@
 
 import { Circle, Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk";
 
-import { env } from "@/lib/env";
-
 import type { LatLng } from "./types";
 
+// client component — env proxy(server-only 변수까지 검증)는 여기서 사용 금지.
+// process.env.NEXT_PUBLIC_*는 Next.js가 빌드 타임에 client 번들로 inline.
 export function StopMapPickerInner({
   position,
   radiusM,
@@ -16,7 +16,7 @@ export function StopMapPickerInner({
   onPick: (next: LatLng) => void;
 }) {
   const [loading, error] = useKakaoLoader({
-    appkey: env.NEXT_PUBLIC_KAKAO_MAP_KEY,
+    appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "",
     libraries: ["services"],
   });
 
