@@ -118,7 +118,7 @@ export default async function RoutesPage() {
                     <TableHead className="w-32">차량</TableHead>
                     <TableHead className="w-28">요일</TableHead>
                     <TableHead className="w-24">정류장</TableHead>
-                    <TableHead className="text-right">관리</TableHead>
+                    <TableHead className="pr-[18px] text-right">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

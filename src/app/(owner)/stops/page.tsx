@@ -96,7 +96,7 @@ export default async function StopsPage() {
                     <TableHead>이름</TableHead>
                     <TableHead>주소</TableHead>
                     <TableHead className="w-24">반경</TableHead>
-                    <TableHead className="text-right">관리</TableHead>
+                    <TableHead className="pr-[18px] text-right">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

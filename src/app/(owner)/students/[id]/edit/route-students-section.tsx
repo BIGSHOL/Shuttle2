@@ -92,7 +92,7 @@ export function RouteStudentsSection({
                 <TableHead>노선</TableHead>
                 <TableHead className="w-20">방향</TableHead>
                 <TableHead>정류장</TableHead>
-                <TableHead className="text-right">관리</TableHead>
+                <TableHead className="pr-[18px] text-right">관리</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>

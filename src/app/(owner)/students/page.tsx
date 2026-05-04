@@ -124,7 +124,7 @@ export default async function StudentsPage() {
                     <TableHead className="w-20">만</TableHead>
                     <TableHead className="w-24">노선</TableHead>
                     <TableHead className="w-24">보호자</TableHead>
-                    <TableHead className="text-right">관리</TableHead>
+                    <TableHead className="pr-[18px] text-right">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>

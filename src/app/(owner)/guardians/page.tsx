@@ -198,7 +198,7 @@ export default async function GuardiansPage() {
                       <TableHead className="w-40">전화</TableHead>
                       <TableHead>자녀</TableHead>
                       <TableHead className="w-24">상태</TableHead>
-                      <TableHead className="text-right">관리</TableHead>
+                      <TableHead className="pr-[18px] text-right">관리</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -317,7 +317,7 @@ export default async function GuardiansPage() {
                       <TableHead className="w-40">전화</TableHead>
                       <TableHead>자녀</TableHead>
                       <TableHead className="w-32">만료일</TableHead>
-                      <TableHead className="text-right">관리</TableHead>
+                      <TableHead className="pr-[18px] text-right">관리</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

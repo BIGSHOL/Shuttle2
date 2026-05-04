@@ -120,7 +120,7 @@ export default async function VehiclesPage() {
                     <TableHead>모드</TableHead>
                     <TableHead>신고증명서</TableHead>
                     <TableHead>보험 만료</TableHead>
-                    <TableHead className="text-right">관리</TableHead>
+                    <TableHead className="pr-[18px] text-right">관리</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
