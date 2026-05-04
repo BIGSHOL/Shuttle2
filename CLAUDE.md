@@ -41,7 +41,7 @@
 - React 19 (`useActionState`)
 - Prisma 7 + PostgreSQL (Supabase)
 - Supabase Auth (이메일 + 학부모용 토큰 가입)
-- **Supabase Realtime** (기사 → 학부모 실시간 위치 broadcast)
+- **Supabase Realtime** (기사→학부모 5초 GPS broadcast + W16 trip-update 채널 + W16-D org-trips 채널)
 - **카카오맵 JS SDK** (지도·정류장 위치·실시간 셔틀 마커)
 - Tailwind CSS v4 (`@theme inline` 토큰) + shadcn/ui (radix-nova preset)
 - **Pretendard 폰트** (`public/fonts/Pretendard-{Regular,Bold}.ttf` + next/font/local)
@@ -104,6 +104,7 @@ prisma/
 ### 라우트 충돌 회피 패턴
 
 route group 다른 그룹이 같은 path를 만들면 빌드 실패. 우리 패턴:
+
 - `/notifications` (parent) ↔ `/run/notifications` (driver) ↔ `/dashboard/notifications` (owner)
 - `/absences` (owner) ↔ `/my-absences` (parent)
 - `/stop-change-requests` (owner) ↔ `/my-stop-changes` (parent)
@@ -126,6 +127,29 @@ route group 다른 그룹이 같은 path를 만들면 빌드 실패. 우리 패�
 - Supabase RLS는 W7부터 활성화됨. service_role 키는 Prisma `DIRECT_URL`로 우회.
   새 도메인 모델 추가 시 마이그레이션에서 `ALTER TABLE ... ENABLE ROW LEVEL SECURITY` 동봉.
 - 세션에서 `orgId`를 추출해 쿼리에 항상 주입하는 헬퍼 사용 (`getOrgId()`).
+
+## Realtime 채널 규약 (W16 이후)
+
+같은 `trip:<tripId>` 채널에서 두 종류의 broadcast event:
+
+- `ping` — 기사 폰 GPS 5초 간격, payload: `TripPingPayload (lat/lng/...)`.
+  학부모 trip-live + 학원장 trip 상세 라이브 지도가 구독.
+- `update` — 기사·동승자 server action(boarding/issue/safety/trip-state) 직후
+  `publishTripUpdate(tripId, reason, orgId)`로 publish. payload는 가볍게
+  `{ tripId, reason, at }`. 받은 쪽은 `router.refresh()`만 호출 → server
+  component가 fresh fetch.
+
+org 단위 채널 `org-trips:<orgId>` — 학원장 dashboard가 N개 trip을 한 번에 보므로
+별도 채널. 같은 `update` event를 학원장 trip 상세와 함께 multi-message
+broadcast로 동시 발행 (1번의 fetch).
+
+publish는 server에서 Supabase Realtime broadcast HTTP API
+(`/realtime/v1/api/broadcast`)로 fire-and-forget. 실패 시 throw 안 함 —
+모든 publish 호출 전에 `revalidatePath("/dashboard")` 같은 fallback이 있어
+broadcast가 안 가도 다음 진입에서 fresh data가 보인다.
+
+새 server action을 추가하면 publishTripUpdate + revalidatePath를 같이
+호출하는 패턴 유지.
 
 ## 위치 데이터·보안 규칙
 
@@ -160,7 +184,7 @@ iOS Safari PWA는 백그라운드에서 GPS를 사실상 받지 못한다. 화�
 - "보호자" = Guardian (학부모 또는 본인)
 - "기사" = Driver (Staff role), "동승자" = Helper
 - "운행" = Trip (날짜·노선 단위 인스턴스, status는 startedAt/endedAt에서 derive)
-- "탑승·하차" = BoardingEvent (BoardingType: BOARD | ALIGHT)
+- "탑승·하차" = BoardingEvent (BoardingType: BOARD | ALIGHT | NO_SHOW | NO_DROPOFF)
 - "안전점검" = SafetyCheck (KIDS 모드 운행마다 1건)
 - "결석 신청" = AbsenceRequest (AbsenceStatus: PENDING | NOTIFIED_DRIVER | ACKNOWLEDGED | REJECTED)
 - "정류장 변경 요청" = StopChangeRequest (RequestStatus: PENDING | APPROVED | REJECTED)
@@ -194,7 +218,8 @@ vercel deploy --prod --yes  # 프로덕션 배포
 
 `progress.md` — 세션이 끊겨도 웹/앱 클로드 코드에서 이어가도록 마일스톤·결정사항·다음 우선순위 기록.
 
-### 마일스톤 요약 (2026-05-04 기준)
+### 마일스톤 요약 (2026-05-03 기준)
+
 - W1~W7: 도메인 모델·CRUD·기사·학부모·실시간 GPS·KIDS 안전점검·RLS·보험 D-30·안전교육
 - W8: 마케팅 사전등록 + admin
 - W9: 학부모 home + trip-live 디자인 (Pretendard 적용)
@@ -207,15 +232,24 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - W15-B: BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 학부모·학원장 푸시
 - W15-C: /terms · /privacy 페이지 + 가입 동의 체크박스 link
 - W15-D: /forgot-password + /reset-password 비밀번호 재설정 흐름
+- W16: 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast HTTP API + router.refresh)
+- W16-B: 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용)
+- W16-C: 종료 운행 GPS 경로 (LocationPing trail polyline)
+- W16-D: 학원장 dashboard 실시간 자동 갱신 (`org-trips:<orgId>` 채널)
+- W17-A: Supabase 비밀번호 재설정 메일 한국어 템플릿
+- W17-C: 학부모 BottomTabBar (홈·알림·결석·정류장 4탭)
+- W17-D: 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화)
+- W17-E: `SHUTTLE_NEAR_CHILD` 알림 카테고리 + 안전운행기록 PDF에 GPS 누적거리
 
 ### 알려진 미해결 (다음 세션)
+
 - 학부모 폰 OTP 가입 + 푸시 권한 단계
-- Owner trip 상세 Realtime 자동 갱신 (현재 새로고침 필요)
 - 약관·개인정보처리방침 정식 법무 검토 (현재 베타 임시본)
-- Supabase 이메일 템플릿 한국어 커스터마이즈 (현재 기본 영문)
+- 가입 확인 메일 한국어 (W17-B, email_confirm bypass 해제 시)
 - 결제 통합 (Toss Payments 또는 Stripe)
 
 ### 환경 변수 가드레일 (W15-D 트러블슈팅 결과)
+
 - `lib/env.ts` proxy는 `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL` 등 server-only 변수까지 검증
 - 따라서 **Client Component에서는 `env.X` 사용 금지** — `process.env.NEXT_PUBLIC_*`을 직접 사용
 - `lib/supabase/client.ts`가 모범 예시 (process.env 직접)

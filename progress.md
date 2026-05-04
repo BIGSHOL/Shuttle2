@@ -5,33 +5,35 @@
 
 ## 완료된 마일스톤
 
-| 단계 | 내용 | 커밋 | 배포 |
-|---|---|---|---|
-| W1~W7 | 도메인 모델·CRUD·기사·학부모·실시간 GPS·KIDS 안전점검·RLS·보험 D-30·안전교육 | `e224bf6` | ✅ |
-| W8 | 마케팅 랜딩 + 사전등록 + admin | `b830a72` | ✅ |
-| W9 | 학부모 home + trip-live 디자인 | `16c9805` | ✅ |
-| W10 | Notification 모델 + StopChangeRequest + 결석 반려 + 학부모/owner 워크플로우 | `abb8a5b`, `00f07eb` | ✅ |
-| W11 | 기사 화면 디자인 (mobile-first + dark gradient running header + tokens) | `b4cb872` | ✅ |
-| W12 | 학원장 dashboard 재구성 + 실시간 운행 모니터 + owner 토큰 마이그레이션 | `f87e566` | ✅ |
-| W13 | 마케팅 랜딩 디자인 + /pricing 신규 + login/signup 디자인 | `dc75d7a`, `a1b41a4` | ✅ |
-| W14 | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화 | `7776d9b` | ✅ |
-| W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정 | `e71961f` | ✅ |
-| W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 | `a2bf51b` | ✅ |
-| W15-C | 약관·개인정보처리방침 + 가입 동의 link | `3c41c2a` | ✅ |
-| W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정 | `684315a` | ✅ |
-| W16 | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh) | _이번_ | ⏳ |
-| W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용) | _이번_ | ⏳ |
-| W17-A | Supabase 비밀번호 재설정 메일 한국어 템플릿 (`supabase/templates/recovery.html`) | _이번_ | ⏳ |
-| W17-C | 학부모 BottomTabBar (홈·알림·결석·정류장 4탭) | _이번_ | ⏳ |
-| W16-C | 종료 운행 GPS 경로 (LocationPing trail polyline) | _이번_ | ⏳ |
-| W17-D | 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화) | _이번_ | ⏳ |
-| W16-D | 학원장 dashboard 실시간 자동 갱신 (`org-trips:<orgId>` 채널) | _이번_ | ⏳ |
+| 단계  | 내용                                                                             | 커밋                 | 배포 |
+| ----- | -------------------------------------------------------------------------------- | -------------------- | ---- |
+| W1~W7 | 도메인 모델·CRUD·기사·학부모·실시간 GPS·KIDS 안전점검·RLS·보험 D-30·안전교육     | `e224bf6`            | ✅   |
+| W8    | 마케팅 랜딩 + 사전등록 + admin                                                   | `b830a72`            | ✅   |
+| W9    | 학부모 home + trip-live 디자인                                                   | `16c9805`            | ✅   |
+| W10   | Notification 모델 + StopChangeRequest + 결석 반려 + 학부모/owner 워크플로우      | `abb8a5b`, `00f07eb` | ✅   |
+| W11   | 기사 화면 디자인 (mobile-first + dark gradient running header + tokens)          | `b4cb872`            | ✅   |
+| W12   | 학원장 dashboard 재구성 + 실시간 운행 모니터 + owner 토큰 마이그레이션           | `f87e566`            | ✅   |
+| W13   | 마케팅 랜딩 디자인 + /pricing 신규 + login/signup 디자인                         | `dc75d7a`, `a1b41a4` | ✅   |
+| W14   | 학부모 invite 디자인 + notification-toggle 토큰화·시각 강화                      | `7776d9b`            | ✅   |
+| W15-A | Owner-side trip 상세 view + parent-invite 줄바꿈 수정                            | `e71961f`            | ✅   |
+| W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시                   | `a2bf51b`            | ✅   |
+| W15-C | 약관·개인정보처리방침 + 가입 동의 link                                           | `3c41c2a`            | ✅   |
+| W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정  | `684315a`            | ✅   |
+| W16   | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh)          | _이번_               | ⏳   |
+| W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용)                     | _이번_               | ⏳   |
+| W17-A | Supabase 비밀번호 재설정 메일 한국어 템플릿 (`supabase/templates/recovery.html`) | _이번_               | ⏳   |
+| W17-C | 학부모 BottomTabBar (홈·알림·결석·정류장 4탭)                                    | _이번_               | ⏳   |
+| W16-C | 종료 운행 GPS 경로 (LocationPing trail polyline)                                 | _이번_               | ⏳   |
+| W17-D | 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화)          | _이번_               | ⏳   |
+| W16-D | 학원장 dashboard 실시간 자동 갱신 (`org-trips:<orgId>` 채널)                     | _이번_               | ⏳   |
+| W17-E | `SHUTTLE_NEAR_CHILD` 알림 카테고리 + 안전운행기록 PDF에 GPS 누적거리             | _이번_               | ⏳   |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
 ## W12 완료 (`f87e566` 배포됨)
 
 ### 결과
+
 - (owner)/layout — unreadCount 주입
 - (owner)/header — sticky + bell + unread 배지 + 모바일 가로 스크롤 nav
 - (owner)/dashboard/notifications — 학원장 알림 인박스
@@ -43,6 +45,7 @@
 - owner CRUD/alerts 11 페이지 토큰 마이그레이션
 
 ### W12 결정사항·이슈
+
 - **owner trip-live 접근 불가**: `(parent)/trip-live`는 `requireGuardianTripAccess`로 가드.
   → 운행 중 카드는 시각만 (link 없음). owner-side 실시간 상세는 W14+로 미룸.
 - **BoardingType에 NO_SHOW 없음**: schema는 BOARD/ALIGHT만. 미해결 이슈는
@@ -52,6 +55,7 @@
 ## W13 완료 (마케팅·가입)
 
 ### 결과
+
 - `(marketing)/page.tsx` 완전 재설계:
   - sticky 헤더 + 글래스 효과
   - Hero: 큰 카피 + 모바일 mock (dark gradient + LIVE 뱃지 + "약 4분")
@@ -71,6 +75,7 @@
 - `pre-register-form` success state 토큰화
 
 ### 알려진 제약 (W14+에서)
+
 - 학부모 가입 분기 — 현재 `/parent-invite/[token]` 라우트만 존재. 토큰 없이 자녀 검색 가능한 가입 흐름은 별도 추가 필요
 - 비밀번호 재설정 페이지 부재
 - 폰 OTP 로그인 (Tabs로 분기)는 다음 세션
@@ -79,6 +84,7 @@
 ## W14 완료 (학부모 가입 흐름 디자인 + notification-toggle)
 
 ### 결과
+
 - `parent-invite/[token]/page.tsx`: 에러 카드 3종 (유효하지 않음/이미 사용/만료) 디자인 토큰
   - Logo + 둥근 카드 + 아이콘 + "로그인 페이지로" 버튼
 - `parent-invite/[token]/accept-form.tsx` 풀 재설계:
@@ -94,6 +100,7 @@
   - unsubscribed에서 bus-soft + 큰 "알림 켜기" 버튼
 
 ### W14에서 의도적으로 미수행 (다음 단계)
+
 - 폰 OTP 인증 — Supabase phone auth + SMS provider (BlueMs/Toast/Twilio) 설정 필요
 - 비밀번호 재설정 흐름 — `(auth)/forgot-password`
 - 약관·개인정보처리방침 페이지 — `(marketing)/(legal)/terms`, `/privacy`
@@ -101,6 +108,7 @@
 ## W15-A 완료 (Owner trip 상세 view)
 
 ### 결과
+
 - `lib/auth/owner-trip-access.ts` 신규 — `requireOwnerTripAccess(tripId)` 헬퍼
   - vehicle.orgId 비교로 다른 학원 trip 차단
 - `(owner)/dashboard/trip/[tripId]/page.tsx` 신규 — read-only 운행 상세
@@ -113,16 +121,19 @@
 - finished 카드도 link화 (요약·안전점검 확인용)
 
 ### 부가 수정 (사용자 요청)
+
 - parent-invite 에러 카드 body 줄바꿈 2줄로 (ReactNode + `<br />`)
 - ErrorCard `body` 타입 string → React.ReactNode
 
 ### 미수행 (다음 단계)
+
 - 실시간 자동 갱신 (Realtime broadcast subscribe) — 현재는 페이지 새로고침 필요
 - 운행 종료 후 LocationPing 경로 시각화 (안전운행기록 면책 자료)
 
 ## W15-B 완료 (BoardingType NO_SHOW/NO_DROPOFF)
 
 ### 결과
+
 - prisma migration `20260503201957_boarding_type_no_show_no_dropoff` — enum 확장
 - `(driver)/run/actions.ts` 신규 액션:
   - `markBoardingIssueAction` — 미탑승·미하차 등록 + 학부모·학원장 즉시 푸시
@@ -139,6 +150,7 @@
 - 푸시 카테고리 활용: STUDENT_NO_SHOW / STUDENT_NO_DROPOFF (이미 enum 존재)
 
 ### 푸시 흐름
+
 1. 기사가 정류장에서 학생 안 보임 → ⚠️ 보고 → 사유 입력 → 보고
 2. `markBoardingIssueAction` 실행:
    - BoardingEvent {type:NO_SHOW/NO_DROPOFF, notes:reason} 저장
@@ -149,6 +161,7 @@
 ## W15-C 완료 (약관·개인정보처리방침)
 
 ### 결과
+
 - `(marketing)/_components/legal-shell.tsx` 신규 — 공용 shell
   - LegalShell (헤더 + Hero + 본문 + 푸터)
   - LegalSection / LegalList helpers
@@ -169,6 +182,7 @@
 ## W15-D 완료 (비밀번호 재설정)
 
 ### 결과
+
 - `(auth)/forgot-password/page.tsx + forgot-form.tsx + actions.ts`:
   - 이메일 입력 → `supabase.auth.resetPasswordForEmail` 호출
   - redirectTo: `${proto}://${host}/reset-password` (production·preview·local 모두 대응)
@@ -186,12 +200,14 @@
 - `(auth)/login/login-form.tsx`: "비밀번호 찾기" link 추가 (가입하기 옆)
 
 ### 부수 수정
+
 - **lib/supabase/client.ts**: `env` proxy → `process.env` 직접 사용
   - 기존: `env.NEXT_PUBLIC_*` 호출 시 proxy가 server-only 변수까지 검증해 client에서 throw
   - 수정: `process.env.NEXT_PUBLIC_*` (Next.js가 client 번들에 inline)
   - 영향: 모든 client-side `createClient()` 호출 (현재는 reset-form만 사용 중)
 
 ### 알려진 제약 (운영 정착 후)
+
 - 이메일 발송은 Supabase 기본 SMTP 사용 (베타 한정 무료, 시간당 한도 있음).
   정식 운영 시 SendGrid/Mailgun 등 SMTP 설정 필요.
 - 이메일 템플릿은 Supabase 대시보드에서 별도 커스터마이즈 (현재 기본 영문)
@@ -199,6 +215,7 @@
 ## W16 완료 (학원장 trip 상세 실시간 자동 갱신)
 
 ### 결과
+
 - `lib/geo/realtime.ts`: 기존 `trip:<tripId>` 채널에 `update` 이벤트 추가.
   ping(5초 GPS broadcast)와 같은 채널을 공유하지만 event 이름으로 분기.
   payload: `{ tripId, reason: "boarding"|"issue"|"safety"|"trip-state", at: ISO }`
@@ -224,6 +241,7 @@
   하단 안내 문구 "실시간 자동 갱신됨"으로 갱신.
 
 ### 디자인 결정
+
 - **이벤트 payload는 가볍게** — 어떤 데이터가 변했는지 자세히 보내지 않음.
   client가 router.refresh() 트리거만 받고 server component가 다시 fetch.
   단일 source of truth + 기존 렌더링 로직 100% 재사용.
@@ -235,6 +253,7 @@
 - **운행 중일 때만 구독** — 종료·예정 trip은 변동 없으니 채널 미점유.
 
 ### 알려진 제약 / 다음 단계
+
 - LocationPing(GPS)는 학원장 화면에서 아직 시각화 안 함. trip detail에
   실시간 지도 보려면 useTripBroadcast(ping)와 kakao map 통합 필요.
   → W16-B 후속 검토.
@@ -245,6 +264,7 @@
 ## W16-B 완료 (학원장 trip 상세 실시간 GPS 지도)
 
 ### 결과
+
 - `(owner)/dashboard/trip/[tripId]/_components/owner-trip-live-map.tsx`
   신규 — `useTripBroadcast(tripId)`로 5초마다 ping 받아 `TripLiveMap` 재사용.
   학원장은 child-stop 강조 없이 모든 정류장 동등.
@@ -255,6 +275,7 @@
   - height 48vh — 운행자·안전점검·timeline은 스크롤로 도달
 
 ### 디자인 결정
+
 - **`TripLiveMap` 100% 재사용** — 학부모용으로 만든 컴포넌트가 props로
   child-stop 플래그를 받게 돼 있어 그대로 사용 가능. 학원장은 전부 false.
 - **운행 중에만 표시** — 종료된 trip의 정적 경로 시각화는 W16-C로 미룸.
@@ -262,6 +283,7 @@
 ## W17-A 완료 (Supabase 비밀번호 재설정 메일 한국어)
 
 ### 결과
+
 - `supabase/templates/recovery.html` 신규 — Pretendard 기반 셔틀이 브랜드
   HTML. 노란 로고 뱃지 + 큰 다크 CTA 버튼 + fallback 링크 + 1시간 유효 안내.
   `{{ .ConfirmationURL }}` 토큰만 사용 (Supabase가 1회용 link로 채움).
@@ -269,6 +291,7 @@
   subject "[셔틀이] 비밀번호 재설정 안내".
 
 ### 적용 방법 (운영자가 수동으로 1번)
+
 1. `supabase login` (서버에 인증)
 2. `pnpm sb:link` (이미 project-ref 등록됨)
 3. **Supabase 대시보드** → Authentication → Email Templates → Recovery 탭에서
@@ -276,6 +299,7 @@
    (CLI 측 `supabase config push`가 templates 동기화를 아직 GA 지원 안함)
 
 ### 영향 범위
+
 - W15-D `(auth)/forgot-password` 흐름이 `resetPasswordForEmail` 호출
   → 이 템플릿으로 메일 발송됨.
 - 가입 confirmation은 `admin.createUser({ email_confirm: true })`로 bypass
@@ -285,6 +309,7 @@
 ## W17-C 완료 (학부모 BottomTabBar)
 
 ### 결과
+
 - `(parent)/parent-bottom-tabs.tsx` 신규 — client. usePathname으로 active
   tab 강조. 4탭: 홈 / 알림 (unread 뱃지) / 결석 / 정류장.
   - 자식 path도 active 처리 (예: `/my-absences/new`도 결석 active)
@@ -295,6 +320,7 @@
   layout이 이미 `flex-col` + `min-h-[100dvh]` 이라 sticky bottom으로 자연스럽게.
 
 ### 디자인 결정
+
 - "설정" 별도 라우트 없음 → 기존 헤더 dropdown 유지 (W14 디자인).
   4탭으로 축약하는 게 모바일 가독성 우선.
 - 홈은 `/home` exact match가 아닌 prefix 매칭 — `/home/anything` 도 active.
@@ -302,6 +328,7 @@
 ## W16-C 완료 (종료 운행 GPS 경로)
 
 ### 결과
+
 - `lib/map/trip-live-map-inner.tsx`: `trail?: {lat,lng}[]` prop 추가.
   주어지면 노선 polyline 위에 노란 굵은 선(`#f5c518`, weight 5, opacity 0.85)
   으로 실주행 경로 overlay. 캡션도 "운행 경로 N개 좌표" 분기.
@@ -311,12 +338,14 @@
   - `<TripLiveMap shuttle={null} trail={trail} />` 직접 사용 (broadcast 불필요)
 
 ### 의도
+
 - 안전운행기록(별지 제20호의2) PDF에 포함하기 전 화면 검증용.
 - 시각적 경로 + 정류장 통과 시점이 일치하는지 학원장이 확인 가능.
 
 ## W17-D 완료 (기사·동승자 trip 화면 실시간 자동 갱신)
 
 ### 결과
+
 - `components/trip-realtime-refresher.tsx` (이전 owner 전용에서 이동) —
   공용 컴포넌트화. owner page는 import 경로만 수정.
 - `(driver)/trip/[id]/trip-screen.tsx`:
@@ -326,12 +355,14 @@
     로드 → no-op. 불필요한 refresh 비용 무시 가능.
 
 ### 영향
+
 - 학부모 trip-live는 그대로 (별도 사실상 broadcast만 사용)
 - 학원장 → 기사 → 동승자 전 채널이 같은 `trip:<tripId>` "update" 이벤트 공유
 
 ## W16-D 완료 (학원장 dashboard 실시간 자동 갱신)
 
 ### 결과
+
 - `lib/geo/realtime.ts`: `ORG_TRIPS_CHANNEL_PREFIX = "org-trips"` +
   `orgTripsChannelName(orgId)` 추가.
 - `lib/geo/publish-trip-update.ts`: optional `orgId` 매개변수.
@@ -342,26 +373,57 @@
 - `components/org-dashboard-refresher.tsx` 신규 — 학원장 dashboard 마운트용.
   "운행 모니터 갱신됨" 토스트.
 - `(driver)/run/actions.ts`: 6개 publishTripUpdate 호출 모두 orgId 전달
-  + `revalidatePath("/dashboard")` 추가 (broadcast 실패 시 fallback).
+  - `revalidatePath("/dashboard")` 추가 (broadcast 실패 시 fallback).
 - `(owner)/dashboard/page.tsx`: `<OrgDashboardRefresher orgId={orgId} />` 마운트.
 
 ### 디자인 결정
+
 - **Org 채널 단일 구독** — dashboard가 trip을 N개 보지만 trip마다 채널
   구독하면 새 trip 추가 시 못 받음. org 채널 1개로 단순화.
 - **600ms debounce** — 여러 기사가 동시에 운행 시작/종료 시 burst 방지.
 - **Multi-message HTTP body** — 1번의 broadcast로 2채널 동시 발행, 추가 latency 없음.
 
+## W17-E 완료 (SHUTTLE_NEAR_CHILD 카테고리 + PDF GPS 거리)
+
+### 결과
+
+- `prisma/schema.prisma`: `NotificationCategory` enum에 `SHUTTLE_NEAR_CHILD`
+  추가 + `prisma/migrations/20260503210000_notification_shuttle_near_child` 신규.
+- `(driver)/run/actions.ts`: `notifyGuardiansOfStopPass`가 ANNOUNCEMENT 대신
+  새 카테고리 사용 — 인박스에서 일반 공지와 분리됨.
+- 학부모·기사·학원장 `notification-list.tsx` 3곳 모두 type union + ICON_BY_CAT
+  맵 갱신 (Bus 아이콘).
+- `lib/pdf/safety-report-data.ts`: trip마다 LocationPing 가져와 haversine으로
+  누적 거리 계산. row에 `gpsDistanceKm` / `gpsPingCount` 추가, vehicle에
+  `totalDistanceKm` 추가.
+- `lib/pdf/safety-report.tsx`: vehicle meta에 "누적 운행거리 X km" 표시,
+  비고 컬럼이 GPS 데이터 있으면 "X.Xkm · N회 ping"으로 자동 채움.
+
+### 의도
+
+- 셔틀 도착 알림이 결석/공지 등 일반 알림과 시각적으로 분리되어 학부모가
+  "지금 자녀 정류장으로 오는 중"임을 즉시 인지.
+- 분기 PDF에 GPS 누적 거리를 함께 명시해 면책 자료의 정량성 강화.
+
+### 운영자 액션
+
+- DB에 마이그레이션 적용: `pnpm db:migrate deploy` (운영) 또는
+  `pnpm db:migrate dev` (로컬).
+
 ## 다음 우선순위 (W17-B+)
 
 ### W17-B: 가입 확인 메일 한국어 (선택)
+
 - Supabase email_confirm bypass 해제 시 필요. 베타 시점은 보류.
 
 ### W17: 인증·기능 보강
+
 - 학부모 폰 OTP 가입 (Supabase phone auth + SMS provider)
 - 약관·개인정보처리방침 정식 법무 검토
 - Supabase 이메일 템플릿 한국어 커스터마이즈
 
 ### W18: 결제·요금제
+
 - Toss Payments 또는 Stripe 통합
 - Plan 전환 (TRIAL → BASIC → PRO)
 - 차량 단위 청구 + 세금계산서
@@ -387,13 +449,13 @@ bg-zinc-100/200 → bg-muted + text-muted-foreground
 
 ## 주요 라우트
 
-| 그룹 | 라우트 | 설명 |
-|---|---|---|
-| (parent) | `/home`, `/trip-live/[tripId]`, `/notifications`, `/my-absences`, `/my-stop-changes` | 학부모 모바일 |
-| (driver) | `/run`, `/run/notifications`, `/trip/[id]` | 기사 모바일 |
-| (helper) | `/helper-run`, `/trip/[id]` | 동승자 모바일 |
-| (owner)  | `/dashboard`, `/dashboard/notifications`, `/vehicles`, `/students`, `/routes`, `/stops`, `/staff`, `/guardians`, `/absences`, `/stop-change-requests`, `/training`, `/safety-report` | 학원장 PC/태블릿 |
-| (marketing) | `/`, `/admin/pre-registrations` | 마케팅 + admin |
+| 그룹        | 라우트                                                                                                                                                                               | 설명             |
+| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
+| (parent)    | `/home`, `/trip-live/[tripId]`, `/notifications`, `/my-absences`, `/my-stop-changes`                                                                                                 | 학부모 모바일    |
+| (driver)    | `/run`, `/run/notifications`, `/trip/[id]`                                                                                                                                           | 기사 모바일      |
+| (helper)    | `/helper-run`, `/trip/[id]`                                                                                                                                                          | 동승자 모바일    |
+| (owner)     | `/dashboard`, `/dashboard/notifications`, `/vehicles`, `/students`, `/routes`, `/stops`, `/staff`, `/guardians`, `/absences`, `/stop-change-requests`, `/training`, `/safety-report` | 학원장 PC/태블릿 |
+| (marketing) | `/`, `/admin/pre-registrations`                                                                                                                                                      | 마케팅 + admin   |
 
 ## 핵심 가드레일 (CLAUDE.md 발췌)
 

@@ -448,6 +448,7 @@ enum NotificationCategory {
   STOP_CHANGE_REJECTED
   ANNOUNCEMENT
   EMERGENCY
+  SHUTTLE_NEAR_CHILD // W17-E: 셔틀이 자녀 정류장에 도착·근접 (driver STOP_PASS ping에서 fan-out)
 }
 
 // W10: 정류장 변경 요청. 학부모가 새 위치를 카카오맵 picker로 선택 →

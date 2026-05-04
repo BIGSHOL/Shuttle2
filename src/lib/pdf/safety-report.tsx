@@ -140,19 +140,14 @@ function VehicleSection({
     <View style={styles.vehicleSection} wrap={true}>
       <Text style={styles.vehicleHead}>차량 {vehicle.plate}</Text>
       <View style={styles.vehicleMeta}>
-        <Text>
-          신고증명서 번호: {vehicle.reportNo ?? "—"}
-        </Text>
-        <Text>
-          보험 만료: {vehicle.insuranceUntil ?? "—"}
-        </Text>
+        <Text>신고증명서 번호: {vehicle.reportNo ?? "—"}</Text>
+        <Text>보험 만료: {vehicle.insuranceUntil ?? "—"}</Text>
         <Text>운행 {vehicle.rows.length}건</Text>
+        <Text>누적 운행거리 {vehicle.totalDistanceKm.toFixed(1)} km (GPS)</Text>
       </View>
 
       {vehicle.rows.length === 0 ? (
-        <Text style={styles.emptyRow}>
-          이 분기 운행 기록이 없습니다.
-        </Text>
+        <Text style={styles.emptyRow}>이 분기 운행 기록이 없습니다.</Text>
       ) : (
         <View style={styles.table}>
           <View style={styles.th}>
@@ -186,9 +181,7 @@ function Row({ row, alt }: { row: SafetyReportRow; alt: boolean }) {
         {row.routeName} ({DIRECTION_LABEL[row.routeDirection]})
       </Text>
       <Text style={[styles.td, styles.colDriver]}>{row.driverName}</Text>
-      <Text style={[styles.td, styles.colHelper]}>
-        {row.helperName ?? "—"}
-      </Text>
+      <Text style={[styles.td, styles.colHelper]}>{row.helperName ?? "—"}</Text>
       <Text style={[styles.td, styles.colCheck]}>
         {check(row.seatbeltAllOk)}
       </Text>
@@ -198,7 +191,11 @@ function Row({ row, alt }: { row: SafetyReportRow; alt: boolean }) {
       <Text style={[styles.td, styles.colCheck]}>
         {check(row.allAlightedOk)}
       </Text>
-      <Text style={[styles.td, styles.colNotes]}>{row.notes ?? ""}</Text>
+      <Text style={[styles.td, styles.colNotes]}>
+        {row.gpsDistanceKm !== null && row.gpsPingCount !== null
+          ? `${row.gpsDistanceKm.toFixed(1)}km · ${row.gpsPingCount}회 ping`
+          : (row.notes ?? "")}
+      </Text>
     </View>
   );
 }
@@ -226,7 +223,9 @@ export function SafetyReportPdf({ data }: { data: SafetyReportData }) {
             (KIDS 모드)
           </Text>
           <View style={styles.meta}>
-            <Text>대상 기간: {quarterMonthsLabel(data.year, data.quarter)}</Text>
+            <Text>
+              대상 기간: {quarterMonthsLabel(data.year, data.quarter)}
+            </Text>
             <Text>발행: {issuedKst} (KST)</Text>
           </View>
         </View>
@@ -234,21 +233,19 @@ export function SafetyReportPdf({ data }: { data: SafetyReportData }) {
         <View style={styles.preface}>
           <Text>
             도로교통법 §53⑦에 따라 어린이통학버스 운영자는 안전운행기록을
-            분기별로 작성·보관하고 관할 경찰서장에게 제출해야 합니다.
-            본 문서는 셔틀이 시스템이 자동 누적한 운행·안전점검 기록을
-            분기 단위로 정리한 것입니다.
+            분기별로 작성·보관하고 관할 경찰서장에게 제출해야 합니다. 본 문서는
+            셔틀이 시스템이 자동 누적한 운행·안전점검 기록을 분기 단위로 정리한
+            것입니다.
           </Text>
         </View>
 
         {data.vehicles.length === 0 ? (
           <Text style={styles.emptyRow}>
-            등록된 KIDS 모드 차량이 없습니다. 차량 모드를 KIDS로 설정하면
-            운행 기록이 이 문서에 누적됩니다.
+            등록된 KIDS 모드 차량이 없습니다. 차량 모드를 KIDS로 설정하면 운행
+            기록이 이 문서에 누적됩니다.
           </Text>
         ) : (
-          data.vehicles.map((v) => (
-            <VehicleSection key={v.plate} vehicle={v} />
-          ))
+          data.vehicles.map((v) => <VehicleSection key={v.plate} vehicle={v} />)
         )}
 
         <View style={styles.footer} fixed>

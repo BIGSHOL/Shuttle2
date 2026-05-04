@@ -35,7 +35,8 @@ type NotifyCategory =
   | "STOP_CHANGE_APPROVED"
   | "STOP_CHANGE_REJECTED"
   | "ANNOUNCEMENT"
-  | "EMERGENCY";
+  | "EMERGENCY"
+  | "SHUTTLE_NEAR_CHILD";
 
 type Item = {
   id: string;
@@ -66,6 +67,7 @@ const ICON_BY_CAT: Record<
   STOP_CHANGE_REJECTED: AlertTriangle,
   ANNOUNCEMENT: Bell,
   EMERGENCY: AlertTriangle,
+  SHUTTLE_NEAR_CHILD: Bus,
 };
 
 const URGENT_CATS = new Set<NotifyCategory>([

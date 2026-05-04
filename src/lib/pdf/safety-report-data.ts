@@ -1,4 +1,5 @@
 import { db } from "@/lib/db";
+import { haversineMeters } from "@/lib/geo/distance";
 
 import { quarterRangeUtc, type Quarter } from "./quarter";
 
@@ -16,13 +17,19 @@ export type SafetyReportRow = {
   seatbeltAllOk: boolean | null; // null = SafetyCheck 없음 (출발 전 점검 안 함)
   helperPresent: boolean | null;
   allAlightedOk: boolean | null;
-  notes: string | null; // 향후 비고 필드 추가 시 채울 자리. 현재는 null.
+  // GPS 요약 (LocationPing 기반, 면책 자료).
+  // distanceKm: 누적 거리, pingCount: 영구 저장된 ping 개수.
+  // null = ping 데이터 없음(GPS 미지원·운행 미시작 등).
+  gpsDistanceKm: number | null;
+  gpsPingCount: number | null;
+  notes: string | null;
 };
 
 export type SafetyReportVehicle = {
   plate: string;
   reportNo: string | null; // 어린이통학버스 신고증명서 번호
   insuranceUntil: string | null; // "YYYY-MM-DD"
+  totalDistanceKm: number; // 분기 누적 거리 (헤더 표시용)
   rows: SafetyReportRow[];
 };
 
@@ -85,6 +92,10 @@ export async function getSafetyReportData(
                 allAlightedOk: true,
               },
             },
+            pings: {
+              orderBy: { recordedAt: "asc" },
+              select: { lat: true, lng: true },
+            },
           },
         },
       },
@@ -96,23 +107,45 @@ export async function getSafetyReportData(
     year,
     quarter,
     generatedAt: new Date().toISOString(),
-    vehicles: vehicles.map((v) => ({
-      plate: v.plate,
-      reportNo: v.reportNo,
-      insuranceUntil: v.insuranceUntil ? fmtDateKst(v.insuranceUntil) : null,
-      rows: v.trips.map((t) => ({
-        date: fmtDateKst(t.date),
-        routeName: t.route.name,
-        routeDirection: t.route.direction,
-        driverName: t.driver.name,
-        helperName: t.helper?.name ?? null,
-        startedAt: fmtTimeKst(t.startedAt),
-        endedAt: fmtTimeKst(t.endedAt),
-        seatbeltAllOk: t.safetyCheck?.seatbeltAllOk ?? null,
-        helperPresent: t.safetyCheck?.helperPresent ?? null,
-        allAlightedOk: t.safetyCheck?.allAlightedOk ?? null,
-        notes: null,
-      })),
-    })),
+    vehicles: vehicles.map((v) => {
+      const rows = v.trips.map((t) => {
+        const pings = t.pings;
+        let distMeters = 0;
+        for (let i = 1; i < pings.length; i++) {
+          distMeters += haversineMeters(
+            pings[i - 1].lat,
+            pings[i - 1].lng,
+            pings[i].lat,
+            pings[i].lng,
+          );
+        }
+        const hasPings = pings.length > 0;
+        return {
+          date: fmtDateKst(t.date),
+          routeName: t.route.name,
+          routeDirection: t.route.direction,
+          driverName: t.driver.name,
+          helperName: t.helper?.name ?? null,
+          startedAt: fmtTimeKst(t.startedAt),
+          endedAt: fmtTimeKst(t.endedAt),
+          seatbeltAllOk: t.safetyCheck?.seatbeltAllOk ?? null,
+          helperPresent: t.safetyCheck?.helperPresent ?? null,
+          allAlightedOk: t.safetyCheck?.allAlightedOk ?? null,
+          gpsDistanceKm: hasPings ? +(distMeters / 1000).toFixed(2) : null,
+          gpsPingCount: hasPings ? pings.length : null,
+          notes: null,
+        };
+      });
+      const totalDistanceKm = +rows
+        .reduce((sum, r) => sum + (r.gpsDistanceKm ?? 0), 0)
+        .toFixed(1);
+      return {
+        plate: v.plate,
+        reportNo: v.reportNo,
+        insuranceUntil: v.insuranceUntil ? fmtDateKst(v.insuranceUntil) : null,
+        totalDistanceKm,
+        rows,
+      };
+    }),
   };
 }

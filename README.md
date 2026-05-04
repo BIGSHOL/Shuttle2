@@ -102,22 +102,30 @@ pnpm build            # production 빌드 (라우트 충돌 검증)
 vercel deploy --prod --yes
 ```
 
-## 마일스톤 (2026-05-04 기준)
+## 마일스톤 (2026-05-03 기준)
 
-| 단계 | 내용 |
-|---|---|
+| 단계  | 내용                                                                         |
+| ----- | ---------------------------------------------------------------------------- |
 | W1~W7 | 도메인 모델·CRUD·기사·학부모·실시간 GPS·KIDS 안전점검·RLS·보험 D-30·안전교육 |
-| W8 | 마케팅 사전등록 + admin |
-| W9 | 학부모 home + trip-live 디자인 (Pretendard) |
-| W10 | Notification + StopChangeRequest + 결석 반려 워크플로우 |
-| W11 | 기사 화면 디자인 (dark gradient running header) |
-| W12 | 학원장 dashboard 재구성 + 실시간 운행 모니터 + 토큰 마이그레이션 |
-| W13 | 마케팅 랜딩 + /pricing + login/signup 디자인 |
-| W14 | 학부모 invite 디자인 + notification-toggle 토큰화 |
-| W15-A | Owner-side trip 상세 view (`/dashboard/trip/[tripId]`) |
-| W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시 |
-| W15-C | 약관·개인정보처리방침 + 가입 동의 link |
-| W15-D | 비밀번호 재설정 (`/forgot-password` → `/reset-password`) |
+| W8    | 마케팅 사전등록 + admin                                                      |
+| W9    | 학부모 home + trip-live 디자인 (Pretendard)                                  |
+| W10   | Notification + StopChangeRequest + 결석 반려 워크플로우                      |
+| W11   | 기사 화면 디자인 (dark gradient running header)                              |
+| W12   | 학원장 dashboard 재구성 + 실시간 운행 모니터 + 토큰 마이그레이션             |
+| W13   | 마케팅 랜딩 + /pricing + login/signup 디자인                                 |
+| W14   | 학부모 invite 디자인 + notification-toggle 토큰화                            |
+| W15-A | Owner-side trip 상세 view (`/dashboard/trip/[tripId]`)                       |
+| W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시               |
+| W15-C | 약관·개인정보처리방침 + 가입 동의 link                                       |
+| W15-D | 비밀번호 재설정 (`/forgot-password` → `/reset-password`)                     |
+| W16   | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh)      |
+| W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용)                 |
+| W16-C | 종료 운행 GPS 경로 (LocationPing trail polyline)                             |
+| W16-D | 학원장 dashboard 실시간 자동 갱신 (`org-trips:<orgId>` 채널)                 |
+| W17-A | Supabase 비밀번호 재설정 메일 한국어 템플릿                                  |
+| W17-C | 학부모 BottomTabBar (홈·알림·결석·정류장 4탭)                                |
+| W17-D | 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화)      |
+| W17-E | `SHUTTLE_NEAR_CHILD` 알림 카테고리 + 안전운행기록 PDF에 GPS 누적거리         |
 
 자세한 진행 현황·결정사항·다음 우선순위는 [`progress.md`](./progress.md) 참고.
 
