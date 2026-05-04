@@ -66,8 +66,7 @@ export default async function StopsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>이름</TableHead>
-                  <TableHead className="w-32">위도</TableHead>
-                  <TableHead className="w-32">경도</TableHead>
+                  <TableHead className="w-44">좌표</TableHead>
                   <TableHead className="w-24">반경</TableHead>
                   <TableHead className="text-right">관리</TableHead>
                 </TableRow>
@@ -77,10 +76,7 @@ export default async function StopsPage() {
                   <TableRow key={s.id}>
                     <TableCell className="font-medium">{s.name}</TableCell>
                     <TableCell className="text-muted-foreground font-mono text-xs">
-                      {s.lat.toFixed(6)}
-                    </TableCell>
-                    <TableCell className="text-muted-foreground font-mono text-xs">
-                      {s.lng.toFixed(6)}
+                      {s.lat.toFixed(4)}, {s.lng.toFixed(4)}
                     </TableCell>
                     <TableCell className="text-muted-foreground text-sm">
                       {s.radiusM}m
