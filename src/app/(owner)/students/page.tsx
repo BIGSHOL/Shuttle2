@@ -140,10 +140,9 @@ export default async function StudentsPage() {
                         <TableCell>
                           <span
                             className={
-                              // -ml-2: 배지 px-2 만큼 당겨서 헤더 텍스트와 정렬.
                               isKids
-                                ? "bg-bus text-bus-foreground -ml-2 rounded-md px-2 py-0.5 text-xs font-bold"
-                                : "bg-muted text-muted-foreground -ml-2 rounded-md px-2 py-0.5 text-xs font-medium"
+                                ? "bg-bus text-bus-foreground rounded-md px-2 py-0.5 text-xs font-bold"
+                                : "bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-medium"
                             }
                           >
                             {age}세 {isKids ? "· 어린이용" : ""}

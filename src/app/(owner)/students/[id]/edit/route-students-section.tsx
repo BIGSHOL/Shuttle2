@@ -179,10 +179,9 @@ function RouteStudentRowView({
       <TableCell>
         <span
           className={
-            // -ml-2: 배지 px-2 만큼 당겨서 헤더 텍스트와 정렬.
             row.route.direction === "PICKUP"
-              ? "bg-success-soft text-success -ml-2 rounded-md px-2 py-0.5 text-xs font-bold"
-              : "bg-info-soft text-info -ml-2 rounded-md px-2 py-0.5 text-xs font-bold"
+              ? "bg-success-soft text-success rounded-md px-2 py-0.5 text-xs font-bold"
+              : "bg-info-soft text-info rounded-md px-2 py-0.5 text-xs font-bold"
           }
         >
           {row.route.direction === "PICKUP" ? "등원" : "하원"}

@@ -130,11 +130,9 @@ export default async function VehiclesPage() {
                       <TableCell>
                         <span
                           className={
-                            // -ml-2: 배지 내부 px-2(8px)만큼 당겨서 배지 텍스트가
-                            // 헤더 텍스트와 같은 X 위치에서 시작하도록 정렬.
                             v.mode === "KIDS"
-                              ? "bg-bus text-bus-foreground -ml-2 rounded-md px-2 py-0.5 text-xs font-bold"
-                              : "bg-muted text-muted-foreground -ml-2 rounded-md px-2 py-0.5 text-xs font-medium"
+                              ? "bg-bus text-bus-foreground rounded-md px-2 py-0.5 text-xs font-bold"
+                              : "bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-medium"
                           }
                         >
                           {MODE_LABEL[v.mode]}
