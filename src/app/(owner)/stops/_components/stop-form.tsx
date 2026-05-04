@@ -71,7 +71,9 @@ export function StopForm({
           <div className="grid gap-6 lg:grid-cols-[1fr_1.4fr]">
             <div className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="name">정류장 이름</Label>
+                <Label htmlFor="name" required>
+                  정류장 이름
+                </Label>
                 <Input
                   id="name"
                   name="name"
@@ -87,31 +89,13 @@ export function StopForm({
                 ) : null}
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label htmlFor="lat-display">위도 (lat)</Label>
-                  <Input
-                    id="lat-display"
-                    value={position.lat.toFixed(6)}
-                    readOnly
-                    className="font-mono"
-                  />
-                  <input type="hidden" name="lat" value={position.lat} />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="lng-display">경도 (lng)</Label>
-                  <Input
-                    id="lng-display"
-                    value={position.lng.toFixed(6)}
-                    readOnly
-                    className="font-mono"
-                  />
-                  <input type="hidden" name="lng" value={position.lng} />
-                </div>
-              </div>
+              <input type="hidden" name="lat" value={position.lat} />
+              <input type="hidden" name="lng" value={position.lng} />
 
               <div className="space-y-2">
-                <Label htmlFor="radiusM">도착 판정 반경 (m)</Label>
+                <Label htmlFor="radiusM" required>
+                  도착 판정 반경 (m)
+                </Label>
                 <Input
                   id="radiusM"
                   name="radiusM"
@@ -121,9 +105,11 @@ export function StopForm({
                   step={5}
                   value={radiusM}
                   onChange={(e) => setRadiusM(Number(e.target.value) || 50)}
+                  required
                 />
                 <p className="text-muted-foreground text-xs">
-                  10~500m. GPS가 이 반경 안에 들어오면 정류장 통과로 판정합니다.
+                  10~500m. 셔틀 위치가 이 반경 안에 들어오면 정류장 통과로
+                  판정합니다.
                 </p>
                 {state.fieldErrors?.radiusM ? (
                   <p className="text-destructive text-sm">
@@ -131,6 +117,11 @@ export function StopForm({
                   </p>
                 ) : null}
               </div>
+
+              <p className="text-muted-foreground border-t pt-3 text-[11px] font-medium">
+                현재 좌표 ({position.lat.toFixed(4)}, {position.lng.toFixed(4)})
+                — 지도에서 위치를 클릭하거나 검색·내 위치 버튼을 사용하세요.
+              </p>
 
               {state.error ? (
                 <p className="text-destructive text-sm" role="alert">

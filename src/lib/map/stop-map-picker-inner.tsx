@@ -1,11 +1,43 @@
 "use client";
 
+import { LocateFixed, Search } from "lucide-react";
+import { useState } from "react";
 import { Circle, Map, MapMarker, useKakaoLoader } from "react-kakao-maps-sdk";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 
 import type { LatLng } from "./types";
 
 // client component — env proxy(server-only 변수까지 검증)는 여기서 사용 금지.
 // process.env.NEXT_PUBLIC_*는 Next.js가 빌드 타임에 client 번들로 inline.
+
+// 카카오 services 라이브러리 (지도 로드 후 window.kakao.maps.services 노출)
+type KakaoPlace = {
+  id: string;
+  place_name: string;
+  road_address_name: string;
+  address_name: string;
+  x: string; // lng
+  y: string; // lat
+};
+
+type KakaoServices = {
+  Places: new () => {
+    keywordSearch: (
+      keyword: string,
+      callback: (data: KakaoPlace[], status: string) => void,
+    ) => void;
+  };
+  Status: { OK: string };
+};
+
+declare global {
+  interface Window {
+    kakao?: { maps?: { services?: KakaoServices } };
+  }
+}
+
 export function StopMapPickerInner({
   position,
   radiusM,
@@ -20,10 +52,60 @@ export function StopMapPickerInner({
     libraries: ["services"],
   });
 
+  const [keyword, setKeyword] = useState("");
+  const [results, setResults] = useState<KakaoPlace[]>([]);
+  const [searchError, setSearchError] = useState<string | null>(null);
+  const [locating, setLocating] = useState(false);
+
+  function handleSearch() {
+    setSearchError(null);
+    const trimmed = keyword.trim();
+    if (!trimmed) return;
+    const services = window.kakao?.maps?.services;
+    if (!services) {
+      setSearchError("지도 SDK가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.");
+      return;
+    }
+    const ps = new services.Places();
+    ps.keywordSearch(trimmed, (data, status) => {
+      if (status === services.Status.OK) {
+        setResults(data.slice(0, 5));
+      } else {
+        setResults([]);
+        setSearchError("검색 결과가 없어요. 더 구체적인 장소·주소를 입력해 주세요.");
+      }
+    });
+  }
+
+  function handleMyLocation() {
+    setSearchError(null);
+    if (typeof navigator === "undefined" || !navigator.geolocation) {
+      setSearchError("이 브라우저는 위치 가져오기를 지원하지 않아요.");
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        onPick({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setResults([]);
+        setLocating(false);
+      },
+      (err) => {
+        setSearchError(
+          err.code === err.PERMISSION_DENIED
+            ? "위치 권한이 차단되어 있어요. 브라우저 주소창의 자물쇠 아이콘에서 허용해 주세요."
+            : "현재 위치를 가져오지 못했어요. 잠시 후 다시 시도해 주세요.",
+        );
+        setLocating(false);
+      },
+      { enableHighAccuracy: true, timeout: 10_000 },
+    );
+  }
+
   if (error) {
     return (
       <div className="border-destructive/40 bg-destructive/5 text-destructive flex h-[420px] w-full items-center justify-center rounded-md border text-sm">
-        카카오맵 SDK 로드 실패. NEXT_PUBLIC_KAKAO_MAP_KEY를 확인하세요.
+        카카오맵을 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
       </div>
     );
   }
@@ -37,34 +119,99 @@ export function StopMapPickerInner({
   }
 
   return (
-    <div className="overflow-hidden rounded-md border">
-      <Map
-        center={position}
-        level={3}
-        style={{ width: "100%", height: "420px" }}
-        onClick={(_target, mouseEvent) => {
-          onPick({
-            lat: mouseEvent.latLng.getLat(),
-            lng: mouseEvent.latLng.getLng(),
-          });
-        }}
-      >
-        <MapMarker position={position} draggable={false} />
-        <Circle
+    <div className="space-y-2">
+      <div className="flex flex-wrap items-stretch gap-2">
+        <div className="flex flex-1 items-center gap-2">
+          <Input
+            type="text"
+            value={keyword}
+            onChange={(e) => setKeyword(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                handleSearch();
+              }
+            }}
+            placeholder="장소·주소 검색 (예: 강남역, 서초구 ○○로 12)"
+            className="flex-1"
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={handleSearch}
+          >
+            <Search className="mr-1 h-3.5 w-3.5" />
+            검색
+          </Button>
+        </div>
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          onClick={handleMyLocation}
+          disabled={locating}
+        >
+          <LocateFixed className="mr-1 h-3.5 w-3.5" />
+          {locating ? "위치 확인 중..." : "내 위치"}
+        </Button>
+      </div>
+
+      {searchError ? (
+        <p className="text-destructive text-xs font-medium">{searchError}</p>
+      ) : null}
+
+      {results.length > 0 ? (
+        <ul className="bg-card max-h-48 overflow-y-auto rounded-md border text-sm shadow-sm">
+          {results.map((p) => (
+            <li key={p.id}>
+              <button
+                type="button"
+                onClick={() => {
+                  onPick({ lat: Number(p.y), lng: Number(p.x) });
+                  setResults([]);
+                }}
+                className="hover:bg-muted/40 flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors"
+              >
+                <span className="text-sm font-bold">{p.place_name}</span>
+                <span className="text-muted-foreground text-[11px]">
+                  {p.road_address_name || p.address_name}
+                </span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+
+      <div className="overflow-hidden rounded-md border">
+        <Map
           center={position}
-          radius={radiusM}
-          strokeWeight={2}
-          strokeColor="#f59e0b"
-          strokeOpacity={0.9}
-          strokeStyle="solid"
-          fillColor="#fbbf24"
-          fillOpacity={0.25}
-        />
-      </Map>
-      <p className="bg-muted/30 text-muted-foreground border-t px-3 py-2 text-xs">
-        지도를 클릭하면 그 지점이 정류장 위치가 됩니다. 노란 원은 도착 판정
-        반경({radiusM}m)을 보여줍니다.
-      </p>
+          level={3}
+          style={{ width: "100%", height: "420px" }}
+          onClick={(_target, mouseEvent) => {
+            onPick({
+              lat: mouseEvent.latLng.getLat(),
+              lng: mouseEvent.latLng.getLng(),
+            });
+          }}
+        >
+          <MapMarker position={position} draggable={false} />
+          <Circle
+            center={position}
+            radius={radiusM}
+            strokeWeight={2}
+            strokeColor="#f59e0b"
+            strokeOpacity={0.9}
+            strokeStyle="solid"
+            fillColor="#fbbf24"
+            fillOpacity={0.25}
+          />
+        </Map>
+        <p className="bg-muted/30 text-muted-foreground border-t px-3 py-2 text-xs">
+          지도를 클릭하거나 위에서 검색·내 위치를 사용하면 그 지점이 정류장
+          위치가 됩니다. 노란 원은 도착 판정 반경({radiusM}m)이에요.
+        </p>
+      </div>
     </div>
   );
 }
