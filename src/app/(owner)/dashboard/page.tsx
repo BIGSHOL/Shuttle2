@@ -41,7 +41,16 @@ export default async function DashboardPage() {
   const orgId = await getOrgId();
   const todayDate = todayUtcDateKst();
 
-  // 멀티테넌시 1차 가드 — 모든 count는 반드시 orgId로 필터.
+  // 보험 만료 D-30 / 안전교육 D-30 / NO_SHOW 빈도 — 날짜 경계 미리 계산
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const d30 = new Date(today);
+  d30.setUTCDate(d30.getUTCDate() + 30);
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+
+  // 12개 쿼리를 한 번에 병렬. 모두 다른 쿼리에 의존하지 않음. (3-phase sequential
+  // → 1-phase parallel) 로그인 후 첫 진입 1.5~2s → 0.5~0.8s 추정 단축.
   const [
     vehicleCount,
     studentCount,
@@ -50,6 +59,11 @@ export default async function DashboardPage() {
     pendingAbsenceCount,
     pendingStopChangeCount,
     todayNoShowCount,
+    org,
+    todayTrips,
+    expiringVehicles,
+    staffWithTraining,
+    noShowCounts,
   ] = await Promise.all([
     db.vehicle.count({ where: { orgId } }),
     db.student.count({ where: { orgId } }),
@@ -64,89 +78,80 @@ export default async function DashboardPage() {
     db.stopChangeRequest.count({
       where: { orgId, status: "PENDING" },
     }),
-    // 오늘 미탑승·미하차 보고 건수 (학원장 즉시 인지용)
     db.boardingEvent.count({
       where: {
         type: { in: ["NO_SHOW", "NO_DROPOFF"] },
         trip: { vehicle: { orgId }, date: todayDate },
       },
     }),
+    db.organization.findUnique({
+      where: { id: orgId },
+      select: { plan: true, createdAt: true },
+    }),
+    db.trip.findMany({
+      where: { vehicle: { orgId }, date: todayDate },
+      orderBy: [{ startedAt: "asc" }],
+      include: {
+        route: {
+          select: {
+            name: true,
+            direction: true,
+            _count: { select: { stops: true } },
+          },
+        },
+        vehicle: { select: { plate: true, mode: true } },
+        driver: { select: { name: true } },
+        _count: { select: { events: true } },
+      },
+    }),
+    db.vehicle.findMany({
+      where: {
+        orgId,
+        mode: "KIDS",
+        OR: [{ insuranceUntil: null }, { insuranceUntil: { lte: d30 } }],
+      },
+      orderBy: [{ insuranceUntil: "asc" }],
+      select: { id: true, plate: true, insuranceUntil: true },
+    }),
+    db.staff.findMany({
+      where: { orgId },
+      select: {
+        id: true,
+        name: true,
+        role: true,
+        trainings: {
+          orderBy: { completedOn: "desc" },
+          take: 1,
+          select: { expiresOn: true },
+        },
+      },
+    }),
+    db.boardingEvent.groupBy({
+      by: ["studentId"],
+      where: {
+        type: { in: ["NO_SHOW", "NO_DROPOFF"] },
+        at: { gte: thirtyDaysAgo },
+        trip: { vehicle: { orgId } },
+      },
+      _count: { studentId: true },
+    }),
   ]);
-
-  // 보험 만료 D-30 alert (KIDS 모드 차량 한정) — 날짜 경계 미리 계산
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
-  const d30 = new Date(today);
-  d30.setUTCDate(d30.getUTCDate() + 30);
-
-  // NO_SHOW 빈도 탐지 — 최근 30일 NO_SHOW/NO_DROPOFF 3건 이상 학생.
-  // 학원장이 학부모 면담·결석 패턴 확인 trigger.
-  const thirtyDaysAgo = new Date(today);
-  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
-
-  // org / todayTrips / expiringVehicles / staffWithTraining / repeatNoShows 5개 병렬화.
-  const [org, todayTrips, expiringVehicles, staffWithTraining, noShowCounts] =
-    await Promise.all([
-      db.organization.findUnique({
-        where: { id: orgId },
-        select: { plan: true, createdAt: true },
-      }),
-      db.trip.findMany({
-        where: { vehicle: { orgId }, date: todayDate },
-        orderBy: [{ startedAt: "asc" }],
-        include: {
-          route: {
-            select: {
-              name: true,
-              direction: true,
-              _count: { select: { stops: true } },
-            },
-          },
-          vehicle: { select: { plate: true, mode: true } },
-          driver: { select: { name: true } },
-          _count: { select: { events: true } },
-        },
-      }),
-      db.vehicle.findMany({
-        where: {
-          orgId,
-          mode: "KIDS",
-          OR: [{ insuranceUntil: null }, { insuranceUntil: { lte: d30 } }],
-        },
-        orderBy: [{ insuranceUntil: "asc" }],
-        select: { id: true, plate: true, insuranceUntil: true },
-      }),
-      db.staff.findMany({
-        where: { orgId },
-        select: {
-          id: true,
-          name: true,
-          role: true,
-          trainings: {
-            orderBy: { completedOn: "desc" },
-            take: 1,
-            select: { expiresOn: true },
-          },
-        },
-      }),
-      db.boardingEvent.groupBy({
-        by: ["studentId"],
-        where: {
-          type: { in: ["NO_SHOW", "NO_DROPOFF"] },
-          at: { gte: thirtyDaysAgo },
-          trip: { vehicle: { orgId } },
-        },
-        _count: { studentId: true },
-      }),
-    ]);
 
   // 3건 이상만 노출 (베타 임계값. 운영 1주 후 조정).
   const repeatNoShowEntries = noShowCounts.filter(
     (g) => g._count.studentId >= 3,
   );
-  const repeatNoShowStudents =
+  const runningTrips = todayTrips.filter(
+    (t) => t.startedAt !== null && t.endedAt === null,
+  );
+  const finishedTrips = todayTrips.filter((t) => t.endedAt !== null);
+  const scheduledCount = todayTrips.filter((t) => t.startedAt === null).length;
+  const runningTripIds = runningTrips.map((t) => t.id);
+
+  // Phase 2 — Phase 1 결과(noShowCounts·todayTrips)에 의존하는 두 쿼리 병렬화.
+  const [repeatNoShowStudents, runningBoardings] = await Promise.all([
     repeatNoShowEntries.length > 0
-      ? await db.student.findMany({
+      ? db.student.findMany({
           where: {
             id: { in: repeatNoShowEntries.map((e) => e.studentId) },
             orgId,
@@ -161,7 +166,15 @@ export default async function DashboardPage() {
             },
           },
         })
-      : [];
+      : Promise.resolve([]),
+    runningTripIds.length > 0
+      ? db.boardingEvent.findMany({
+          where: { tripId: { in: runningTripIds } },
+          select: { tripId: true, type: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
   const repeatNoShowAlerts = repeatNoShowStudents
     .map((s) => {
       const entry = repeatNoShowEntries.find((e) => e.studentId === s.id);
@@ -175,22 +188,6 @@ export default async function DashboardPage() {
       };
     })
     .sort((a, b) => b.count - a.count);
-
-  const runningTrips = todayTrips.filter(
-    (t) => t.startedAt !== null && t.endedAt === null,
-  );
-  const finishedTrips = todayTrips.filter((t) => t.endedAt !== null);
-  const scheduledCount = todayTrips.filter((t) => t.startedAt === null).length;
-
-  // 진행중 trip별 boarding 진행률 (BOARD/ALIGHT 카운트) — todayTrips 결과 의존이라 그 후
-  const runningTripIds = runningTrips.map((t) => t.id);
-  const runningBoardings =
-    runningTripIds.length > 0
-      ? await db.boardingEvent.findMany({
-          where: { tripId: { in: runningTripIds } },
-          select: { tripId: true, type: true },
-        })
-      : [];
   const boardingsByTrip = new Map<string, { board: number; alight: number }>();
   for (const tid of runningTripIds) {
     boardingsByTrip.set(tid, { board: 0, alight: 0 });

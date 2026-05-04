@@ -1,10 +1,10 @@
 # 셔틀이 — 진행 작업 계획
 
-마지막 업데이트: 2026-05-04 (A안 + B안 완료)
+마지막 업데이트: 2026-05-04 (A안 + B안 + 로그인·dashboard 병렬화 완료)
 
 ## 직전 진행 사항
 
-사용자 피드백 "웹앱 반응속도가 여전히 느린곳이 제법 있네. 클릭해도 제법 대기해야 넘어가는데" 대응 중. **A안(loading.tsx 스켈레톤) + B안(auth dedupe) 완료**. 다음은 C안(Suspense 스트리밍).
+사용자 피드백 "웹앱 반응속도가 여전히 느린곳이 제법 있네", "로그인 중에서 너무 오래 걸리는데" 대응 완료. **A안(loading.tsx) + B안(auth dedupe) + 로그인 후 dashboard 병렬화** 모두 라이브. 또한 OWNER dashboard 알림 토글 문구가 학부모용으로 하드코딩된 버그(`63153d1`) 수정.
 
 ## A안 완료 (이번 커밋)
 
@@ -50,7 +50,28 @@
   - `(owner)/stops/new/loading.tsx`
   - `(parent)/my-stop-changes/new/loading.tsx`
 
-## B안 완료 (이번 커밋)
+## 로그인 스피드 (이번 커밋)
+
+### 결과
+
+사용자 피드백 "로그인 중 너무 오래 걸린다"에 대한 핫픽스. login → dashboard 진입 도착 시간 추정 800~1500ms 단축.
+
+### 구현
+
+1. **`(auth)/login/actions.ts` loginAction**
+   - 로그인 후 role 결정 시 Staff lookup → (없으면) Guardian lookup으로 **순차** 호출 → 둘 다 `Promise.all`로 **병렬** (1 roundtrip 절약, 학부모 케이스 100~200ms 단축)
+
+2. **`(owner)/dashboard/page.tsx`**
+   - 기존 3-phase sequential await: Phase 1(7 counts) → Phase 2(5 queries 의존성 0) → Phase 3 (groupBy 의존)
+   - 변경: Phase 1+2 → **단일 Promise.all 12개 쿼리 병렬** (의존성 없음)
+   - Phase 3 (repeatNoShow students) + Phase 4 (running boardings)도 둘 다 Phase 1+2 결과만 의존하므로 한 Promise.all로 묶음
+   - **3단계 순차 → 2단계로 압축**, DB roundtrip 시간 1/2~1/3 단축 추정
+
+### 측정 (사용자 점검 가능)
+
+Vercel Speed Insights → /dashboard p75 LCP·TTFB 비교 (현재 vs 이전 커밋).
+
+## B안 완료
 
 ### 결과
 

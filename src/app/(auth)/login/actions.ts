@@ -86,20 +86,21 @@ export async function loginAction(
     redirect(redirectTo);
   }
 
-  // role 기반 redirect — Staff 직접 조회 (getCurrentUser는 react cache로 stale일 수 있음).
+  // role 기반 redirect — Staff/Guardian 둘 다 lookup 병렬 (1 roundtrip).
+  // (getCurrentUser는 react cache로 stale일 수 있어 직접 조회)
   const userId = signInData.user?.id;
   if (userId) {
-    const staff = await db.staff.findFirst({
-      where: { userId },
-      select: { role: true },
-    });
+    const [staff, guardian] = await Promise.all([
+      db.staff.findFirst({
+        where: { userId },
+        select: { role: true },
+      }),
+      db.guardian.findFirst({
+        where: { userId },
+        select: { id: true },
+      }),
+    ]);
     if (staff) redirect(homePathForRole(staff.role));
-
-    // Staff가 없으면 Guardian (학부모) 시도
-    const guardian = await db.guardian.findFirst({
-      where: { userId },
-      select: { id: true },
-    });
     if (guardian) redirect("/home");
   }
   redirect("/dashboard");
