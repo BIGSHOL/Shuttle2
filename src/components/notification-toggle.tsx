@@ -223,9 +223,11 @@ export function NotificationToggle({
               {pending ? "..." : "해제"}
             </Button>
           </div>
-          <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-            자녀 정류장 도착 전 푸시가 옵니다.
-          </p>
+          {helpText ? (
+            <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+              {helpText}
+            </p>
+          ) : null}
         </div>
       </div>
     );

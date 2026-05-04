@@ -19,7 +19,7 @@ export function StaffNotificationToggle({
       saveAction={saveStaffPushSubscriptionAction}
       removeAction={removeStaffPushSubscriptionAction}
       label="결석·운영 알림 받기"
-      helpText="새 결석 신청이 들어오면 즉시 알림을 받습니다."
+      helpText="새 결석 신청·미탑승·운행 이상 발생 시 즉시 푸시가 옵니다."
     />
   );
 }

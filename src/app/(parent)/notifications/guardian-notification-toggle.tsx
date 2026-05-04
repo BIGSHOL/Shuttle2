@@ -19,7 +19,7 @@ export function GuardianNotificationToggle({
       saveAction={saveGuardianPushSubscriptionAction}
       removeAction={removeGuardianPushSubscriptionAction}
       label="자녀 셔틀 알림 받기"
-      helpText="자녀가 정류장에 도착하기 전 알림을 받아볼 수 있어요."
+      helpText="자녀 정류장 도착 전 푸시가 옵니다."
     />
   );
 }
