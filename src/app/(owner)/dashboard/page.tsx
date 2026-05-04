@@ -79,9 +79,13 @@ export default async function DashboardPage() {
   const d30 = new Date(today);
   d30.setUTCDate(d30.getUTCDate() + 30);
 
-  // org / todayTrips / expiringVehicles / staffWithTraining 4개는 서로 독립적이라 병렬화.
-  // 5번의 sequential await → 1번의 Promise.all (-200~500ms TTFB).
-  const [org, todayTrips, expiringVehicles, staffWithTraining] =
+  // NO_SHOW 빈도 탐지 — 최근 30일 NO_SHOW/NO_DROPOFF 3건 이상 학생.
+  // 학원장이 학부모 면담·결석 패턴 확인 trigger.
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+
+  // org / todayTrips / expiringVehicles / staffWithTraining / repeatNoShows 5개 병렬화.
+  const [org, todayTrips, expiringVehicles, staffWithTraining, noShowCounts] =
     await Promise.all([
       db.organization.findUnique({
         where: { id: orgId },
@@ -125,7 +129,52 @@ export default async function DashboardPage() {
           },
         },
       }),
+      db.boardingEvent.groupBy({
+        by: ["studentId"],
+        where: {
+          type: { in: ["NO_SHOW", "NO_DROPOFF"] },
+          at: { gte: thirtyDaysAgo },
+          trip: { vehicle: { orgId } },
+        },
+        _count: { studentId: true },
+      }),
     ]);
+
+  // 3건 이상만 노출 (베타 임계값. 운영 1주 후 조정).
+  const repeatNoShowEntries = noShowCounts.filter(
+    (g) => g._count.studentId >= 3,
+  );
+  const repeatNoShowStudents =
+    repeatNoShowEntries.length > 0
+      ? await db.student.findMany({
+          where: {
+            id: { in: repeatNoShowEntries.map((e) => e.studentId) },
+            orgId,
+          },
+          select: {
+            id: true,
+            name: true,
+            guardians: {
+              where: { isPrimary: true },
+              take: 1,
+              select: { guardian: { select: { name: true, phone: true } } },
+            },
+          },
+        })
+      : [];
+  const repeatNoShowAlerts = repeatNoShowStudents
+    .map((s) => {
+      const entry = repeatNoShowEntries.find((e) => e.studentId === s.id);
+      const primary = s.guardians[0]?.guardian ?? null;
+      return {
+        id: s.id,
+        name: s.name,
+        count: entry?._count.studentId ?? 0,
+        guardianName: primary?.name ?? null,
+        guardianPhone: primary?.phone ?? null,
+      };
+    })
+    .sort((a, b) => b.count - a.count);
 
   const runningTrips = todayTrips.filter(
     (t) => t.startedAt !== null && t.endedAt === null,
@@ -304,6 +353,49 @@ export default async function DashboardPage() {
       </section>
 
       {/* 미해결 알림 */}
+      {repeatNoShowAlerts.length > 0 ? (
+        <section>
+          <div className="border-destructive/40 bg-destructive/5 rounded-2xl border p-4 shadow-sm">
+            <div className="flex items-start gap-2">
+              <span className="bg-destructive/15 text-destructive mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full">
+                <AlertTriangle className="h-4 w-4" />
+              </span>
+              <div className="min-w-0 flex-1">
+                <h3 className="text-sm font-extrabold tracking-tight">
+                  최근 30일 미탑승·미하차 잦은 {studentLabel} (
+                  {repeatNoShowAlerts.length}명)
+                </h3>
+                <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+                  3건 이상 누적된 {studentLabel}. 보호자 면담·결석 사전 통보
+                  안내를 검토해 주세요.
+                </p>
+              </div>
+            </div>
+            <ul className="mt-3 space-y-1.5">
+              {repeatNoShowAlerts.map((s) => (
+                <li
+                  key={s.id}
+                  className="bg-background flex items-center justify-between gap-3 rounded-xl border px-3 py-2"
+                >
+                  <div className="flex flex-1 items-center gap-2">
+                    <span className="text-sm font-bold">{s.name}</span>
+                    {s.guardianName ? (
+                      <span className="text-muted-foreground text-[11px] font-medium">
+                        · 보호자 {s.guardianName}
+                        {s.guardianPhone ? ` (${s.guardianPhone})` : ""}
+                      </span>
+                    ) : null}
+                  </div>
+                  <span className="bg-destructive/10 text-destructive rounded-md px-2 py-0.5 text-[11px] font-bold">
+                    {s.count}건
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </section>
+      ) : null}
+
       {trainingAlerts.length > 0 ? (
         <section>
           <div className="border-warning bg-warning-soft/40 rounded-2xl border p-4 shadow-sm">
