@@ -109,8 +109,8 @@ export async function TripScreen({ tripId }: { tripId: string }) {
           </dl>
           {trip.vehicle.mode === "KIDS" && sc ? (
             <div className="border-warning/30 bg-warning-soft/40 mt-4 rounded-xl border p-3 text-xs font-medium">
-              <p className="text-foreground/80 mb-1.5 text-[10px] font-extrabold tracking-wide uppercase">
-                안전점검 (KIDS)
+              <p className="text-foreground/80 mb-1.5 text-[10px] font-extrabold tracking-wide">
+                안전점검 (어린이용)
               </p>
               <ul className="space-y-1">
                 <li className="flex items-center gap-2">

@@ -184,7 +184,7 @@ export function TripRunningView({
             동승보호자가 지정되지 않았어요
           </p>
           <p className="text-foreground/80 mt-1 text-xs font-medium">
-            도교법 §53⑦에 따라 어린이통학버스 운행에는 동승보호자가 함께 타야
+            어린이통학버스 운행에는 법령에 따라 동승보호자가 함께 타야
             합니다. 아래에서 동승자를 지정한 후 운행을 진행해 주세요.
           </p>
         </div>
@@ -211,13 +211,13 @@ export function TripRunningView({
                 {DIRECTION_LABEL[route.direction]}
               </span>
               {isKidsMode ? (
-                <span className="bg-bus text-bus-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                <span className="bg-bus text-bus-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
                   <span className="bg-bus-foreground inline-block h-1.5 w-1.5 animate-pulse rounded-full" />
-                  KIDS
+                  어린이용
                 </span>
               ) : (
-                <span className="bg-white/15 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
-                  일반
+                <span className="bg-white/15 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                  일반용
                 </span>
               )}
             </div>
@@ -471,12 +471,12 @@ function SafetyCheckCard({
         <div className="min-w-0 flex-1">
           <h3 className="text-sm font-extrabold tracking-tight">
             {phase === "pre"
-              ? "출발 전 안전점검 (KIDS)"
-              : "종료 전 전원 하차 확인 (KIDS)"}
+              ? "출발 전 안전점검 (어린이용)"
+              : "종료 전 전원 하차 확인 (어린이용)"}
           </h3>
           <p className="text-muted-foreground mt-0.5 text-xs font-medium">
             {phase === "pre"
-              ? "도교법 §53⑦ 안전운행기록 데이터. 출발 전 반드시 확인."
+              ? "법정 안전운행기록 데이터. 출발 전 반드시 확인."
               : "운행 종료 전 전원 하차 여부를 확인하세요."}
           </p>
         </div>

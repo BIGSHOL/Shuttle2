@@ -11,7 +11,7 @@ const PLANS = [
     desc: "안전운행기록 PDF만 필요한 학원·교습소",
     features: [
       { label: "안전운행기록 PDF 분기 추출", included: true },
-      { label: "기본 운행 일지 (BoardingEvent)", included: true },
+      { label: "기본 운행 일지", included: true },
       { label: "최대 30명 학생", included: true },
       { label: "실시간 GPS 위치 공유", included: false },
       { label: "결석·정류장 변경 워크플로우", included: false },

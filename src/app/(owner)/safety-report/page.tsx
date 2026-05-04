@@ -47,9 +47,9 @@ export default async function SafetyReportPage() {
       <div>
         <h2 className="text-2xl font-semibold">분기 안전운행기록</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          도로교통법 §53⑦에 따라 어린이통학버스 운영자가 분기마다 작성·제출해야
-          하는 안전운행기록을 자동 생성합니다. {me.org.name}의 KIDS 모드 차량
-          운행 + 안전점검 데이터를 분기별로 PDF로 묶어 다운로드할 수 있어요.
+          어린이통학버스 운영자가 분기마다 작성·제출해야 하는 법정 안전운행기록을
+          자동 생성합니다. {me.org.name}의 어린이용 모드 차량 운행 + 안전점검
+          데이터를 분기별로 PDF로 묶어 다운로드할 수 있어요.
         </p>
       </div>
 
@@ -57,11 +57,11 @@ export default async function SafetyReportPage() {
         <Card className="border-warning/40 bg-warning-soft/40">
           <CardHeader>
             <CardTitle className="text-warning">
-              KIDS 모드 차량이 없어요
+              어린이용 모드 차량이 없어요
             </CardTitle>
             <CardDescription>
-              차량 등록 시 모드를 KIDS로 설정해야 안전운행기록 누적 대상이
-              됩니다. /vehicles 화면에서 차량을 KIDS로 변경해 주세요.
+              차량 등록 시 모드를 어린이용으로 설정해야 안전운행기록 누적
+              대상이 됩니다. 차량 화면에서 차량을 어린이용으로 변경해 주세요.
             </CardDescription>
           </CardHeader>
         </Card>

@@ -68,7 +68,7 @@ export default async function HelperRunPage() {
         {candidateTrips.length > 0 ? (
           <CardContent>
             <p className="text-muted-foreground mb-2 text-xs">
-              현재 진행 중이고 동승자가 없는 KIDS 운행:
+              현재 진행 중이고 동승자가 없는 어린이용 운행:
             </p>
             <ul className="space-y-1 text-sm">
               {candidateTrips.map((t) => (

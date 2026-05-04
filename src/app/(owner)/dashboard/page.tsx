@@ -250,7 +250,7 @@ export default async function DashboardPage() {
             <Bus className="text-muted-foreground mx-auto h-8 w-8" />
             <p className="mt-3 text-base font-bold">오늘 운행이 없어요</p>
             <p className="text-muted-foreground mt-1 text-xs font-medium">
-              요일 비트마스크에 오늘이 켜진 노선이 없거나 기사가 운행을 시작하지
+              오늘 요일에 운행하는 노선이 없거나 기사가 운행을 시작하지
               않았습니다.
             </p>
           </div>
@@ -364,7 +364,7 @@ export default async function DashboardPage() {
                   보험 만료 임박·미입력 차량 ({expiringVehicles.length})
                 </h3>
                 <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-                  어린이통학버스(KIDS) 보험은 도교법상 필수.
+                  어린이통학버스(어린이용 모드) 보험은 법정 의무.
                 </p>
               </div>
             </div>
@@ -551,8 +551,8 @@ function TripMonitorCard({
                   {DIRECTION_LABEL[direction]}
                 </span>
                 {isKids ? (
-                  <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
-                    KIDS
+                  <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                    어린이용
                   </span>
                 ) : null}
               </div>
@@ -626,8 +626,8 @@ function TripMonitorCard({
                 {DIRECTION_LABEL[direction]}
               </span>
               {isKids ? (
-                <span className="bg-bus text-bus-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
-                  KIDS
+                <span className="bg-bus text-bus-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                  어린이용
                 </span>
               ) : null}
             </div>

@@ -22,8 +22,8 @@ import { getOrgId } from "@/lib/auth/session";
 import { DeleteVehicleButton } from "./_components/delete-vehicle-button";
 
 const MODE_LABEL = {
-  KIDS: "KIDS",
-  GENERAL: "GENERAL",
+  KIDS: "어린이용",
+  GENERAL: "일반용",
 } as const;
 
 function formatDate(d: Date | null) {
@@ -45,7 +45,7 @@ export default async function VehiclesPage() {
         <div>
           <h2 className="text-2xl font-semibold">차량</h2>
           <p className="text-muted-foreground text-sm">
-            셔틀버스 차량을 등록하고 KIDS·GENERAL 모드를 관리합니다.
+            셔틀버스 차량을 등록하고 어린이용·일반용 모드를 관리합니다.
           </p>
         </div>
         <Button asChild>
@@ -58,7 +58,7 @@ export default async function VehiclesPage() {
           <CardHeader>
             <CardTitle>등록된 차량이 없습니다</CardTitle>
             <CardDescription>
-              첫 차량을 등록해 셔틀이 운영을 시작하세요. KIDS 모드 차량은
+              첫 차량을 등록해 셔틀이 운영을 시작하세요. 어린이용 모드 차량은
               어린이통학버스 신고증명서와 보험 정보가 필요합니다.
             </CardDescription>
           </CardHeader>

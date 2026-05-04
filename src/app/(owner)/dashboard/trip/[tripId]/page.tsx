@@ -257,12 +257,12 @@ export default async function OwnerTripDetailPage({
               </span>
               {trip.vehicle.mode === "KIDS" ? (
                 isRunning ? (
-                  <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
-                    KIDS
+                  <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                    어린이용
                   </span>
                 ) : (
-                  <span className="bg-bus text-bus-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
-                    KIDS
+                  <span className="bg-bus text-bus-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                    어린이용
                   </span>
                 )
               ) : null}
@@ -462,18 +462,18 @@ export default async function OwnerTripDetailPage({
                 동승보호자 미지정
               </p>
               <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-                도교법 §53⑦ KIDS 차량은 동승보호자 의무.
+                어린이용 차량은 동승보호자 의무 (어린이통학버스 안전운행).
               </p>
             </div>
           ) : null}
         </div>
       </section>
 
-      {/* 안전점검 (KIDS 모드만) */}
+      {/* 안전점검 (어린이용 모드만) */}
       {trip.vehicle.mode === "KIDS" ? (
         <section className="border-warning/30 bg-warning-soft/40 rounded-2xl border p-4">
           <h3 className="text-sm font-extrabold tracking-tight">
-            안전점검 (KIDS)
+            안전점검 (어린이용)
           </h3>
           <ul className="mt-2 space-y-1 text-sm font-medium">
             <SafetyRow

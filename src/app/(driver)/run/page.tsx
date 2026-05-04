@@ -114,9 +114,9 @@ export default async function RunPage() {
             해 주세요.
           </li>
           <li>
-            KIDS 모드 차량은{" "}
+            어린이용 모드 차량은{" "}
             <strong className="text-foreground">동승보호자</strong>가 함께 타야
-            합니다 (도교법 §53⑦).
+            합니다 (어린이통학버스 법령 의무).
           </li>
         </ul>
       </details>
@@ -156,12 +156,12 @@ export default async function RunPage() {
                         {DIRECTION_LABEL[r.direction]}
                       </span>
                       {isKids ? (
-                        <span className="bg-bus text-bus-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
-                          KIDS
+                        <span className="bg-bus text-bus-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                          어린이용
                         </span>
                       ) : (
-                        <span className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
-                          일반
+                        <span className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                          일반용
                         </span>
                       )}
                     </div>

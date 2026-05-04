@@ -85,7 +85,7 @@ export function InviteForm({ origin }: { origin: string }) {
                     {
                       value: "HELPER",
                       label: "동승보호자",
-                      desc: "KIDS 모드 동승, 탑승·하차 확인",
+                      desc: "어린이용 모드 동승, 탑승·하차 확인",
                     },
                   ] as const
                 ).map((r, idx) => (

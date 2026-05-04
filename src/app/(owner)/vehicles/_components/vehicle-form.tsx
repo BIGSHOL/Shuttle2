@@ -96,11 +96,11 @@ export function VehicleForm({
                     onChange={() => setMode(m)}
                   />
                   <span className="font-medium">
-                    {m === "KIDS" ? "KIDS" : "GENERAL"}
+                    {m === "KIDS" ? "어린이용" : "일반용"}
                   </span>
                   <span className="text-muted-foreground text-xs">
                     {m === "KIDS"
-                      ? "13세 미만 / 도교법 §52·§53 의무"
+                      ? "13세 미만 어린이통학 / 법정 의무 차량"
                       : "중고생·성인·통근 등"}
                   </span>
                 </label>
@@ -116,7 +116,7 @@ export function VehicleForm({
           {mode === "KIDS" ? (
             <div className="border-warning/40 bg-warning-soft/40 space-y-4 rounded-xl border p-4">
               <p className="text-warning text-sm font-bold">
-                KIDS 모드 — 어린이통학버스 의무 정보
+                어린이용 모드 — 어린이통학버스 의무 정보
               </p>
               <div className="space-y-2">
                 <Label htmlFor="reportNo">신고증명서 번호</Label>

@@ -49,19 +49,19 @@ const FEATURES = [
     Icon: MapPin,
     title: "실시간 셔틀 위치",
     body: "기사 폰 GPS가 5초마다 학부모 앱에 셔틀 위치를 전송. 카카오맵에 마커가 움직이고 다음 정류장 ETA 표시.",
-    tag: "Realtime",
+    tag: "실시간",
   },
   {
     Icon: Bus,
     title: "결석·정류장 변경 워크플로우",
     body: "학부모는 앱에서 결석 신청과 정류장 변경 요청. 학원장이 승인하면 기사·동승자에게 즉시 푸시.",
-    tag: "Self-serve",
+    tag: "셀프서비스",
   },
   {
     Icon: Bell,
     title: "정류장 도착 푸시 알림",
     body: "자녀 정류장 반경 도달 시 학부모에게 자동 푸시. 미탑승·미하차 발생 시 학부모·학원에 즉시 경고.",
-    tag: "Push",
+    tag: "푸시 알림",
   },
 ];
 
@@ -71,7 +71,7 @@ const COMPARISON = [
   { feature: "결석 신청 자동 매칭", us: true, others: false },
   { feature: "정류장 변경 요청 워크플로우", us: true, others: false },
   { feature: "푸시 알림 (Web Push)", us: true, others: true },
-  { feature: "KIDS 모드 전용 안전점검 강제", us: true, others: false },
+  { feature: "어린이용 모드 전용 안전점검", us: true, others: false },
   { feature: "분기 안전운행기록 별지 제20호의2", us: true, others: false },
   { feature: "다회 학원 자녀 1계정", us: true, others: false },
 ];
@@ -319,8 +319,8 @@ export default function MarketingPage() {
               안전 + 알림, 두 축을 자동화
             </h3>
             <p className="text-muted-foreground mt-3 text-base font-medium">
-              KIDS 모드 차량은 법정 안전운행 의무를 자동 충족하고, 모든 차량은
-              학부모 실시간 알림을 기본 제공합니다.
+              어린이용 모드 차량은 법정 안전운행 의무를 자동 충족하고, 모든
+              차량은 학부모 실시간 알림을 기본 제공합니다.
             </p>
           </div>
           <div className="grid gap-4 md:grid-cols-2">
