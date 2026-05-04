@@ -573,21 +573,23 @@ function KpiCard({
   const t = TONE_CLS[tone];
   return (
     <div className="bg-card rounded-lg border p-4 shadow-sm">
-      <div className="flex items-center gap-2">
+      {/* items-start + leading-tight: 모바일에서 라벨이 wrap돼도 아이콘과 정렬
+          어색하지 않도록 (예: "오늘 미탑승·미하차" 두 줄 wrap 케이스). */}
+      <div className="flex items-start gap-2">
         <span
-          className={`flex h-8 w-8 items-center justify-center rounded-full ${t.bg} ${t.text}`}
+          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${t.bg} ${t.text}`}
         >
           <Icon className="h-4 w-4" />
         </span>
-        <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
+        <p className="text-muted-foreground min-w-0 flex-1 pt-1 text-[11px] font-extrabold tracking-wide uppercase leading-tight">
           {label}
         </p>
         {pulse ? (
-          <span className="bg-bus ml-auto inline-block h-2 w-2 animate-pulse rounded-full" />
+          <span className="bg-bus mt-2 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full" />
         ) : null}
       </div>
       <p className="mt-3 text-3xl font-extrabold tracking-tight">{value}</p>
-      <p className="text-muted-foreground mt-1 text-[11px] font-medium">
+      <p className="text-muted-foreground mt-1 text-[11px] font-medium leading-tight">
         {subtext}
       </p>
     </div>
