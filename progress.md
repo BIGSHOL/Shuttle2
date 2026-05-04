@@ -525,6 +525,11 @@
   으로 100m~수km 오차 발생 (사용자 보고). geolocation timeout 20s + maximumAge:
   0으로 sample 강화. 결과의 `coords.accuracy`를 "약 ±50m" 형태로 표시,
   100m 초과 시 "데스크톱은 부정확. 검색·지도 클릭으로 보정" 안내 자동 노출.
+- **검색 결과 dropdown floating**: 기존엔 결과 list가 같은 column에 위에 위치
+  → 결과 표시 시 지도가 아래로 밀려 스크롤 필요. relative wrapper +
+  `absolute top-full z-20`로 검색 input 바로 아래에 dropdown 형태 overlay.
+  지도 본체는 항상 같은 자리. "검색 결과 N건" 헤더 + ✕ 닫기 버튼,
+  Esc 키로도 닫힘. max-h-64 overflow-y-auto.
 
 ### W18-H Layout 진입 가드 redirect (`c9befca`, `1246bff`)
 

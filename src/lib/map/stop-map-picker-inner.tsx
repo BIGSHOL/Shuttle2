@@ -125,41 +125,85 @@ export function StopMapPickerInner({
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-stretch gap-2">
-        <div className="flex flex-1 items-center gap-2">
-          <Input
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                handleSearch();
-              }
-            }}
-            placeholder="장소·주소 검색 (예: 강남역, 서초구 ○○로 12)"
-            className="flex-1"
-          />
+      {/* 검색·내 위치 버튼 행 + 결과 dropdown — relative wrapper로 지도 위에
+          floating overlay되어 지도 본체가 아래로 밀리지 않게. */}
+      <div className="relative">
+        <div className="flex flex-wrap items-stretch gap-2">
+          <div className="flex flex-1 items-center gap-2">
+            <Input
+              type="text"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  handleSearch();
+                }
+                if (e.key === "Escape") {
+                  setResults([]);
+                }
+              }}
+              placeholder="장소·주소 검색 (예: 강남역, 서초구 ○○로 12)"
+              className="flex-1"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleSearch}
+            >
+              <Search className="mr-1 h-3.5 w-3.5" />
+              검색
+            </Button>
+          </div>
           <Button
             type="button"
             size="sm"
             variant="outline"
-            onClick={handleSearch}
+            onClick={handleMyLocation}
+            disabled={locating}
           >
-            <Search className="mr-1 h-3.5 w-3.5" />
-            검색
+            <LocateFixed className="mr-1 h-3.5 w-3.5" />
+            {locating ? "위치 확인 중..." : "내 위치"}
           </Button>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={handleMyLocation}
-          disabled={locating}
-        >
-          <LocateFixed className="mr-1 h-3.5 w-3.5" />
-          {locating ? "위치 확인 중..." : "내 위치"}
-        </Button>
+
+        {results.length > 0 ? (
+          <div className="absolute top-full right-0 left-0 z-20 mt-1">
+            <div className="bg-card flex items-center justify-between border-x border-t px-3 py-1.5 text-[11px] font-bold rounded-t-md">
+              <span className="text-muted-foreground">
+                검색 결과 {results.length}건
+              </span>
+              <button
+                type="button"
+                onClick={() => setResults([])}
+                className="text-muted-foreground hover:text-foreground"
+                aria-label="검색 결과 닫기"
+              >
+                ✕
+              </button>
+            </div>
+            <ul className="bg-card max-h-64 overflow-y-auto rounded-b-md border text-sm shadow-lg">
+              {results.map((p) => (
+                <li key={p.id} className="border-t first:border-t-0">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onPick({ lat: Number(p.y), lng: Number(p.x) });
+                      setResults([]);
+                    }}
+                    className="hover:bg-muted/40 flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors"
+                  >
+                    <span className="text-sm font-bold">{p.place_name}</span>
+                    <span className="text-muted-foreground text-[11px]">
+                      {p.road_address_name || p.address_name}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </div>
 
       {searchError ? (
@@ -173,28 +217,6 @@ export function StopMapPickerInner({
             ? " · 데스크톱에서는 위성 신호 대신 WiFi·IP로 추정해 부정확할 수 있어요. 지도에서 정확한 위치를 클릭해 보정해 주세요."
             : null}
         </p>
-      ) : null}
-
-      {results.length > 0 ? (
-        <ul className="bg-card max-h-48 overflow-y-auto rounded-md border text-sm shadow-sm">
-          {results.map((p) => (
-            <li key={p.id}>
-              <button
-                type="button"
-                onClick={() => {
-                  onPick({ lat: Number(p.y), lng: Number(p.x) });
-                  setResults([]);
-                }}
-                className="hover:bg-muted/40 flex w-full flex-col items-start gap-0.5 px-3 py-2 text-left transition-colors"
-              >
-                <span className="text-sm font-bold">{p.place_name}</span>
-                <span className="text-muted-foreground text-[11px]">
-                  {p.road_address_name || p.address_name}
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
       ) : null}
 
       <div className="overflow-hidden rounded-md border">
