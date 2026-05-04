@@ -17,9 +17,9 @@ const STATUS_LABEL = {
 } as const;
 
 const STATUS_COLOR = {
-  PENDING: "bg-amber-100 text-amber-900",
-  APPROVED: "bg-emerald-100 text-emerald-900",
-  REJECTED: "bg-rose-100 text-rose-900",
+  PENDING: "bg-warning-soft text-warning",
+  APPROVED: "bg-success-soft text-success",
+  REJECTED: "bg-destructive/10 text-destructive",
 } as const;
 
 export default async function StopChangeRequestsPage() {

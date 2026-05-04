@@ -22,6 +22,7 @@ export default async function NewStopChangePage() {
     <main className="px-4 pt-4 pb-6">
       <StopChangeForm
         items={routeStudents.map((rs) => ({
+          routeStudentId: rs.id,
           studentId: rs.student.id,
           studentName: rs.student.name,
           fromStopId: rs.stop.id,

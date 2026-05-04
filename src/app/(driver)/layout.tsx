@@ -1,3 +1,4 @@
+import { SwRegister } from "@/components/sw-register";
 import { db } from "@/lib/db";
 import { requireDriver } from "@/lib/auth/session";
 
@@ -26,6 +27,7 @@ export default async function DriverLayout({
         staffName={user.staff.name}
         unreadCount={unreadCount}
       />
+      <SwRegister />
       <div className="flex-1">{children}</div>
     </div>
   );

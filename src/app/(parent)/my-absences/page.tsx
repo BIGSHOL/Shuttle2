@@ -24,10 +24,10 @@ const STATUS_LABEL = {
 } as const;
 
 const STATUS_COLOR = {
-  PENDING: "bg-amber-100 text-amber-900",
-  NOTIFIED_DRIVER: "bg-sky-100 text-sky-900",
-  ACKNOWLEDGED: "bg-emerald-100 text-emerald-900",
-  REJECTED: "bg-rose-100 text-rose-900",
+  PENDING: "bg-warning-soft text-warning",
+  NOTIFIED_DRIVER: "bg-info-soft text-info",
+  ACKNOWLEDGED: "bg-success-soft text-success",
+  REJECTED: "bg-destructive/10 text-destructive",
 } as const;
 
 function fmtKstDate(d: Date): string {

@@ -7,9 +7,10 @@ import {
   homePathForRole,
 } from "@/lib/auth/session";
 
+import { SwRegister } from "@/components/sw-register";
+
 import { ParentBottomTabs } from "./parent-bottom-tabs";
 import { ParentHeader } from "./parent-header";
-import { SwRegister } from "./sw-register";
 
 // 학부모 레이아웃. 모바일 우선 — 데스크톱에서도 max-w-md로 모바일 폭 고정.
 // 100dvh로 iOS Safari address bar 변화에도 안정. trip-live는 본인이 fixed

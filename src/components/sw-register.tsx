@@ -2,8 +2,9 @@
 
 import { useEffect } from "react";
 
-// 학부모 PWA 발판 — service worker 등록만 (push 구독은 W6).
-// 실제 sw.js는 /public/sw.js. 등록 후 push 구독·VAPID 키 교환은 다음 세션.
+// 공용 PWA service worker 등록. 학부모·기사·동승자·학원장 layout 모두 마운트.
+// 실제 sw.js는 /public/sw.js. NotificationToggle 컴포넌트가 이 등록을
+// 전제로 navigator.serviceWorker.ready를 기다리므로 모든 역할 layout에 필요.
 export function SwRegister() {
   useEffect(() => {
     if (typeof window === "undefined") return;

@@ -164,6 +164,10 @@
   }
   body {
     @apply bg-background text-foreground;
+    /* 한국어 어절 단위 줄바꿈 — 단어 중간 끊김(예: "별/지", "다.") 방지.
+       매우 긴 영어 단어(URL 등)는 단어 경계 우선이지만 박스 넘치면 줄바꿈. */
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
   html {
     @apply font-sans;

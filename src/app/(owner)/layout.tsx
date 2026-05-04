@@ -1,3 +1,4 @@
+import { SwRegister } from "@/components/sw-register";
 import { db } from "@/lib/db";
 import { requireOwner } from "@/lib/auth/session";
 
@@ -25,6 +26,7 @@ export default async function OwnerLayout({
         email={user.email}
         unreadCount={unreadCount}
       />
+      <SwRegister />
       {children}
     </div>
   );

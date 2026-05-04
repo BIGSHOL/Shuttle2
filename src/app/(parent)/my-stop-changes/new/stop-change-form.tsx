@@ -29,6 +29,7 @@ function todayKstDateString(): string {
 }
 
 type Item = {
+  routeStudentId: string;
   studentId: string;
   studentName: string;
   fromStopId: string;
@@ -40,13 +41,13 @@ type Item = {
 };
 
 export function StopChangeForm({ items }: { items: Item[] }) {
-  // 선택된 (student, fromStop) — items의 첫 번째 default
+  // routeStudentId는 unique — 같은 학생이 같은 정류장으로 여러 노선에 배정된
+  // 케이스(등원·하원 같은 정류장 등)에서 중복 key 회피.
   const [selectedKey, setSelectedKey] = useState(
-    items[0] ? `${items[0].studentId}|${items[0].fromStopId}` : "",
+    items[0]?.routeStudentId ?? "",
   );
   const selected = useMemo(
-    () =>
-      items.find((it) => `${it.studentId}|${it.fromStopId}` === selectedKey),
+    () => items.find((it) => it.routeStudentId === selectedKey),
     [items, selectedKey],
   );
 
@@ -100,9 +101,7 @@ export function StopChangeForm({ items }: { items: Item[] }) {
               onChange={(e) => {
                 const key = e.target.value;
                 setSelectedKey(key);
-                const item = items.find(
-                  (it) => `${it.studentId}|${it.fromStopId}` === key,
-                );
+                const item = items.find((it) => it.routeStudentId === key);
                 if (item) {
                   setPos({ lat: item.fromStopLat, lng: item.fromStopLng });
                 }
@@ -110,10 +109,7 @@ export function StopChangeForm({ items }: { items: Item[] }) {
               className="border-input bg-background flex h-9 w-full rounded-md border px-3 py-1 text-sm shadow-xs"
             >
               {items.map((it) => (
-                <option
-                  key={`${it.studentId}|${it.fromStopId}`}
-                  value={`${it.studentId}|${it.fromStopId}`}
-                >
+                <option key={it.routeStudentId} value={it.routeStudentId}>
                   {it.studentName} · {DIRECTION_LABEL[it.direction]}{" "}
                   {it.routeName} · 현재 {it.fromStopName}
                 </option>
