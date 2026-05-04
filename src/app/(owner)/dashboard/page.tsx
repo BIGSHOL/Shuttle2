@@ -9,6 +9,7 @@ import {
   Users,
 } from "lucide-react";
 
+import { OrgDashboardRefresher } from "@/components/org-dashboard-refresher";
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { todayUtcDateKst } from "@/lib/date/today";
@@ -31,9 +32,7 @@ const PLAN_LABEL = {
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
 function fmtKstHHmm(d: Date): string {
-  return new Date(d.getTime() + 9 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(11, 16);
+  return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16);
 }
 
 export default async function DashboardPage() {
@@ -164,6 +163,9 @@ export default async function DashboardPage() {
 
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-6">
+      {/* W16-D: 같은 org의 어떤 trip이든 변동되면 운행 모니터·KPI 자동 갱신 */}
+      <OrgDashboardRefresher orgId={orgId} />
+
       {/* 인사 + 푸시 토글 */}
       <section className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -183,7 +185,7 @@ export default async function DashboardPage() {
       </section>
 
       {/* KPI 4 cards */}
-      <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="오늘 운행"
           value={todayTrips.length}
@@ -199,9 +201,7 @@ export default async function DashboardPage() {
           label="진행 중 차량"
           value={runningTrips.length}
           subtext={
-            runningTrips.length > 0
-              ? "지금 운행 중"
-              : "진행 중 운행 없음"
+            runningTrips.length > 0 ? "지금 운행 중" : "진행 중 운행 없음"
           }
           Icon={Route}
           tone={runningTrips.length > 0 ? "bus" : "muted"}
@@ -235,8 +235,7 @@ export default async function DashboardPage() {
               오늘 운행 모니터
             </h3>
             <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-              지금 진행 중·예정·완료된 운행. 카드 클릭하면 실시간 화면으로
-              이동.
+              지금 진행 중·예정·완료된 운행. 카드 클릭하면 실시간 화면으로 이동.
             </p>
           </div>
           {totalAlerts === 0 ? (
@@ -386,7 +385,7 @@ export default async function DashboardPage() {
                       href={`/vehicles/${v.id}/edit`}
                       className="bg-background hover:bg-muted/40 flex items-center justify-between gap-3 rounded-xl border px-3 py-2 transition-colors"
                     >
-                      <span className="flex items-center gap-2 text-sm font-bold font-mono">
+                      <span className="flex items-center gap-2 font-mono text-sm font-bold">
                         {v.plate}
                         <span className="text-muted-foreground text-[11px] font-medium">
                           만료 {dateLabel}
@@ -411,8 +410,13 @@ export default async function DashboardPage() {
       ) : null}
 
       {/* 빠른 이동 (작은 KPI grid) */}
-      <section className="grid gap-3 grid-cols-2 lg:grid-cols-4">
-        <QuickLink href="/vehicles" label="차량" value={vehicleCount} Icon={Bus} />
+      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <QuickLink
+          href="/vehicles"
+          label="차량"
+          value={vehicleCount}
+          Icon={Bus}
+        />
         <QuickLink
           href="/stops"
           label="정류장"
@@ -547,7 +551,7 @@ function TripMonitorCard({
                   {DIRECTION_LABEL[direction]}
                 </span>
                 {isKids ? (
-                  <span className="bg-white/15 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                  <span className="rounded-md bg-white/15 px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
                     KIDS
                   </span>
                 ) : null}
@@ -572,10 +576,10 @@ function TripMonitorCard({
           </div>
           <div className="mt-3 flex items-center justify-between gap-3">
             <div className="flex items-center gap-1.5 text-[11px] font-medium">
-              <span className="bg-white/10 rounded-md px-1.5 py-0.5 font-bold">
+              <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-bold">
                 정류장 {totalStops}
               </span>
-              <span className="bg-white/10 rounded-md px-1.5 py-0.5 font-bold">
+              <span className="rounded-md bg-white/10 px-1.5 py-0.5 font-bold">
                 탑승·하차 {boarded}
               </span>
             </div>

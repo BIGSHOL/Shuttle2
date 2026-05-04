@@ -4,6 +4,7 @@ import { env } from "@/lib/env";
 
 import {
   TRIP_UPDATE_EVENT,
+  orgTripsChannelName,
   tripChannelName,
   type TripUpdatePayload,
   type TripUpdateReason,
@@ -20,6 +21,7 @@ const HTTP_BROADCAST_TIMEOUT_MS = 2_000;
 export async function publishTripUpdate(
   tripId: string,
   reason: TripUpdateReason,
+  orgId?: string,
 ): Promise<void> {
   const payload: TripUpdatePayload = {
     tripId,
@@ -30,6 +32,30 @@ export async function publishTripUpdate(
   const url = `${env.NEXT_PUBLIC_SUPABASE_URL}/realtime/v1/api/broadcast`;
   const apikey = env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
+  // 두 채널에 동시 발행 — trip 상세 화면용(trip:<tripId>) + org 대시보드용(org-trips:<orgId>).
+  // orgId가 없으면 trip 채널만. 한 번의 HTTP로 multi-message body.
+  const messages: Array<{
+    topic: string;
+    event: string;
+    payload: TripUpdatePayload;
+    private: boolean;
+  }> = [
+    {
+      topic: tripChannelName(tripId),
+      event: TRIP_UPDATE_EVENT,
+      payload,
+      private: false,
+    },
+  ];
+  if (orgId) {
+    messages.push({
+      topic: orgTripsChannelName(orgId),
+      event: TRIP_UPDATE_EVENT,
+      payload,
+      private: false,
+    });
+  }
+
   try {
     const res = await fetch(url, {
       method: "POST",
@@ -38,16 +64,7 @@ export async function publishTripUpdate(
         Authorization: `Bearer ${apikey}`,
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        messages: [
-          {
-            topic: tripChannelName(tripId),
-            event: TRIP_UPDATE_EVENT,
-            payload,
-            private: false,
-          },
-        ],
-      }),
+      body: JSON.stringify({ messages }),
       signal: AbortSignal.timeout(HTTP_BROADCAST_TIMEOUT_MS),
     });
 

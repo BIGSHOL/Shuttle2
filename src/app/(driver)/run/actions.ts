@@ -74,8 +74,9 @@ export async function startTripAction(
     });
   }
 
-  await publishTripUpdate(trip.id, "trip-state");
+  await publishTripUpdate(trip.id, "trip-state", orgId);
   revalidatePath("/run");
+  revalidatePath("/dashboard");
   redirect(`/trip/${trip.id}`);
 }
 
@@ -100,9 +101,10 @@ export async function endTripAction(tripId: string): Promise<void> {
     data: { endedAt: new Date() },
   });
 
-  await publishTripUpdate(trip.id, "trip-state");
+  await publishTripUpdate(trip.id, "trip-state", orgId);
   revalidatePath("/run");
   revalidatePath(`/trip/${tripId}`);
+  revalidatePath("/dashboard");
   redirect("/run");
 }
 
@@ -271,7 +273,7 @@ export async function upsertSafetyCheckAction(
   const parsed = SafetyFields.safeParse(fields);
   if (!parsed.success) throw new Error("잘못된 안전점검 데이터");
 
-  await requireTripAccess(tripId);
+  const access = await requireTripAccess(tripId);
 
   const now = new Date();
   const data: {
@@ -306,8 +308,9 @@ export async function upsertSafetyCheckAction(
     update: data,
   });
 
-  await publishTripUpdate(tripId, "safety");
+  await publishTripUpdate(tripId, "safety", access.user.org.id);
   revalidatePath(`/trip/${tripId}`);
+  revalidatePath("/dashboard");
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -332,7 +335,7 @@ export async function toggleBoardingEventAction(
   const parsed = BoardingInput.safeParse(input);
   if (!parsed.success) throw new Error("잘못된 탑승·하차 데이터");
 
-  await requireTripAccess(parsed.data.tripId);
+  const access = await requireTripAccess(parsed.data.tripId);
 
   // 이미 같은 type 이벤트가 있으면 가장 최근 것 삭제 (토글)
   const existing = await db.boardingEvent.findFirst({
@@ -359,9 +362,10 @@ export async function toggleBoardingEventAction(
     });
   }
 
-  await publishTripUpdate(parsed.data.tripId, "boarding");
+  await publishTripUpdate(parsed.data.tripId, "boarding", access.user.org.id);
   revalidatePath(`/trip/${parsed.data.tripId}`);
   revalidatePath(`/dashboard/trip/${parsed.data.tripId}`);
+  revalidatePath("/dashboard");
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -387,7 +391,7 @@ export async function markBoardingIssueAction(
   const parsed = MarkIssueInput.safeParse(input);
   if (!parsed.success) throw new Error("잘못된 입력 데이터");
 
-  await requireTripAccess(parsed.data.tripId);
+  const access = await requireTripAccess(parsed.data.tripId);
 
   // 같은 type이 이미 있으면 갱신, 없으면 새로 생성 (idempotent)
   const existing = await db.boardingEvent.findFirst({
@@ -461,9 +465,10 @@ export async function markBoardingIssueAction(
     }).catch((e) => console.error("push to owners failed:", e));
   }
 
-  await publishTripUpdate(parsed.data.tripId, "issue");
+  await publishTripUpdate(parsed.data.tripId, "issue", access.user.org.id);
   revalidatePath(`/trip/${parsed.data.tripId}`);
   revalidatePath(`/dashboard/trip/${parsed.data.tripId}`);
+  revalidatePath("/dashboard");
 }
 
 // 미탑승·미하차 mark 해제 (실수로 누른 경우)
@@ -472,15 +477,16 @@ export async function unmarkBoardingIssueAction(
   studentId: string,
   type: "NO_SHOW" | "NO_DROPOFF",
 ): Promise<void> {
-  await requireTripAccess(tripId);
+  const access = await requireTripAccess(tripId);
 
   await db.boardingEvent.deleteMany({
     where: { tripId, studentId, type },
   });
 
-  await publishTripUpdate(tripId, "issue");
+  await publishTripUpdate(tripId, "issue", access.user.org.id);
   revalidatePath(`/trip/${tripId}`);
   revalidatePath(`/dashboard/trip/${tripId}`);
+  revalidatePath("/dashboard");
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -509,6 +515,7 @@ export async function assignHelperAction(
   });
   if (result.count === 0) throw new Error("운행을 찾을 수 없습니다");
 
-  await publishTripUpdate(tripId, "trip-state");
+  await publishTripUpdate(tripId, "trip-state", orgId);
   revalidatePath(`/trip/${tripId}`);
+  revalidatePath("/dashboard");
 }

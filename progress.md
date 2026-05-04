@@ -25,6 +25,7 @@
 | W17-C | 학부모 BottomTabBar (홈·알림·결석·정류장 4탭) | _이번_ | ⏳ |
 | W16-C | 종료 운행 GPS 경로 (LocationPing trail polyline) | _이번_ | ⏳ |
 | W17-D | 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화) | _이번_ | ⏳ |
+| W16-D | 학원장 dashboard 실시간 자동 갱신 (`org-trips:<orgId>` 채널) | _이번_ | ⏳ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -327,6 +328,28 @@
 ### 영향
 - 학부모 trip-live는 그대로 (별도 사실상 broadcast만 사용)
 - 학원장 → 기사 → 동승자 전 채널이 같은 `trip:<tripId>` "update" 이벤트 공유
+
+## W16-D 완료 (학원장 dashboard 실시간 자동 갱신)
+
+### 결과
+- `lib/geo/realtime.ts`: `ORG_TRIPS_CHANNEL_PREFIX = "org-trips"` +
+  `orgTripsChannelName(orgId)` 추가.
+- `lib/geo/publish-trip-update.ts`: optional `orgId` 매개변수.
+  주어지면 single HTTP request에 trip 채널 + org 채널 두 메시지를 함께 발행
+  (multi-message body) — 한 번의 fetch로 학원장 trip 상세 + dashboard 모두 갱신.
+- `lib/geo/use-org-trips-updates.ts` 신규 — 600ms debounce(여러 trip이
+  동시에 변동될 가능성 높아 trip-level보다 길게).
+- `components/org-dashboard-refresher.tsx` 신규 — 학원장 dashboard 마운트용.
+  "운행 모니터 갱신됨" 토스트.
+- `(driver)/run/actions.ts`: 6개 publishTripUpdate 호출 모두 orgId 전달
+  + `revalidatePath("/dashboard")` 추가 (broadcast 실패 시 fallback).
+- `(owner)/dashboard/page.tsx`: `<OrgDashboardRefresher orgId={orgId} />` 마운트.
+
+### 디자인 결정
+- **Org 채널 단일 구독** — dashboard가 trip을 N개 보지만 trip마다 채널
+  구독하면 새 trip 추가 시 못 받음. org 채널 1개로 단순화.
+- **600ms debounce** — 여러 기사가 동시에 운행 시작/종료 시 burst 방지.
+- **Multi-message HTTP body** — 1번의 broadcast로 2채널 동시 발행, 추가 latency 없음.
 
 ## 다음 우선순위 (W17-B+)
 

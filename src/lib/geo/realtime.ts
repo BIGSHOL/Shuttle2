@@ -10,8 +10,17 @@ export const TRIP_CHANNEL_PREFIX = "trip";
 export const TRIP_PING_EVENT = "ping";
 export const TRIP_UPDATE_EVENT = "update";
 
+// W16-D: org 단위 채널. 학원장 dashboard가 trip 여러 개를 동시에 보므로
+// trip:<tripId> 여러 개를 구독하는 대신 org-trips:<orgId> 1개만 구독.
+// 같은 update payload(tripId 포함)를 함께 수신해 router.refresh.
+export const ORG_TRIPS_CHANNEL_PREFIX = "org-trips";
+
 export function tripChannelName(tripId: string): string {
   return `${TRIP_CHANNEL_PREFIX}:${tripId}`;
+}
+
+export function orgTripsChannelName(orgId: string): string {
+  return `${ORG_TRIPS_CHANNEL_PREFIX}:${orgId}`;
 }
 
 export type TripPingPayload = {
