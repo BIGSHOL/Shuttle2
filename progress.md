@@ -521,6 +521,10 @@
   (학원장이 좌표를 직접 알 일 거의 없음). 카카오 services.Places.keywordSearch
   로 키워드(장소·주소) 검색 → 결과 list 5개. navigator.geolocation으로 "내
   위치" 버튼 — enableHighAccuracy. 작은 caption으로 현재 좌표 4자리만 참고용.
+- **내 위치 정확도 표시·안내**: 데스크톱 브라우저는 GPS 없이 WiFi/IP fallback
+  으로 100m~수km 오차 발생 (사용자 보고). geolocation timeout 20s + maximumAge:
+  0으로 sample 강화. 결과의 `coords.accuracy`를 "약 ±50m" 형태로 표시,
+  100m 초과 시 "데스크톱은 부정확. 검색·지도 클릭으로 보정" 안내 자동 노출.
 
 ### W18-H Layout 진입 가드 redirect (`c9befca`, `1246bff`)
 

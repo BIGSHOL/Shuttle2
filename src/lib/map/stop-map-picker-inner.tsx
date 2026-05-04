@@ -56,6 +56,7 @@ export function StopMapPickerInner({
   const [results, setResults] = useState<KakaoPlace[]>([]);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [locating, setLocating] = useState(false);
+  const [lastAccuracy, setLastAccuracy] = useState<number | null>(null);
 
   function handleSearch() {
     setSearchError(null);
@@ -63,7 +64,7 @@ export function StopMapPickerInner({
     if (!trimmed) return;
     const services = window.kakao?.maps?.services;
     if (!services) {
-      setSearchError("지도 SDK가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.");
+      setSearchError("지도가 아직 준비되지 않았어요. 잠시 후 다시 시도해 주세요.");
       return;
     }
     const ps = new services.Places();
@@ -79,6 +80,7 @@ export function StopMapPickerInner({
 
   function handleMyLocation() {
     setSearchError(null);
+    setLastAccuracy(null);
     if (typeof navigator === "undefined" || !navigator.geolocation) {
       setSearchError("이 브라우저는 위치 가져오기를 지원하지 않아요.");
       return;
@@ -87,6 +89,7 @@ export function StopMapPickerInner({
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         onPick({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLastAccuracy(pos.coords.accuracy);
         setResults([]);
         setLocating(false);
       },
@@ -98,7 +101,9 @@ export function StopMapPickerInner({
         );
         setLocating(false);
       },
-      { enableHighAccuracy: true, timeout: 10_000 },
+      // GPS 없는 데스크톱은 WiFi/IP 기반 fallback — 정확도 떨어짐.
+      // timeout 길게 + cache 무시로 더 정확한 sample 시도.
+      { enableHighAccuracy: true, timeout: 20_000, maximumAge: 0 },
     );
   }
 
@@ -161,6 +166,15 @@ export function StopMapPickerInner({
         <p className="text-destructive text-xs font-medium">{searchError}</p>
       ) : null}
 
+      {lastAccuracy !== null ? (
+        <p className="text-muted-foreground text-[11px] font-medium">
+          내 위치 정확도 약 ±{Math.round(lastAccuracy)}m
+          {lastAccuracy > 100
+            ? " · 데스크톱에서는 위성 신호 대신 WiFi·IP로 추정해 부정확할 수 있어요. 지도에서 정확한 위치를 클릭해 보정해 주세요."
+            : null}
+        </p>
+      ) : null}
+
       {results.length > 0 ? (
         <ul className="bg-card max-h-48 overflow-y-auto rounded-md border text-sm shadow-sm">
           {results.map((p) => (
@@ -209,7 +223,8 @@ export function StopMapPickerInner({
         </Map>
         <p className="bg-muted/30 text-muted-foreground border-t px-3 py-2 text-xs">
           지도를 클릭하거나 위에서 검색·내 위치를 사용하면 그 지점이 정류장
-          위치가 됩니다. 노란 원은 도착 판정 반경({radiusM}m)이에요.
+          위치가 됩니다. 노란 원은 도착 판정 반경({radiusM}m)이에요. 정확한
+          위치는 모바일(스마트폰)에서 잡거나 검색·지도 클릭으로 보정하세요.
         </p>
       </div>
     </div>
