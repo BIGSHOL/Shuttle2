@@ -80,7 +80,7 @@ export function VehicleForm({
           </div>
 
           <div className="space-y-2">
-            <Label>운영 모드</Label>
+            <Label>운영 모드 — 어린이도 태우나요?</Label>
             <div className="grid grid-cols-2 gap-2">
               {(["KIDS", "GENERAL"] as const).map((m) => (
                 <label
@@ -96,16 +96,21 @@ export function VehicleForm({
                     onChange={() => setMode(m)}
                   />
                   <span className="font-medium">
-                    {m === "KIDS" ? "어린이용" : "일반용"}
+                    {m === "KIDS" ? "어린이용 (네)" : "일반용 (아니요)"}
                   </span>
                   <span className="text-muted-foreground text-xs">
                     {m === "KIDS"
-                      ? "13세 미만 어린이통학 / 법정 의무 차량"
-                      : "중고생·성인·통근 등"}
+                      ? "어린이(만 13세 미만)를 한 번이라도 태우는 차량"
+                      : "중고생·성인만 태우는 차량"}
                   </span>
                 </label>
               ))}
             </div>
+            <p className="text-muted-foreground text-xs">
+              시간대에 따라 어린이·중고생을 병행 운영해도 어린이용으로 등록해
+              주세요. 도로교통법상 어린이를 한 번이라도 태우는 차량은
+              어린이통학버스 신고·운영 의무가 적용됩니다.
+            </p>
             {state.fieldErrors?.mode ? (
               <p className="text-destructive text-sm">
                 {state.fieldErrors.mode[0]}
@@ -140,7 +145,12 @@ export function VehicleForm({
                   name="insuranceUntil"
                   type="date"
                   defaultValue={initial.insuranceUntil}
+                  min="2024-01-01"
+                  max="2099-12-31"
                 />
+                <p className="text-muted-foreground text-xs">
+                  연도는 2024년부터 2099년까지 입력 가능합니다.
+                </p>
                 {state.fieldErrors?.insuranceUntil ? (
                   <p className="text-destructive text-sm">
                     {state.fieldErrors.insuranceUntil[0]}

@@ -203,6 +203,8 @@ export function TrainingForm({
               name="completedOn"
               type="date"
               defaultValue={todayKstDateString()}
+              min="2000-01-01"
+              max="2099-12-31"
               required
             />
             {state.fieldErrors?.completedOn ? (
@@ -219,6 +221,8 @@ export function TrainingForm({
               name="expiresOn"
               type="date"
               defaultValue={plus2YearsKstDateString()}
+              min="2000-01-01"
+              max="2099-12-31"
               required
             />
             {state.fieldErrors?.expiresOn ? (

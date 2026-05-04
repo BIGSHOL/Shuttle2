@@ -77,6 +77,7 @@ export function AbsenceForm({
               type="date"
               defaultValue={todayKstDateString()}
               min={todayKstDateString()}
+              max="2099-12-31"
               required
             />
             {state.fieldErrors?.date ? (

@@ -175,6 +175,7 @@ export function StopChangeForm({ items }: { items: Item[] }) {
               required
               defaultValue={todayKstDateString()}
               min={todayKstDateString()}
+              max="2099-12-31"
             />
             <p className="text-muted-foreground text-xs">
               학원장 승인 후 이 날짜부터 다음 운행에 적용됩니다.

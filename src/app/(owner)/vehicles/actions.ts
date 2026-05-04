@@ -26,7 +26,18 @@ const VehicleInput = z
     insuranceUntil: z
       .string()
       .optional()
-      .transform((v) => (v ? v : undefined)),
+      .transform((v) => (v ? v : undefined))
+      .refine(
+        (v) => {
+          if (!v) return true;
+          // YYYY-MM-DD 4자리 연도 + 2024~2099 범위. 브라우저 date input의
+          // 큰 연도(예: 262026) 입력을 서버에서 차단.
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(v)) return false;
+          const year = Number(v.slice(0, 4));
+          return year >= 2024 && year <= 2099;
+        },
+        "보험 만료일은 2024-01-01 ~ 2099-12-31 형식이어야 합니다",
+      ),
   })
   .refine(
     (data) => {
