@@ -8,9 +8,9 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import {
+  authEmailForLogin,
   generateTempPassword,
   isValidLoginId,
-  loginIdToEmail,
   LOGIN_ID_REGEX,
 } from "@/lib/auth/login-id";
 import { getOrgId, homePathForRole, requireOwner } from "@/lib/auth/session";
@@ -202,10 +202,20 @@ export async function deleteStaffAction(id: string): Promise<void> {
 // 초대 수락 (public, 토큰으로 진입)
 // ────────────────────────────────────────────────────────────────────
 
-// 초대 수락은 invite의 loginId를 그대로 사용. 가입자는 비밀번호만 입력.
+// 초대 수락은 invite의 loginId를 그대로 사용. 가입자는 비밀번호 + (선택) 복구용 이메일.
 // (이전 형식 — invite.loginId == null — 은 학원장에게 새 초대 요청 안내)
 const AcceptInput = z.object({
   password: z.string().min(8, "비밀번호는 8자 이상").max(72),
+  recoveryEmail: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : undefined))
+    .refine(
+      (v) => v === undefined || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+      "이메일 형식이 올바르지 않습니다",
+    ),
 });
 
 export type AcceptInviteState = {
@@ -235,6 +245,7 @@ export async function acceptInviteAction(
 ): Promise<AcceptInviteState> {
   const parsed = AcceptInput.safeParse({
     password: formData.get("password"),
+    recoveryEmail: formData.get("recoveryEmail"),
   });
   if (!parsed.success) {
     return {
@@ -269,17 +280,26 @@ export async function acceptInviteAction(
     };
   }
 
-  const placeholderEmail = loginIdToEmail(invite.loginId);
+  const recoveryEmail = parsed.data.recoveryEmail ?? null;
+  const authEmail = authEmailForLogin(invite.loginId, recoveryEmail);
   const admin = createSupabaseAdmin();
 
-  // 1) Auth 사용자 생성 — Supabase에는 placeholder 이메일로 저장.
+  // 1) Auth 사용자 생성. recoveryEmail 입력 시 그 이메일이 Auth user.email
+  //    → 본인이 /forgot-password에서 reset 메일 수신 가능.
   const { data: created, error: createError } =
     await admin.auth.admin.createUser({
-      email: placeholderEmail,
+      email: authEmail,
       password: parsed.data.password,
       email_confirm: true,
     });
   if (createError || !created.user) {
+    if (createError?.message?.toLowerCase().includes("already")) {
+      return {
+        error:
+          "이 이메일로는 이미 다른 계정이 있어요. 다른 비밀번호 찾기용 이메일을 입력해 주세요.",
+        fieldErrors: { recoveryEmail: ["이미 사용 중인 이메일"] },
+      };
+    }
     return { error: createError?.message ?? "가입 처리 실패" };
   }
   const userId = created.user.id;
@@ -292,6 +312,7 @@ export async function acceptInviteAction(
           orgId: invite.orgId,
           userId,
           loginId: invite.loginId,
+          recoveryEmail: recoveryEmail,
           name: invite.name,
           phone: invite.phone,
           role: invite.role,
@@ -315,7 +336,7 @@ export async function acceptInviteAction(
   // 3) 세션 수립 (가입자 본인의 cookies-aware client)
   const supabase = await createClient();
   await supabase.auth.signInWithPassword({
-    email: placeholderEmail,
+    email: authEmail,
     password: parsed.data.password,
   });
 

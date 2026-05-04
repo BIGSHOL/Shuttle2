@@ -5,9 +5,9 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import {
+  authEmailForLogin,
   isLikelyEmail,
   isValidLoginId,
-  loginIdToEmail,
 } from "@/lib/auth/login-id";
 import { homePathForRole } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
@@ -38,7 +38,8 @@ export async function loginAction(
     };
   }
 
-  // identifier가 이메일이면 그대로, 로그인 아이디면 placeholder 이메일로 변환.
+  // identifier가 이메일이면 그대로, 로그인 아이디면 DB lookup으로 실제 Auth email 매핑.
+  // (가입 시 recoveryEmail 입력자는 user.email = recoveryEmail, 미입력자는 placeholder)
   const { identifier, password } = parsed.data;
   let email: string;
   if (isLikelyEmail(identifier)) {
@@ -54,7 +55,19 @@ export async function loginAction(
         error: "로그인 아이디는 영문 소문자·숫자·언더스코어 4~20자입니다",
       };
     }
-    email = loginIdToEmail(normalized);
+    // Staff·Guardian 양쪽 다 lookup. 한쪽이 hit하면 그쪽의 recoveryEmail로 매핑.
+    const [staff, guardian] = await Promise.all([
+      db.staff.findUnique({
+        where: { loginId: normalized },
+        select: { recoveryEmail: true },
+      }),
+      db.guardian.findUnique({
+        where: { loginId: normalized },
+        select: { recoveryEmail: true },
+      }),
+    ]);
+    const recoveryEmail = staff?.recoveryEmail ?? guardian?.recoveryEmail ?? null;
+    email = authEmailForLogin(normalized, recoveryEmail);
   }
 
   const supabase = await createClient();

@@ -130,6 +130,28 @@ export function ParentAcceptForm({
               </p>
             ) : null}
           </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="recoveryEmail" className="text-xs font-bold">
+              비밀번호 찾기용 이메일{" "}
+              <span className="text-muted-foreground font-medium">(선택)</span>
+            </Label>
+            <Input
+              id="recoveryEmail"
+              name="recoveryEmail"
+              type="email"
+              autoComplete="email"
+              placeholder="example@gmail.com"
+            />
+            <p className="text-muted-foreground text-[11px] font-medium">
+              비밀번호를 잊으면 이 이메일로 다시 만들 수 있어요. 안 적으면
+              학원장님께 부탁해야 합니다.
+            </p>
+            {state.fieldErrors?.recoveryEmail ? (
+              <p className="text-destructive text-xs font-medium">
+                {state.fieldErrors.recoveryEmail[0]}
+              </p>
+            ) : null}
+          </div>
 
           <label className="border-input bg-background hover:bg-muted/40 has-[:checked]:border-bus has-[:checked]:bg-bus-soft/40 flex cursor-pointer items-start gap-2 rounded-xl border p-3 text-sm transition-colors">
             <input

@@ -118,14 +118,15 @@ enum VehicleMode {
 }
 
 model Staff {
-  id      String       @id @default(cuid())
-  orgId   String
-  org     Organization @relation(fields: [orgId], references: [id])
-  userId  String? // Supabase auth.users 연결
-  loginId String? @unique // 영문·숫자·_ 4~20자. 학원장 발급 또는 본인 선택. 이메일 대신 사용.
-  name    String
-  phone   String
-  role    StaffRole
+  id            String       @id @default(cuid())
+  orgId         String
+  org           Organization @relation(fields: [orgId], references: [id])
+  userId        String? // Supabase auth.users 연결
+  loginId       String? @unique // 영문·숫자·_ 4~20자. 학원장 발급 또는 본인 선택. 이메일 대신 사용.
+  recoveryEmail String? // 비밀번호 찾기용 이메일. 입력 시 Auth user.email = 이 값. 미입력 시 placeholder.
+  name          String
+  phone         String
+  role          StaffRole
 
   trainings         TrainingRecord[]
   driverTrips       Trip[]                  @relation("DriverTrips")
@@ -229,11 +230,12 @@ model Student {
 }
 
 model Guardian {
-  id      String  @id @default(cuid())
-  userId  String? // Supabase auth (학부모 본인 계정)
-  loginId String? @unique // 영문·숫자·_ 4~20자. 학원장 발급 또는 본인 선택. 이메일 대신 사용.
-  name    String
-  phone   String  @unique
+  id            String  @id @default(cuid())
+  userId        String? // Supabase auth (학부모 본인 계정)
+  loginId       String? @unique // 영문·숫자·_ 4~20자. 학원장 발급 또는 본인 선택. 이메일 대신 사용.
+  recoveryEmail String? // 비밀번호 찾기용 이메일. 입력 시 Auth user.email = 이 값.
+  name          String
+  phone         String  @unique
 
   links              GuardianLink[]
   absences           AbsenceRequest[]

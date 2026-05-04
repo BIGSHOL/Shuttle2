@@ -4,27 +4,68 @@ import { headers } from "next/headers";
 import { z } from "zod";
 
 import { db } from "@/lib/db";
+import { isLikelyEmail, isValidLoginId } from "@/lib/auth/login-id";
 import { createClient } from "@/lib/supabase/server";
 
+// 이메일 또는 로그인 아이디 어느 쪽이든 받음.
 const ForgotSchema = z.object({
-  email: z.string().email("이메일 형식이 올바르지 않습니다"),
+  identifier: z.string().trim().min(1, "이메일 또는 로그인 아이디를 입력해 주세요"),
 });
 
 export type ForgotState = {
   error?: string;
   ok?: boolean;
+  /** 로그인 아이디로 조회됐으나 복구용 이메일이 등록 안 된 케이스 — 학원장 안내용 */
+  needsAdminReset?: boolean;
 };
 
 export async function requestPasswordResetAction(
   _prev: ForgotState,
   formData: FormData,
 ): Promise<ForgotState> {
-  const parsed = ForgotSchema.safeParse({ email: formData.get("email") });
+  const parsed = ForgotSchema.safeParse({
+    identifier: formData.get("identifier"),
+  });
   if (!parsed.success) {
     return { error: parsed.error.issues[0]?.message ?? "입력값을 확인해 주세요" };
   }
 
-  const email = parsed.data.email.toLowerCase();
+  // 입력이 이메일이면 그대로, 로그인 아이디면 DB에서 recoveryEmail lookup.
+  const identifier = parsed.data.identifier.toLowerCase();
+  let email: string;
+  if (isLikelyEmail(identifier)) {
+    const emailParse = z.email().safeParse(identifier);
+    if (!emailParse.success) {
+      return { error: "이메일 형식이 올바르지 않습니다" };
+    }
+    email = emailParse.data;
+  } else {
+    if (!isValidLoginId(identifier)) {
+      return {
+        error: "이메일 또는 로그인 아이디를 정확히 입력해 주세요",
+      };
+    }
+    const [staff, guardian] = await Promise.all([
+      db.staff.findUnique({
+        where: { loginId: identifier },
+        select: { recoveryEmail: true },
+      }),
+      db.guardian.findUnique({
+        where: { loginId: identifier },
+        select: { recoveryEmail: true },
+      }),
+    ]);
+    const recoveryEmail =
+      staff?.recoveryEmail ?? guardian?.recoveryEmail ?? null;
+    if (!staff && !guardian) {
+      return { error: "가입된 로그인 아이디가 아닙니다" };
+    }
+    if (!recoveryEmail) {
+      // 복구용 이메일 없음 → 학원장 admin 초기화 안내
+      return { needsAdminReset: true };
+    }
+    email = recoveryEmail;
+  }
 
   // 가입 여부 사전 확인 (사용자 요청: UX 우선).
   // 트레이드오프: 계정 enumeration 가능 — 베타 B2B 환경에서 수용.

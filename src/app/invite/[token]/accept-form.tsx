@@ -82,6 +82,30 @@ export function AcceptForm({
               </p>
             ) : null}
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="recoveryEmail">
+              비밀번호 찾기용 이메일{" "}
+              <span className="text-muted-foreground text-xs font-medium">
+                (선택)
+              </span>
+            </Label>
+            <Input
+              id="recoveryEmail"
+              name="recoveryEmail"
+              type="email"
+              autoComplete="email"
+              placeholder="example@gmail.com"
+            />
+            <p className="text-muted-foreground text-xs">
+              비밀번호를 잊으면 이 이메일로 다시 만들 수 있어요. 안 적으면
+              학원장님께 부탁해야 합니다.
+            </p>
+            {state.fieldErrors?.recoveryEmail ? (
+              <p className="text-destructive text-sm">
+                {state.fieldErrors.recoveryEmail[0]}
+              </p>
+            ) : null}
+          </div>
           {state.error ? (
             <p className="text-destructive text-sm" role="alert">
               {state.error}

@@ -27,6 +27,19 @@ export function isLikelyEmail(input: string): boolean {
   return input.includes("@");
 }
 
+// loginId 가입 사용자의 Supabase Auth user.email 값을 결정.
+// - recoveryEmail 입력 시 → 사용자 실제 이메일 (본인이 reset 메일 수신 가능)
+// - 미입력 시 → placeholder 이메일 (외부 라우팅 불가, 학원장 admin reset만 가능)
+export function authEmailForLogin(
+  loginId: string,
+  recoveryEmail: string | null,
+): string {
+  if (recoveryEmail && isLikelyEmail(recoveryEmail)) {
+    return recoveryEmail.toLowerCase();
+  }
+  return loginIdToEmail(loginId);
+}
+
 // 임시 비밀번호 6자리 (학원장이 직원·학부모 비번 초기화 시 1회 발급).
 // 영문 대소문자·숫자, 헷갈리는 0/O/1/l/I 제외.
 const TEMP_PASSWORD_ALPHABET =

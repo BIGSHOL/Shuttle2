@@ -8,9 +8,9 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 import {
+  authEmailForLogin,
   generateTempPassword,
   isValidLoginId,
-  loginIdToEmail,
   LOGIN_ID_REGEX,
 } from "@/lib/auth/login-id";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
@@ -175,9 +175,19 @@ export async function getGuardianInviteByToken(token: string) {
   });
 }
 
-// 학부모 가입은 invite의 loginId를 그대로 사용. 가입자는 비밀번호 + 동의만.
+// 학부모 가입은 invite의 loginId를 그대로 사용. 가입자는 비밀번호 + (선택) 복구용 이메일 + 동의.
 const AcceptInput = z.object({
   password: z.string().min(8, "비밀번호는 8자 이상").max(72),
+  recoveryEmail: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .optional()
+    .transform((v) => (v && v.length > 0 ? v : undefined))
+    .refine(
+      (v) => v === undefined || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v),
+      "이메일 형식이 올바르지 않습니다",
+    ),
   consentMinor: z
     .string()
     .refine((v) => v === "on", "자녀 정보 처리 동의가 필요합니다"),
@@ -195,6 +205,7 @@ export async function acceptGuardianInviteAction(
 ): Promise<AcceptGuardianInviteState> {
   const parsed = AcceptInput.safeParse({
     password: formData.get("password"),
+    recoveryEmail: formData.get("recoveryEmail"),
     consentMinor: formData.get("consentMinor"),
   });
   if (!parsed.success) {
@@ -231,7 +242,8 @@ export async function acceptGuardianInviteAction(
     };
   }
 
-  const placeholderEmail = loginIdToEmail(invite.loginId);
+  const recoveryEmail = parsed.data.recoveryEmail ?? null;
+  const authEmail = authEmailForLogin(invite.loginId, recoveryEmail);
   const admin = createSupabaseAdmin();
 
   // 기존 Guardian (phone unique) 조회 — 이미 가입된 학부모면 거절
@@ -245,14 +257,21 @@ export async function acceptGuardianInviteAction(
     };
   }
 
-  // 1) Auth 사용자 생성 — placeholder 이메일
+  // 1) Auth 사용자 생성. recoveryEmail 입력 시 본인 reset 메일 수신 가능.
   const { data: created, error: createError } =
     await admin.auth.admin.createUser({
-      email: placeholderEmail,
+      email: authEmail,
       password: parsed.data.password,
       email_confirm: true,
     });
   if (createError || !created.user) {
+    if (createError?.message?.toLowerCase().includes("already")) {
+      return {
+        error:
+          "이 이메일로는 이미 다른 계정이 있어요. 다른 비밀번호 찾기용 이메일을 입력해 주세요.",
+        fieldErrors: { recoveryEmail: ["이미 사용 중인 이메일"] },
+      };
+    }
     return { error: createError?.message ?? "가입 처리 실패" };
   }
   const userId = created.user.id;
@@ -263,12 +282,18 @@ export async function acceptGuardianInviteAction(
       const guardian = existingByPhone
         ? await tx.guardian.update({
             where: { id: existingByPhone.id },
-            data: { userId, name: invite.name, loginId: invite.loginId },
+            data: {
+              userId,
+              name: invite.name,
+              loginId: invite.loginId,
+              recoveryEmail,
+            },
           })
         : await tx.guardian.create({
             data: {
               userId,
               loginId: invite.loginId,
+              recoveryEmail,
               name: invite.name,
               phone: invite.phone,
             },
@@ -310,7 +335,7 @@ export async function acceptGuardianInviteAction(
   // 3) 세션 수립
   const supabase = await createClient();
   await supabase.auth.signInWithPassword({
-    email: placeholderEmail,
+    email: authEmail,
     password: parsed.data.password,
   });
 
