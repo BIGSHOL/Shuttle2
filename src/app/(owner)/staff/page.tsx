@@ -29,11 +29,14 @@ const ROLE_LABEL = {
   HELPER: "동승보호자",
 } as const;
 
+// -ml-2: 표 셀 안에서 배지 px-2 패딩만큼 당겨서 헤더 텍스트와 좌측 정렬.
 const ROLE_BADGE: Record<keyof typeof ROLE_LABEL, string> = {
-  OWNER: "bg-primary/10 text-primary rounded-md px-2 py-0.5 text-xs font-bold",
+  OWNER:
+    "bg-primary/10 text-primary -ml-2 rounded-md px-2 py-0.5 text-xs font-bold",
   DRIVER:
-    "bg-success-soft text-success rounded-md px-2 py-0.5 text-xs font-bold",
-  HELPER: "bg-info-soft text-info rounded-md px-2 py-0.5 text-xs font-bold",
+    "bg-success-soft text-success -ml-2 rounded-md px-2 py-0.5 text-xs font-bold",
+  HELPER:
+    "bg-info-soft text-info -ml-2 rounded-md px-2 py-0.5 text-xs font-bold",
 };
 
 function formatDate(d: Date) {
