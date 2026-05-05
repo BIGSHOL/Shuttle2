@@ -1,5 +1,5 @@
 import { db } from "@/lib/db";
-import { haversineMeters } from "@/lib/geo/distance";
+import { computeDistanceMeters } from "@/lib/geo/trip-stats";
 
 import { quarterRangeUtc, type Quarter } from "./quarter";
 
@@ -110,15 +110,7 @@ export async function getSafetyReportData(
     vehicles: vehicles.map((v) => {
       const rows = v.trips.map((t) => {
         const pings = t.pings;
-        let distMeters = 0;
-        for (let i = 1; i < pings.length; i++) {
-          distMeters += haversineMeters(
-            pings[i - 1].lat,
-            pings[i - 1].lng,
-            pings[i].lat,
-            pings[i].lng,
-          );
-        }
+        const distMeters = computeDistanceMeters(pings);
         const hasPings = pings.length > 0;
         return {
           date: fmtDateKst(t.date),
