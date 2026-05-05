@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -19,8 +20,6 @@ import {
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 
-import { DeleteStaffButton } from "./_components/delete-staff-button";
-import { ResetStaffPasswordButton } from "./_components/reset-staff-password-button";
 import { RevokeInviteButton } from "./_components/revoke-invite-button";
 
 const ROLE_LABEL = {
@@ -63,8 +62,8 @@ export default async function StaffPage() {
         <div>
           <h2 className="text-2xl font-semibold">직원</h2>
           <p className="text-muted-foreground text-sm">
-            학원장·원장 본인과 기사·동승보호자를 관리합니다. 새 기사·동승자는
-            초대 링크를 발급해 가입하게 합니다.
+            학원장·원장 본인과 기사·동승보호자를 관리합니다. 카드를 누르면 30일
+            운행 기록·안전교육 만기·미흡 운행을 확인합니다.
           </p>
         </div>
         <Button asChild>
@@ -79,56 +78,43 @@ export default async function StaffPage() {
           <CardDescription>본인 + 가입을 마친 기사·동승자.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
-          {/* 모바일/태블릿: 카드 stack — 가로 스크롤 회피 */}
+          {/* 모바일/태블릿: 카드 stack */}
           <ul className="space-y-2 px-4 pb-4 lg:hidden">
             {staffs.map((s) => {
               const isMe = s.id === me.staff.id;
               return (
                 <li key={s.id}>
-                  <div className="bg-card rounded-lg border p-3.5 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span className={ROLE_BADGE[s.role]}>
-                            {ROLE_LABEL[s.role]}
-                          </span>
-                          <h3 className="text-sm font-extrabold tracking-tight">
-                            {s.name}
-                            {isMe ? (
-                              <span className="text-muted-foreground ml-1.5 text-[10px] font-medium">
-                                (나)
-                              </span>
-                            ) : null}
-                          </h3>
-                        </div>
-                        <p className="text-muted-foreground mt-1.5 text-xs font-medium">
-                          ID {s.loginId ?? "—"} · {s.phone || "—"} ·{" "}
-                          {s.userId ? "가입 완료" : "미가입"}
-                        </p>
-                      </div>
-                      {!(isMe || s.role === "OWNER") ? (
-                        <div className="flex shrink-0 flex-col items-end gap-1.5">
-                          {s.userId && s.loginId ? (
-                            <ResetStaffPasswordButton
-                              staffId={s.id}
-                              name={s.name}
-                            />
+                  <Link
+                    href={`/staff/${s.id}`}
+                    className="bg-card hover:bg-muted/40 flex items-start justify-between gap-3 rounded-lg border p-3.5 shadow-sm transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className={ROLE_BADGE[s.role]}>
+                          {ROLE_LABEL[s.role]}
+                        </span>
+                        <h3 className="text-sm font-extrabold tracking-tight">
+                          {s.name}
+                          {isMe ? (
+                            <span className="text-muted-foreground ml-1.5 text-[10px] font-medium">
+                              (나)
+                            </span>
                           ) : null}
-                          <DeleteStaffButton
-                            id={s.id}
-                            name={s.name}
-                            roleLabel={ROLE_LABEL[s.role]}
-                          />
-                        </div>
-                      ) : null}
+                        </h3>
+                      </div>
+                      <p className="text-muted-foreground mt-1.5 text-xs font-medium">
+                        ID {s.loginId ?? "—"} · {s.phone || "—"} ·{" "}
+                        {s.userId ? "가입 완료" : "미가입"}
+                      </p>
                     </div>
-                  </div>
+                    <ChevronRight className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
+                  </Link>
                 </li>
               );
             })}
           </ul>
 
-          {/* 데스크톱: 표 */}
+          {/* 데스크톱: 표 — 행 전체 Link */}
           <div className="hidden lg:block">
             <Table>
               <TableHeader>
@@ -138,58 +124,74 @@ export default async function StaffPage() {
                   <TableHead className="w-32">역할</TableHead>
                   <TableHead className="w-40">전화</TableHead>
                   <TableHead className="w-24">상태</TableHead>
-                  <TableHead className="pr-[18px] text-right">관리</TableHead>
+                  <TableHead className="w-12 pr-[18px] text-right" />
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {staffs.map((s) => {
                   const isMe = s.id === me.staff.id;
                   return (
-                    <TableRow key={s.id}>
-                      <TableCell className="font-medium">
-                        {s.name}
-                        {isMe ? (
-                          <span className="text-muted-foreground ml-2 text-xs">
-                            (나)
+                    <TableRow
+                      key={s.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/staff/${s.id}`}
+                          className="block px-2 py-2 font-medium"
+                        >
+                          {s.name}
+                          {isMe ? (
+                            <span className="text-muted-foreground ml-2 text-xs">
+                              (나)
+                            </span>
+                          ) : null}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/staff/${s.id}`}
+                          className="block px-2 py-2 font-mono text-xs"
+                        >
+                          {s.loginId ?? (
+                            <span className="text-muted-foreground">—</span>
+                          )}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/staff/${s.id}`}
+                          className="block px-2 py-2"
+                        >
+                          <span className={ROLE_BADGE[s.role]}>
+                            {ROLE_LABEL[s.role]}
                           </span>
-                        ) : null}
+                        </Link>
                       </TableCell>
-                      <TableCell className="font-mono text-xs">
-                        {s.loginId ?? (
-                          <span className="text-muted-foreground">—</span>
-                        )}
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/staff/${s.id}`}
+                          className="text-muted-foreground block px-2 py-2 text-sm"
+                        >
+                          {s.phone || "—"}
+                        </Link>
                       </TableCell>
-                      <TableCell>
-                        <span className={ROLE_BADGE[s.role]}>
-                          {ROLE_LABEL[s.role]}
-                        </span>
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/staff/${s.id}`}
+                          className="text-muted-foreground block px-2 py-2 text-sm"
+                        >
+                          {s.userId ? "가입 완료" : "미가입"}
+                        </Link>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {s.phone || "—"}
-                      </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {s.userId ? "가입 완료" : "미가입"}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {isMe || s.role === "OWNER" ? (
-                          <span className="text-muted-foreground text-xs">
-                            —
-                          </span>
-                        ) : (
-                          <div className="inline-flex items-start gap-1.5">
-                            {s.userId && s.loginId ? (
-                              <ResetStaffPasswordButton
-                                staffId={s.id}
-                                name={s.name}
-                              />
-                            ) : null}
-                            <DeleteStaffButton
-                              id={s.id}
-                              name={s.name}
-                              roleLabel={ROLE_LABEL[s.role]}
-                            />
-                          </div>
-                        )}
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/staff/${s.id}`}
+                          className="text-muted-foreground flex items-center justify-end pr-[18px] py-2"
+                          aria-label="상세"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
                       </TableCell>
                     </TableRow>
                   );

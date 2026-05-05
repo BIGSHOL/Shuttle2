@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -159,7 +160,7 @@ export function InviteForm({ origin }: { origin: string }) {
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
             <Button asChild type="button" variant="outline">
-              <a href="/staff">취소</a>
+              <Link href="/staff">취소</Link>
             </Button>
             <Button type="submit" disabled={pending}>
               {pending ? "발급 중..." : "초대 링크 발급"}
