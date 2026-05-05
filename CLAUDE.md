@@ -231,7 +231,7 @@ vercel deploy --prod --yes  # 프로덕션 배포
 
 `progress.md` — 세션이 끊겨도 웹/앱 클로드 코드에서 이어가도록 마일스톤·결정사항·다음 우선순위 기록.
 
-### 마일스톤 요약 (2026-05-03 기준)
+### 마일스톤 요약 (2026-05-05 기준)
 
 - W1~W7: 도메인 모델·CRUD·기사·학부모·실시간 GPS·KIDS 안전점검·RLS·보험 D-30·안전교육
 - W8: 마케팅 사전등록 + admin
@@ -261,6 +261,12 @@ vercel deploy --prod --yes  # 프로덕션 배포
   스탠다드·프로·푸시 알림·브라우저 종류·구독 주소·실시간 위치 전송)
 - W18-C: layout 진입 가드를 throw → redirect (driver/helper/owner 모두
   비-역할 사용자가 영어 stack trace 보지 않게 본인 home으로 redirect)
+- W19: 학원장 차량 모니터링 강화 — 운행 중 trail polyline (Hybrid 30s
+  server fetch + 5s broadcast append), dashboard 멀티 trip 라이브 지도
+  (`MultiTripLiveSection` + `useTripBroadcastWithTrail`), Trip 상세 운행
+  통계 카드 + 정류장 도착 시각 표, `/dashboard/analytics` 노선·기사별 평균
+  통계 페이지 + nav 항목. trip-stats utility(`src/lib/geo/trip-stats.ts`)로
+  안전운행기록 PDF의 누적거리 계산 코드도 DRY refactor.
 
 ### 알려진 미해결 (다음 세션)
 

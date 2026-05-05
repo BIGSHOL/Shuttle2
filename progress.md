@@ -591,7 +591,76 @@
      응답 → demo OWNER dashboard에 KPI "1" 자동 갱신
   4. 신규 직원 초대 → loginId·recoveryEmail 가입 → 자동 로그인 정상
 
-## 다음 우선순위 (W19+)
+## W19 학원장 차량 모니터링 강화 (2026-05-05)
+
+베타 운영 중 학원장이 운영 의사결정에 필요한 도구가 부족해서 추가.
+세 기능을 한 패키지로 한 번 배포·검증.
+
+### W19-A trip-stats utility + safety-report DRY refactor (`475310e`)
+
+- `src/lib/geo/trip-stats.ts` 신설 — `computeTripStats(pings, startedAt, endedAt)`
+  + `computeStopArrivals(pings, stops)` + `formatDuration(sec)` helper.
+  durationSec / distanceKm / avgSpeedKmh / maxSpeedKmh / pingCount 한 번에 계산.
+- 기존 `src/lib/pdf/safety-report-data.ts`의 자체 for-loop 누적거리 코드를
+  `computeDistanceMeters`로 이전. PDF distanceKm 결과는 동일 (regression 0).
+- 이후 W19-B~E 커밋이 이 utility 위에서 동작.
+
+### W19-B 운행 중 실시간 trail polyline (`2ffc78e`, `41c698e`)
+
+- 학원장 trip 상세에서 운행 중에도 노란 trail polyline 표시.
+- Hybrid 방식: server에서 LocationPing(30s grain) → initialTrail prop으로 전달
+  + client에서 broadcast(5s grain) ping을 useState에 append.
+- 직전 좌표와 ~5m 이내면 dedup (정지 중 점 누적 방지).
+- `src/lib/geo/use-trip-broadcast-with-trail.ts` — 콜백 안에서 setState 하는
+  단일 hook. react-hooks/set-state-in-effect 룰 회피.
+
+### W19-C 멀티 trip 라이브 지도 (`41c698e`)
+
+- 학원장 dashboard 상단에 "운행 중 셔틀 위치" 카드 추가, 운행 중 1개 이상일
+  때만 자동 표시. 모두 종료 시 섹션 자체 숨김.
+- 카카오맵 1개에 N개 셔틀 마커 + 정류장 합집합 + 노선별 polyline.
+  마커 클릭 → 해당 trip 상세로 이동.
+- 신규: `src/lib/map/multi-trip-live-map-inner.tsx`,
+  `src/lib/map/multi-trip-live-map.tsx`,
+  `src/app/(owner)/dashboard/_components/multi-trip-live-section.tsx`.
+- 각 trip별 broadcast 구독은 mini-component(TripPingFeeder) 패턴 — Rules of
+  Hooks 위반 없이 N개 useTripBroadcast 호출.
+- dashboard page 수정: Phase 2 Promise.all에 stops fetch 추가, liveMapTrips
+  변환, OrgDashboardRefresher 직후 마운트.
+
+### W19-D Trip 상세 통계 카드 + 정류장 도착 시각 표 (`3acc2b3`)
+
+- `TripStatsCard` — 운행 시간 / 누적 거리 / 평균 속도 / 최대 속도 4-grid.
+  운행 중·종료 모두. 운행 중은 "지금까지" 누계, 종료 시 최종값.
+- `StopArrivalsTable` — 정류장별 도착 시각(STOP_PASS) + 직전 구간 소요 +
+  탑승·미탑승 처리 건수. 모바일 카드 stack + 데스크톱 표 (W18 패턴).
+- 정류장별 처리 건수는 BoardingEvent를 학생→정류장 매핑으로 derive.
+- LocationPing select에 recordedAt/source/speed 추가.
+
+### W19-E /dashboard/analytics 운행 분석 페이지 (`967d8cb`)
+
+- searchParam `?range=7d|30d|90d` (default 30d). 노선별 평균 + 기사별 평균
+  두 섹션. 평균 운행 시간·거리·속도, 운행 횟수, 미탑승 누적.
+- 신규: `src/lib/analytics/trip-aggregates.ts` — aggregateByRoute /
+  aggregateByDriver. computeTripStats 재사용. orgId 필터(vehicle:{orgId})로
+  멀티테넌시 준수.
+- nav 항목 "분석"(BarChart3) 추가. 안전기록 바로 앞 위치. 항목 11→12개.
+- loading.tsx skeleton — aggregate 쿼리 1~2초 대응.
+
+### 사용자 가치
+
+- 차량 N대 학원: 한 지도에서 모든 셔틀 동시 모니터링 가능
+- 운행 후: 평균 속도·미탑승 건수 등 객관적 KPI로 기사·노선 성과 비교
+- 운행 중: trail polyline으로 "방금 어디 거쳐 왔지?" 즉시 답
+- 안전운행기록 PDF의 분기 단위 distanceKm와 동일 utility — 일관성 보장
+
+### W19 검증
+
+- typecheck/lint/build 모두 clean
+- /dashboard/analytics 라우트 build 성공
+- LocationPing/realtime broadcast/RLS 변경 없음
+
+## 다음 우선순위 (W20+)
 
 ### W17-B: 가입 확인 메일 한국어 (선택)
 
