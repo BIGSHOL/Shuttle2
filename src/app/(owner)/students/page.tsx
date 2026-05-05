@@ -78,9 +78,13 @@ export default async function StudentsPage() {
                 : "bg-muted text-muted-foreground";
               return (
                 <li key={s.id}>
-                  <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                  <div className="bg-card rounded-lg border shadow-sm">
                     <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
+                      {/* 메인 영역 — 카드 클릭 시 학생 상세로 (W20-A) */}
+                      <Link
+                        href={`/students/${s.id}`}
+                        className="hover:bg-muted/40 min-w-0 flex-1 rounded-lg p-3.5 transition-colors"
+                      >
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span
                             className={`${ageCls} rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide`}
@@ -95,8 +99,8 @@ export default async function StudentsPage() {
                           출생 {s.birthYear} · 노선 {s._count.routes}개 ·
                           보호자 {s._count.guardians}명
                         </p>
-                      </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1.5">
+                      </Link>
+                      <div className="flex shrink-0 flex-col items-end gap-1.5 p-3.5">
                         <Button asChild size="sm" variant="outline">
                           <Link href={`/students/${s.id}/edit`}>편집</Link>
                         </Button>
@@ -133,7 +137,14 @@ export default async function StudentsPage() {
                     const isKids = age < 13;
                     return (
                       <TableRow key={s.id}>
-                        <TableCell className="font-medium">{s.name}</TableCell>
+                        <TableCell className="font-medium">
+                          <Link
+                            href={`/students/${s.id}`}
+                            className="hover:text-primary hover:underline"
+                          >
+                            {s.name}
+                          </Link>
+                        </TableCell>
                         <TableCell className="font-mono text-sm">
                           {s.birthYear}
                         </TableCell>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -60,9 +61,9 @@ export function GuardianInviteForm({
               {students.length === 0 ? (
                 <p className="text-destructive text-sm">
                   먼저{" "}
-                  <a href="/students" className="font-medium underline">
+                  <Link href="/students" className="font-medium underline">
                     {termLabel}을 등록
-                  </a>
+                  </Link>
                   해야 보호자를 초대할 수 있습니다.
                 </p>
               ) : (

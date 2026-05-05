@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useMemo, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -189,7 +190,7 @@ export function StudentForm({
 
       <CardFooter className="flex justify-end gap-2">
         <Button asChild type="button" variant="outline">
-          <a href="/students">취소</a>
+          <Link href="/students">취소</Link>
         </Button>
         <Button type="submit" disabled={pending}>
           {pending ? "저장 중..." : submitLabel}
