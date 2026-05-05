@@ -522,6 +522,7 @@ export default async function OwnerTripDetailPage({
             name={trip.driver.name}
             phone={trip.driver.phone}
             Icon={User}
+            analyticsHref={`/dashboard/analytics/drivers/${trip.driver.id}?range=30d`}
           />
           {trip.helper ? (
             <StaffRow
@@ -632,7 +633,12 @@ export default async function OwnerTripDetailPage({
                             <AlertTriangle className="text-destructive mt-0.5 h-3.5 w-3.5 shrink-0" />
                             <div className="min-w-0 flex-1">
                               <p className="text-destructive flex items-center gap-1.5 font-extrabold">
-                                {st.name}
+                                <Link
+                                  href={`/students/${st.id}`}
+                                  className="hover:underline"
+                                >
+                                  {st.name}
+                                </Link>
                                 <span className="bg-destructive text-destructive-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide whitespace-nowrap">
                                   {iss.type === "NO_SHOW" ? "미탑승" : "미하차"}
                                 </span>
@@ -656,9 +662,12 @@ export default async function OwnerTripDetailPage({
                             className="border-warning/30 bg-warning-soft/30 flex items-center gap-2 rounded-lg border px-2.5 py-1.5 text-sm"
                           >
                             <Calendar className="text-warning h-3.5 w-3.5 shrink-0" />
-                            <span className="flex-1 truncate font-bold">
+                            <Link
+                              href={`/students/${st.id}`}
+                              className="hover:text-primary flex-1 truncate font-bold hover:underline"
+                            >
                               {st.name}
-                            </span>
+                            </Link>
                             <span className="bg-warning text-warning-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide whitespace-nowrap">
                               {ABSENCE_LABEL[ab.status]}
                             </span>
@@ -679,15 +688,16 @@ export default async function OwnerTripDetailPage({
                           ) : (
                             <span className="border-muted-foreground/40 inline-block h-3 w-3 shrink-0 rounded-full border" />
                           )}
-                          <span
+                          <Link
+                            href={`/students/${st.id}`}
                             className={
                               checked
-                                ? "text-success flex-1 truncate font-extrabold"
-                                : "flex-1 truncate font-bold"
+                                ? "text-success hover:text-primary flex-1 truncate font-extrabold hover:underline"
+                                : "hover:text-primary flex-1 truncate font-bold hover:underline"
                             }
                           >
                             {st.name}
-                          </span>
+                          </Link>
                           {checked && at ? (
                             <span className="text-muted-foreground font-mono text-[11px] font-medium whitespace-nowrap">
                               {fmtKstHHmm(at)}
@@ -729,12 +739,15 @@ function StaffRow({
   name,
   phone,
   Icon,
+  analyticsHref,
 }: {
   tone: "success" | "info";
   label: string;
   name: string;
   phone: string | null;
   Icon: React.ComponentType<{ className?: string }>;
+  /** W20-A2: 기사일 때 그 기사의 분석 페이지로 이름 클릭 시 이동. */
+  analyticsHref?: string;
 }) {
   const cls =
     tone === "success"
@@ -751,7 +764,16 @@ function StaffRow({
         <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
           {label}
         </p>
-        <p className="truncate text-sm font-extrabold">{name}</p>
+        {analyticsHref ? (
+          <Link
+            href={analyticsHref}
+            className="hover:text-primary block truncate text-sm font-extrabold hover:underline"
+          >
+            {name}
+          </Link>
+        ) : (
+          <p className="truncate text-sm font-extrabold">{name}</p>
+        )}
       </div>
       {phone ? (
         <a

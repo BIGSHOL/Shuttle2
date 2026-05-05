@@ -415,22 +415,24 @@ export default async function DashboardPage() {
             </div>
             <ul className="mt-3 space-y-1.5">
               {repeatNoShowAlerts.map((s) => (
-                <li
-                  key={s.id}
-                  className="bg-background flex items-center justify-between gap-3 rounded-md border px-3 py-2"
-                >
-                  <div className="flex flex-1 items-center gap-2">
-                    <span className="text-sm font-bold">{s.name}</span>
-                    {s.guardianName ? (
-                      <span className="text-muted-foreground text-[11px] font-medium">
-                        · 보호자 {s.guardianName}
-                        {s.guardianPhone ? ` (${s.guardianPhone})` : ""}
-                      </span>
-                    ) : null}
-                  </div>
-                  <span className="bg-destructive/10 text-destructive rounded-md px-2 py-0.5 text-[11px] font-bold">
-                    {s.count}건
-                  </span>
+                <li key={s.id}>
+                  <Link
+                    href={`/students/${s.id}`}
+                    className="bg-background hover:bg-muted/40 flex items-center justify-between gap-3 rounded-md border px-3 py-2 transition-colors"
+                  >
+                    <div className="flex flex-1 items-center gap-2">
+                      <span className="text-sm font-bold">{s.name}</span>
+                      {s.guardianName ? (
+                        <span className="text-muted-foreground text-[11px] font-medium">
+                          · 보호자 {s.guardianName}
+                          {s.guardianPhone ? ` (${s.guardianPhone})` : ""}
+                        </span>
+                      ) : null}
+                    </div>
+                    <span className="bg-destructive/10 text-destructive rounded-md px-2 py-0.5 text-[11px] font-bold">
+                      {s.count}건
+                    </span>
+                  </Link>
                 </li>
               ))}
             </ul>
