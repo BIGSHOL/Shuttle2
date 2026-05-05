@@ -41,11 +41,13 @@ export function useGpsTracker({
   active: boolean;
   stops: StopWithGeo[];
   onStopPassed?: (stopId: string) => void;
-}): GpsState {
+}): GpsState & { retry: () => void } {
   const [fix, setFix] = useState<GeolocationCoordinates | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [passed, setPassed] = useState<Set<string>>(() => new Set());
   const [startedSent, setStartedSent] = useState(false);
+  // W20-C3: GPS 오류 발생 후 사용자가 명시적으로 재시도. retryKey 증가 → effect 재실행.
+  const [retryKey, setRetryKey] = useState(0);
 
   // 최신 좌표 / 마지막 broadcast·DB 시점·passed set·startedSent를 ref로 유지
   // (interval timer가 stale closure에 갇히지 않게)
@@ -192,9 +194,19 @@ export function useGpsTracker({
       channel.unsubscribe().catch(() => {});
     };
     // stops/onStopPassed는 ref·passedRef로 안정화 — re-mount 회피.
+    // retryKey는 GPS 오류 후 사용자가 "다시 시도" 누르면 effect 재실행 (W20-C3).
     // 의도적으로 deps 최소화.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [tripId, active]);
+  }, [tripId, active, retryKey]);
 
-  return { fix, error, passed, startedSent };
+  return {
+    fix,
+    error,
+    passed,
+    startedSent,
+    retry: () => {
+      setError(null);
+      setRetryKey((k) => k + 1);
+    },
+  };
 }

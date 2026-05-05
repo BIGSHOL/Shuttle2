@@ -8,6 +8,7 @@ import { todayBitKst, todayUtcDateKst } from "@/lib/date/today";
 import { env } from "@/lib/env";
 
 import { DriverNotificationToggle } from "../notifications/driver-notification-toggle";
+import { DriverPermissionsCard } from "./_components/driver-permissions-card";
 import { StartTripButton } from "./start-trip-button";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
@@ -83,6 +84,9 @@ export default async function RunPage() {
           </div>
         ) : null}
       </div>
+
+      {/* W20-C1: 운행 시작 전 브라우저 권한·기능 사전 체크 (활성 trip 없을 때만) */}
+      {activeTrip ? null : <DriverPermissionsCard />}
 
       <details className="bg-card rounded-lg border px-4 py-3 text-sm shadow-sm">
         <summary className="text-foreground cursor-pointer text-xs font-bold tracking-wide uppercase">

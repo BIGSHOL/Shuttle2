@@ -359,7 +359,25 @@ export function TripRunningView({
           <p className="text-destructive mt-2 text-xs">{wakeLock.error}</p>
         ) : null}
         {gps.error ? (
-          <p className="text-destructive mt-2 text-xs">GPS: {gps.error}</p>
+          <div className="border-destructive/40 bg-destructive/5 mt-2 rounded-md border p-2.5">
+            <p className="text-destructive text-xs font-bold">
+              GPS 신호 없음
+            </p>
+            <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
+              {gps.error}
+            </p>
+            <p className="text-muted-foreground mt-1 text-[11px] font-medium">
+              지하 주차장·터널일 수 있어요. 야외로 나오거나, 위치 권한이 막혔다면
+              브라우저 자물쇠 → 위치 → 허용으로 변경.
+            </p>
+            <button
+              type="button"
+              onClick={gps.retry}
+              className="bg-destructive text-destructive-foreground mt-2 inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-bold hover:opacity-90"
+            >
+              GPS 다시 시도
+            </button>
+          </div>
         ) : null}
       </div>
 

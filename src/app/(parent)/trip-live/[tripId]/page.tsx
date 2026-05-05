@@ -46,7 +46,7 @@ export default async function TripLivePage({
         },
       },
       vehicle: { select: { plate: true, mode: true } },
-      driver: { select: { name: true } },
+      driver: { select: { name: true, phone: true } },
       helper: { select: { name: true } },
       pings: {
         where: { source: "STOP_PASS" },
@@ -139,6 +139,7 @@ export default async function TripLivePage({
       }}
       vehicle={trip.vehicle}
       driverName={trip.driver.name}
+      driverPhone={trip.driver.phone}
       helperName={trip.helper?.name ?? null}
       stops={trip.route.stops.map((rs) => ({
         id: rs.id,
