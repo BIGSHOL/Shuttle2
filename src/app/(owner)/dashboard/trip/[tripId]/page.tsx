@@ -154,15 +154,17 @@ export default async function OwnerTripDetailPage({
   const isFinished = trip.endedAt !== null;
   const isScheduled = trip.startedAt === null;
 
-  // 종료된 운행만 GPS trail 추가 fetch (안전운행기록 면책 자료).
-  // 진행 중 운행은 broadcast로 이미 보고 있으니 중복 fetch 안 함.
-  const trail = isFinished
-    ? await db.locationPing.findMany({
-        where: { tripId },
-        orderBy: { recordedAt: "asc" },
-        select: { lat: true, lng: true },
-      })
-    : [];
+  // GPS trail fetch — 진행 중·종료 모두. 운행 중에는 진입 전까지의 누적 경로를
+  // 학원장이 즉시 보게 하고, 진입 후는 client에서 broadcast ping을 append (W19-B).
+  // 예정 운행은 ping이 없으니 skip.
+  const trail =
+    isRunning || isFinished
+      ? await db.locationPing.findMany({
+          where: { tripId },
+          orderBy: { recordedAt: "asc" },
+          select: { lat: true, lng: true },
+        })
+      : [];
 
   const eventType: "BOARD" | "ALIGHT" =
     trip.route.direction === "PICKUP" ? "BOARD" : "ALIGHT";
@@ -403,6 +405,7 @@ export default async function OwnerTripDetailPage({
             tripId={tripId}
             stops={liveMapStops}
             direction={trip.route.direction}
+            initialTrail={trail}
           />
         </section>
       ) : null}
