@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-04 (W18+ 베타 직전 sweep — 한글화·loginId·데이터 고도화·env 가드)
+> 마지막 업데이트: 2026-05-06 (W21 학원장 메뉴 4종 360° drill-down 배포)
 
 ## 완료된 마일스톤
 
@@ -19,16 +19,87 @@
 | W15-B | BoardingType NO_SHOW/NO_DROPOFF + 미탑승·미하차 보고 UI + 푸시                   | `a2bf51b`            | ✅   |
 | W15-C | 약관·개인정보처리방침 + 가입 동의 link                                           | `3c41c2a`            | ✅   |
 | W15-D | 비밀번호 재설정 흐름 (`/forgot-password` → `/reset-password`) + client env 수정  | `684315a`            | ✅   |
-| W16   | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh)          | _이번_               | ⏳   |
-| W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용)                     | _이번_               | ⏳   |
-| W17-A | Supabase 비밀번호 재설정 메일 한국어 템플릿 (`supabase/templates/recovery.html`) | _이번_               | ⏳   |
-| W17-C | 학부모 BottomTabBar (홈·알림·결석·정류장 4탭)                                    | _이번_               | ⏳   |
-| W16-C | 종료 운행 GPS 경로 (LocationPing trail polyline)                                 | _이번_               | ⏳   |
-| W17-D | 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화)          | _이번_               | ⏳   |
-| W16-D | 학원장 dashboard 실시간 자동 갱신 (`org-trips:<orgId>` 채널)                     | _이번_               | ⏳   |
-| W17-E | `SHUTTLE_NEAR_CHILD` 알림 카테고리 + 안전운행기록 PDF에 GPS 누적거리             | _이번_               | ⏳   |
+| W16   | 학원장 trip 상세 실시간 자동 갱신 (Realtime broadcast + router.refresh)          | `9dbb04d`            | ✅   |
+| W16-B | 학원장 trip 상세 실시간 GPS 지도 (`useTripBroadcast` 재사용)                     | `2b47e5d`            | ✅   |
+| W16-C | 종료 운행 GPS 경로 (LocationPing trail polyline)                                 | `4842dff`            | ✅   |
+| W16-D | 학원장 dashboard 실시간 자동 갱신 (`org-trips:<orgId>` 채널)                     | `c39cba3`            | ✅   |
+| W17-A | Supabase 비밀번호 재설정 메일 한국어 템플릿 (`supabase/templates/recovery.html`) | `e3e8842`            | ✅   |
+| W17-C | 학부모 BottomTabBar (홈·알림·결석·정류장 4탭)                                    | `ad577fc`            | ✅   |
+| W17-D | 기사·동승자 trip 화면 실시간 자동 갱신 (`TripRealtimeRefresher` 공용화)          | `4842dff`            | ✅   |
+| W17-E | `SHUTTLE_NEAR_CHILD` 알림 카테고리 + 안전운행기록 PDF에 GPS 누적거리             | `ec60e79`            | ✅   |
+| W18   | 베타 직전 패키지 — Storage 업로드·NO_SHOW S1·M1·DB 인덱스·loginId 도입·데이터 고도화 #1·#2·#10 | `eb32b6f`, `a0a1f80` | ✅ |
+| W18-B | 사용자 노출 영어 광범위 한글화 (운행 중·도착 예상·위치·앱·라이트·스탠다드·프로 등) | _W18 묶음_         | ✅   |
+| W18-C | layout 진입 가드 throw → redirect (영어 stack trace 사용자 노출 차단)            | _W18 묶음_           | ✅   |
+| W19   | 학원장 차량 모니터링 강화 — 운행 중 trail·멀티 trip 지도·운행 통계·`/dashboard/analytics` | `2ffc78e`, `41c698e`, `3acc2b3`, `967d8cb`, `7e3b50f`, `e20779a` | ✅ |
+| W20   | UX 풀세트 — 학생 360°·cross-link·toast·error.tsx·기사 권한·학부모 통화·신청 현황·PWA 배너 | `7d5924a`, `ebfdd7c`, `bf65989`, `dc03bdd`, `fdf25ed` | ✅ |
+| W21   | 학원장 메뉴 4종 360° drill-down — 차량·기사·정류장·학부모 detail + 카카오맵 read-only | `fdfbe99`, `3774fe1`, `8fcf3ae`, `0ab030b`, `651b76c` | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
+
+## 다른 컴퓨터에서 이어가기 (Quickstart)
+
+다른 컴퓨터에서 이 프로젝트 작업을 이어 받을 때 필요한 단계.
+
+### 1. 코드·툴 준비
+
+```bash
+git clone https://github.com/BIGSHOL/Shuttle2.git
+cd Shuttle2
+nvm install 22 && nvm use 22   # Node.js 22 LTS (Next.js 16 권장)
+npm install -g pnpm@10         # 패키지매니저는 pnpm 고정
+pnpm install
+```
+
+### 2. 환경변수 (.env.local)
+
+`.env.example`에 정의된 8개 키 모두 필요. 1Password 또는 팀 비밀저장소에서 받아 `.env.local`로 저장:
+
+```
+NEXT_PUBLIC_SUPABASE_URL=          # Supabase 프로젝트 URL (Asia Seoul region)
+NEXT_PUBLIC_SUPABASE_ANON_KEY=     # 클라이언트 노출 OK
+SUPABASE_SERVICE_ROLE_KEY=         # 서버 전용. 절대 client에 노출 X
+DATABASE_URL=                      # Supabase pooler (W18: 6543 포트). Prisma client 사용
+DIRECT_URL=                        # Supabase direct (5432 포트). Prisma migration·service role 우회용
+NEXT_PUBLIC_KAKAO_MAP_KEY=         # 카카오 개발자 콘솔 JavaScript Key
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=      # web-push 공개키 (한 번 생성 후 고정)
+VAPID_PRIVATE_KEY=                 # web-push 비밀키 (한 번 생성 후 고정)
+```
+
+VAPID 새로 만들 때: `npx web-push generate-vapid-keys`. 한 번 생성하면 학부모 디바이스 구독이 그 키쌍에 묶이므로 절대 변경 X.
+
+### 3. 데이터베이스 동기화
+
+```bash
+pnpm db:push       # 스키마 → 원격 DB 즉시 반영 (개발용. 데모 환경)
+# 또는 production-grade
+pnpm db:migrate    # prisma/migrations 폴더의 .sql 적용 (RLS 마이그레이션 포함)
+pnpm db:studio     # 데이터 확인·수정 GUI
+```
+
+### 4. 개발 서버
+
+```bash
+pnpm dev           # http://localhost:3000 (Next.js 16 Turbopack)
+```
+
+데모 학원·기사·학부모 계정은 Supabase auth.users에 이미 있음. 비밀번호는 1Password 또는 학원장 본인 reset 메일로.
+
+### 5. 검증·배포
+
+```bash
+pnpm typecheck     # tsc --noEmit (any 금지·strict)
+pnpm lint          # eslint (anchor nesting·no-html-link-for-pages 등)
+pnpm build         # production 빌드 (라우트 충돌 검증 + cascading lint)
+git push origin main
+vercel deploy --prod --yes   # Vercel CLI로 배포 (또는 main push 시 자동)
+```
+
+### 6. 새 세션 진입 시 첫 단계
+
+1. `git log --oneline -10` — 최근 커밋 확인 (어디까지 진행됐나)
+2. `progress.md` "완료된 마일스톤" 표·"다음 우선순위" 섹션 읽기
+3. `CLAUDE.md` 가드레일·디자인 토큰 다시 확인
+4. 작업 전: `pnpm typecheck && pnpm lint` — 진입 시점에 깨끗한지 확인
 
 ## W12 완료 (`f87e566` 배포됨)
 
@@ -852,29 +923,50 @@
 
 ## 다음 우선순위 (W22+)
 
-### W17-B: 가입 확인 메일 한국어 (선택)
+W21까지 학원장 운영 도구는 베타 운영 가능 수준에 도달. 다음은 베타 졸업·정식
+런칭 준비를 위한 항목 위주.
 
-- Supabase email_confirm bypass 해제 시 필요. 베타 시점은 보류.
+### P1 — 베타 졸업 필수
 
-### W17: 인증·기능 보강
+1. **결제 통합 (Toss Payments 또는 Stripe)**
+   - Plan 모델: TRIAL → BASIC → PRO 전환
+   - 차량 단위 월 청구 + 세금계산서 발행
+   - Stripe Customer Portal 또는 Toss 빌링키로 구독 관리
+   - `prisma/schema.prisma`에 Subscription 모델 + 청구 webhook handler
 
-- 학부모 폰 OTP 가입 (Supabase phone auth + SMS provider)
-- 약관·개인정보처리방침 정식 법무 검토
-- Supabase 이메일 템플릿 한국어 커스터마이즈
+2. **정식 법무 검토 (약관·개인정보처리방침)**
+   - 현재 `/terms`·`/privacy`는 W15-C 베타 임시본
+   - 한국 개인정보보호법·청소년보호법(영유아 처리 한정) 변호사 검토
+   - 학부모 가입 시 GPS·푸시·자녀 정보 처리 명시 동의 반영
 
-### W18: 결제·요금제
+3. **학부모 폰 OTP 가입 + 자녀 검색 가입 흐름**
+   - 현재 `/parent-invite/[token]` 토큰 기반만 지원
+   - Supabase phone auth + SMS provider(NHN Cloud SMS 등) 통합
+   - 토큰 없어도 phone + 학생 이름·생년 검색으로 가입 가능 옵션
+   - phone OTP는 `auth.users` placeholder 이메일 패턴(`+82{phone}@shuttlee.local`) 검토
 
-- Toss Payments 또는 Stripe 통합
-- Plan 전환 (TRIAL → BASIC → PRO)
-- 차량 단위 청구 + 세금계산서
+### P1 — 베타 운영 중 발견 시 즉시
 
-## 다음 우선순위 (이번 세션 또는 다음)
+4. **W17-B 가입 확인 메일 한국어 템플릿** (선택, 현재 `email_confirm` bypass됨)
+5. **푸시 미전송 디버깅 도구** — `/guardians/[id]` push 디바이스 카드는 만들었지만 발송 실패 history(`Notification.failedAt` 같은 필드)는 미구현
 
-1. **W12 완료** — owner 페이지 토큰 마이그레이션 + verify + deploy
-2. **W13 (디자인 W6)** — 마케팅 랜딩 디자인 + 가입 분기 + 요금제 UI
-3. **W14+** — owner-side trip-live 모니터 (실시간 지도 view)
-4. **W15+** — Notification 카테고리 SHUTTLE_NEAR_CHILD 추가, BoardingType 확장
-5. **장기**: BottomTabBar (홈/기록/설정) 학부모용
+### P2 — 확장·고도화
+
+6. **안드로이드 기사용 네이티브 앱 (Foreground Service GPS)**
+   - iOS Safari PWA 백그라운드 GPS 한계 회피
+   - React Native 또는 Expo + Foreground Service plugin
+   - Wake Lock 의존 없이 안정 GPS 수집
+
+7. **신규 학원 onboarding flow** — 가입 직후 차량·학생·기사 가이드 wizard
+8. **학부모 자녀 추가 셀프 요청** — 학원장 승인 흐름 (현재는 학원장이 직접 link)
+9. **마케팅 영업 확장 — 어린이집·유치원 라벨링 보강** (orgType=KINDERGARTEN/DAYCARE 진입 텍스트 차별화)
+10. **운영 분석 페이지 차량 섹션** (W21 차량 detail로 충분하다는 가정 검증 후 필요 시 추가)
+
+### P3 — 알려진 미해결 (낮은 우선순위)
+
+- 모바일 bottom sheet on shuttle marker tap (학부모 trip-live)
+- GPS recovery 상세 가이드 (지하주차장·터널 상황별)
+- 학부모 home greeting 이름 호명·시간대별 멘트 다양화
 
 ## 디자인 토큰 매핑 (참고)
 
@@ -891,11 +983,15 @@ bg-zinc-100/200 → bg-muted + text-muted-foreground
 
 | 그룹        | 라우트                                                                                                                                                                               | 설명             |
 | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------- |
-| (parent)    | `/home`, `/trip-live/[tripId]`, `/notifications`, `/my-absences`, `/my-stop-changes`                                                                                                 | 학부모 모바일    |
+| (auth)      | `/login`, `/signup`, `/forgot-password`, `/reset-password`                                                                                                                           | 인증             |
+| (parent)    | `/home`, `/trip-live/[tripId]`, `/notifications`, `/my-absences`, `/my-absences/new`, `/my-stop-changes`, `/my-stop-changes/new`                                                     | 학부모 모바일    |
 | (driver)    | `/run`, `/run/notifications`, `/trip/[id]`                                                                                                                                           | 기사 모바일      |
-| (helper)    | `/helper-run`, `/trip/[id]`                                                                                                                                                          | 동승자 모바일    |
-| (owner)     | `/dashboard`, `/dashboard/notifications`, `/vehicles`, `/students`, `/routes`, `/stops`, `/staff`, `/guardians`, `/absences`, `/stop-change-requests`, `/training`, `/safety-report` | 학원장 PC/태블릿 |
-| (marketing) | `/`, `/admin/pre-registrations`                                                                                                                                                      | 마케팅 + admin   |
+| (helper)    | `/helper-run`, `/helper-trip/[id]`                                                                                                                                                   | 동승자 모바일    |
+| (owner)     | `/dashboard`, `/dashboard/notifications`, `/dashboard/trip/[tripId]`, `/dashboard/analytics`, `/dashboard/analytics/routes/[routeId]`, `/dashboard/analytics/drivers/[driverId]`     | 학원장 운영·분석 |
+| (owner)     | `/vehicles`, `/vehicles/[id]` (W21), `/vehicles/[id]/edit`, `/staff`, `/staff/[id]` (W21), `/stops`, `/stops/[id]` (W21), `/stops/[id]/edit`, `/guardians`, `/guardians/[id]` (W21)  | 학원장 CRUD      |
+| (owner)     | `/students`, `/students/[id]` (W20), `/students/[id]/edit`, `/routes`, `/routes/[id]/edit`, `/absences`, `/stop-change-requests`, `/training`, `/training/new`, `/safety-report`     | 학원장 CRUD      |
+| (marketing) | `/`, `/pricing`, `/terms`, `/privacy`, `/admin/pre-registrations`                                                                                                                    | 마케팅 + admin   |
+| invite      | `/invite/[token]` (직원), `/parent-invite/[token]` (학부모)                                                                                                                          | 토큰 가입        |
 
 ## 핵심 가드레일 (CLAUDE.md 발췌)
 

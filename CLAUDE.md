@@ -231,7 +231,7 @@ vercel deploy --prod --yes  # 프로덕션 배포
 
 `progress.md` — 세션이 끊겨도 웹/앱 클로드 코드에서 이어가도록 마일스톤·결정사항·다음 우선순위 기록.
 
-### 마일스톤 요약 (2026-05-05 기준)
+### 마일스톤 요약 (2026-05-06 기준)
 
 - W1~W7: 도메인 모델·CRUD·기사·학부모·실시간 GPS·KIDS 안전점검·RLS·보험 D-30·안전교육
 - W8: 마케팅 사전등록 + admin
@@ -331,3 +331,63 @@ if (user.staff.role !== "<EXPECTED>") {
 
 새 role 그룹 추가 시 이 패턴 따라야 영어 stack trace가 사용자에게 노출 안 됨.
 - Server Component / Server Action / Route Handler에서만 `env.X` 사용
+
+### Owner 360° detail page 패턴 (W20-A·W21)
+
+학원장 list 페이지에서 행 클릭 → detail 진입은 학생(`/students/[id]`) 360°가
+원형. W21에서 차량·기사·정류장·학부모 4개로 확장. 새로 detail 페이지 추가할
+때 다음 템플릿 따름:
+
+**1. 신규 server component `(owner)/<resource>/[id]/page.tsx`**
+
+```ts
+export default async function ProfilePage({ params }) {
+  const { id } = await params;
+  await requireOwner();
+  const orgId = await getOrgId();
+
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const thirtyDaysAgo = new Date(today);
+  thirtyDaysAgo.setUTCDate(thirtyDaysAgo.getUTCDate() - 30);
+
+  // 1차 검증 + 관련 쿼리 N개를 Promise.all로 병렬 (orgId 필터 필수)
+  const [resource, ...related] = await Promise.all([
+    db.<resource>.findFirst({ where: { id, orgId } }),
+    // ... 30일 history·관련 list·통계 입력
+  ]);
+  if (!resource) notFound();
+  // ...
+}
+```
+
+- `Date.now()` 직접 호출 금지 (React 19 `react-hooks/purity`). 진입 시점의
+  `today.getTime()` 같은 캡처 값 사용.
+- Guardian처럼 orgId 컬럼이 없는 모델은 `where: { id, links: { some: { student: { orgId } } } }`
+  같이 자녀(또는 다른 owned model) join 필터로 1차 검증.
+
+**2. 섹션 구성 (위→아래)**
+
+- 뒤로가기 (`<ArrowLeft>` + 9x9 rounded-full)
+- 헤더: 메인 라벨 + 배지(상태·종류) + 보조 정보 + 액션 버튼(편집·삭제·"분석" cross-link)
+- 30일 통계 4-grid: `bg-card rounded-lg border` 외곽 + `grid-cols-2 lg:grid-cols-4 gap-px bg-border` 내부
+- 관련 list 카드들: `<Card><CardHeader><CardContent className="p-0"><ul className="divide-y">`
+
+재사용 컴포넌트:
+- `<AnalyticsStatsCard>` — `dashboard/analytics/_components/trip-detail-list.tsx` (W19)
+- `<TripDetailList variant="route|driver">` — 같은 파일
+- `computeTripStats()` — `src/lib/geo/trip-stats.ts` (W19)
+- `<StopMapDisplay>` — `src/lib/map/stop-map-display.tsx` (W21, read-only kakao map)
+  picker(검색·내 위치·onPick) 없는 단순 표시 모드. dynamic import wrapper로 SSR-safe.
+
+**3. List page 행 클릭 진입 패턴**
+
+- 모바일 카드: 외곽 div를 `<Link className="bg-card hover:bg-muted/40 ... block">` wrap
+- 데스크톱 표: `<TableRow className="hover:bg-muted/50">` + 각 `<TableCell className="p-0"><Link className="block px-2 py-2">` (anchor nesting 회피)
+- 액션 버튼들(편집·삭제·비번 초기화)은 detail 페이지로 이동 — list 행 Link 안에 button 있으면 React hydration 경고
+
+**4. Cascading lint 처리 (sub-route 신규 생성 시)**
+
+`/students/[id]` 같은 신규 sub-route를 만들면, 같은 prefix의 `<a href="/students">` 태그가
+`@next/next/no-html-link-for-pages` 룰에 걸린다. `<Link>`로 일괄 교체 필요. 빌드
+직전 `pnpm lint` 한 번 돌려 cascade된 에러 잡을 것.
