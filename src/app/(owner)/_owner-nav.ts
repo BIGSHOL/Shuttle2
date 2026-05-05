@@ -1,4 +1,5 @@
 import {
+  BarChart3,
   Bus,
   CalendarOff,
   FileCheck,
@@ -14,7 +15,7 @@ import {
 } from "lucide-react";
 
 // 학원장 nav 공용 정의. 헤더(데스크톱)와 BottomNav(모바일)가 동일 항목을 사용.
-// 항목 11개 — 아이콘 + 라벨로 표시.
+// 항목 12개 — 아이콘 + 라벨로 표시.
 export type OwnerNavItem = {
   href: string;
   label: string;
@@ -36,6 +37,7 @@ export function buildOwnerNav(
     { href: "/absences", label: "결석", Icon: CalendarOff },
     { href: "/stop-change-requests", label: "정류장 변경", Icon: MapPinned },
     { href: "/training", label: "안전교육", Icon: GraduationCap },
+    { href: "/dashboard/analytics", label: "분석", Icon: BarChart3 },
     { href: "/safety-report", label: "안전기록", Icon: FileCheck },
   ];
 }
