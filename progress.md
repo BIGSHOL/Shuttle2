@@ -762,7 +762,95 @@
 - 신규 4개 라우트(/students/[id], /error, /not-found, 학부모 홈 PWA banner UI)
 - Supabase Realtime/RLS/LocationPing 변경 없음
 
-## 다음 우선순위 (W21+)
+## W21 학원장 메뉴 4종 360° drill-down (2026-05-06)
+
+학생 360°(W20-A)와 같은 패턴을 차량·기사·정류장·학부모 메뉴로 확장. 사용자
+지적: "차량메뉴는 편집 밖에 없네?" — 4개 list 페이지 모두 행 클릭이 안 되고
+액션이 편집·삭제·비번 초기화에 그쳐서 정보가 흩어져 있음 → 4개 detail 페이지
+신규 + list 행 클릭 진입 통일.
+
+### W21-A 차량 360° (`/vehicles/[id]`)
+
+- 헤더: plate·mode 배지(KIDS/GENERAL)·신고증명서·보험만기 + 편집/삭제 버튼.
+  보험 만기 60일 이내면 warning 칩, 만료면 destructive.
+- 30일 통계 4-grid: 운행 횟수·누적거리·평균속도·미탑승 건수.
+  `computeTripStats` (W19) 재사용 + Promise.all 병렬 (vehicle·routes·trips 30일).
+- 배정 노선 list (방향 배지·정류장 수·학생 수, link to /dashboard/analytics/routes/[id]).
+- 최근 30일 운행 trip list (방향·날짜·시각·노선·기사·통계·미탑승, link to /dashboard/trip/[tripId]).
+- KIDS 모드만: 안전점검 미흡 운행 카드 (seatbeltAllOk·allAlightedOk false 필터).
+- list page: 카드/표 행 → /vehicles/[id] Link wrap, 편집·삭제 버튼 detail로 이동.
+
+### W21-B 직원 360° (`/staff/[id]`)
+
+- 헤더: name·role 배지·loginId·phone(tel:)·가입상태 + DRIVER에 "상세 운행 분석"
+  cross-link (→ /dashboard/analytics/drivers/[id]). 본인이 아니고 OWNER 아니면
+  비번 초기화·삭제 버튼.
+- DRIVER/HELPER만: 30일 운행 통계 4-grid (운행수·평균시간·평균거리·미탑승).
+  query: `vehicle.orgId` + OR `driverId`/`helperId` 필터로 통합. 누계 평균 속도 footer.
+- 안전교육 list: 카테고리(운영자/운전자/동승자) + 이수일·만기일.
+  만기 30일 이내 warning, 만료 destructive 배지.
+- DRIVER/HELPER만: 최근 30일 운행 trip list (driverId 매치 안 되면 "동승" 배지).
+- DRIVER만: 안전점검 미흡 운행 (KIDS 모드 운전 책임 분).
+- OWNER 본인 진입 시 운행 카드 hide + 분석 페이지 안내.
+- list page: 카드/표 행 → /staff/[id] Link wrap, 액션 버튼 detail로 이동.
+  대기 중 초대 섹션은 그대로 유지.
+
+### W21-C 정류장 360° (`/stops/[id]`) + 카카오맵 read-only
+
+- 신규 `src/lib/map/stop-map-display{,.inner}.tsx` — picker(검색·내 위치·onPick)
+  없는 read-only 표시 컴포넌트. dynamic import wrapper로 SSR-safe.
+- 헤더: name·address·반경·좌표 + 편집/삭제 버튼.
+- StopMapDisplay 카드 (radiusM 노란 원).
+- 4-grid: 사용 노선 수·home 학생 수·30일 변경요청(from)·변경요청(to).
+- 사용 노선 list: 방향·노선명·차량·KIDS 배지 → /dashboard/analytics/routes/[id].
+  RouteStop join, 순서·예정 시각 표시.
+- home 학생 list: 방향·이름·노선 → /students/[id].
+- 30일 변경 요청 history: "이 정류장에서/으로" 배지 + 학생 link + 사유·반려.
+- list page: 카드/표 행 → /stops/[id] Link wrap, 편집·삭제 detail로 이동.
+
+### W21-D 학부모 360° (`/guardians/[id]`)
+
+- Guardian 모델에 orgId 없음 → `links: { some: { student: { orgId } } }` join
+  필터로 본 기관 학생과 link된 보호자만 통과. links도 같은 필터로 본 기관 자녀만.
+- 헤더: name·loginId·phone(tel:)·가입상태·recoveryEmail + 비번 초기화 버튼.
+- 4-grid: 결석 신청 수·정류장 변경 수·푸시 디바이스 수·마지막 알림 발송.
+  push 디바이스 0이고 가입 상태인 경우 destructive (구독 안 함 경고).
+- 자녀 list: relation·isPrimary 배지 → /students/[id]. 각 row에
+  UnlinkGuardianLinkButton 분리 (anchor nesting 회피).
+- 결석·정류장 변경 history: 학생 페이지 패턴 그대로, 학생 이름 link 추가.
+- 푸시 디바이스 list: UA 파싱 → 디바이스 라벨 (iPhone/iPad/Android/Mac/Windows/Linux/기타).
+- list page: 카드 헤더만 Link wrap (자녀 list와 비번 버튼은 분리).
+  데스크톱 표는 이름·loginId·phone·상태 cell만 Link, 자녀·관리 cell은 그대로.
+
+### W21 부수 변경
+
+- `<a href="/internal-route">` → `<Link>` 일괄 변경 (eslint @next/next/no-html-link-for-pages):
+  `routes/[id]/edit/route-stops-section.tsx`, `routes/_components/route-form.tsx`,
+  `staff/invite/invite-form.tsx`, `stops/_components/stop-form.tsx`,
+  `students/[id]/edit/route-students-section.tsx`, `vehicles/_components/vehicle-form.tsx`,
+  `guardians/invite/invite-form.tsx`. (sub-route /\[id\] 신규 생성으로 internal로 분류돼 lint 발생.)
+- `Date.now()` 사용 제거 — react-hooks/purity (React 19) 위반. `today.getTime()`
+  같은 진입 시점 캡처 값으로 변경 (vehicles/staff detail).
+
+### W21 사용자 가치 요약
+
+- **학원장 차량 운영**: 차량 한 대 클릭 → 30일 운행 패턴·노선·안전점검 미흡·
+  보험 만기 한 화면.
+- **학원장 인사 관리**: 직원 클릭 → 30일 운행·안전교육 만기·미흡 운행. 기사 단위
+  분석 페이지 cross-link.
+- **학원장 정류장 운영**: 정류장 클릭 → 위치 지도·사용 노선·home 학생·변경 요청
+  빈도 (정류장 위치가 부적절한지 판단 가능).
+- **학원장 보호자 관리**: 보호자 클릭 → 자녀·결석/변경 history·푸시 구독 상태
+  (학부모가 알림 못 받는 이유 즉시 진단).
+
+### W21 검증
+
+- typecheck/lint/build 모두 clean
+- 신규 4개 라우트(/vehicles/[id], /staff/[id], /stops/[id], /guardians/[id]) 등록 확인
+- 신규 2개 client component(stop-map-display{,.inner}) — dynamic import + SSR-safe
+- Supabase Realtime/RLS/LocationPing 변경 없음
+
+## 다음 우선순위 (W22+)
 
 ### W17-B: 가입 확인 메일 한국어 (선택)
 

@@ -274,6 +274,11 @@ vercel deploy --prod --yes  # 프로덕션 배포
   CTA + GPS 끊김 복구 안내·재시도 + 학부모 홈 "내 신청 현황" 카드 (대기
   카운트 배지) + PWA 설치 안내 배너 (Android beforeinstallprompt + iOS
   Safari "공유→홈 화면에 추가" 안내).
+- W21: 학원장 메뉴 4종 360° drill-down — 차량(`/vehicles/[id]`) 30일 운행 통계·
+  배정 노선·안전점검 미흡, 직원(`/staff/[id]`) 운행 통계·안전교육 만기·분석 페이지
+  cross-link, 정류장(`/stops/[id]`) 카카오맵 read-only(`stop-map-display`)·사용
+  노선·home 학생·변경 요청 빈도, 학부모(`/guardians/[id]`) 자녀·결석/변경
+  history·푸시 디바이스 진단. list page 행 클릭 → detail 통일.
 
 ### 알려진 미해결 (다음 세션)
 
