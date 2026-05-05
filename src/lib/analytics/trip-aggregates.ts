@@ -134,6 +134,133 @@ export async function aggregateByRoute(
   return rows;
 }
 
+/** 한 trip의 표시용 detail. routes/[routeId], drivers/[driverId] list rows에 공유. */
+export type TripDetailRow = {
+  tripId: string;
+  date: Date;
+  startedAt: Date | null;
+  endedAt: Date | null;
+  vehiclePlate: string;
+  routeName: string;
+  routeDirection: "PICKUP" | "DROPOFF";
+  driverName: string;
+  durationSec: number;
+  distanceKm: number;
+  avgSpeedKmh: number;
+  noShowCount: number;
+};
+
+function makeDetailRow(t: TripWithDeps & { vehiclePlate: string }): TripDetailRow {
+  const stats = computeTripStats(t.pings, t.startedAt, t.endedAt);
+  return {
+    tripId: t.id,
+    date: t.startedAt ?? new Date(),
+    startedAt: t.startedAt,
+    endedAt: t.endedAt,
+    vehiclePlate: t.vehiclePlate,
+    routeName: t.route.name,
+    routeDirection: t.route.direction,
+    driverName: t.driver.name,
+    durationSec: stats.durationSec,
+    distanceKm: stats.distanceKm,
+    avgSpeedKmh: stats.avgSpeedKmh,
+    noShowCount: t.noShowCount,
+  };
+}
+
+async function fetchTripsByFilter(
+  orgId: string,
+  range: AnalyticsRange,
+  extraWhere: { routeId?: string; driverId?: string },
+): Promise<(TripWithDeps & { vehiclePlate: string })[]> {
+  const start = rangeToStartDate(range);
+  const trips = await db.trip.findMany({
+    where: {
+      vehicle: { orgId },
+      startedAt: { not: null, gte: start },
+      ...(extraWhere.routeId ? { routeId: extraWhere.routeId } : {}),
+      ...(extraWhere.driverId ? { driverId: extraWhere.driverId } : {}),
+    },
+    orderBy: [{ startedAt: "desc" }],
+    select: {
+      id: true,
+      startedAt: true,
+      endedAt: true,
+      vehicle: { select: { plate: true } },
+      route: { select: { id: true, name: true, direction: true } },
+      driver: { select: { id: true, name: true } },
+      pings: {
+        orderBy: { recordedAt: "asc" },
+        select: {
+          lat: true,
+          lng: true,
+          recordedAt: true,
+          speed: true,
+          source: true,
+        },
+      },
+      events: {
+        where: { type: { in: ["NO_SHOW", "NO_DROPOFF"] } },
+        select: { id: true },
+      },
+    },
+  });
+
+  return trips.map((t) => ({
+    id: t.id,
+    startedAt: t.startedAt,
+    endedAt: t.endedAt,
+    route: t.route,
+    driver: t.driver,
+    pings: t.pings,
+    noShowCount: t.events.length,
+    vehiclePlate: t.vehicle.plate,
+  }));
+}
+
+/**
+ * 단일 노선의 trip list (해당 기간). 행을 클릭하면 trip 상세로.
+ * Route 자체가 orgId 안 맞으면 빈 배열 반환 (멀티테넌시 안전).
+ */
+export async function getRouteDetail(
+  orgId: string,
+  routeId: string,
+  range: AnalyticsRange,
+): Promise<{
+  route: { id: string; name: string; direction: "PICKUP" | "DROPOFF" } | null;
+  trips: TripDetailRow[];
+}> {
+  const route = await db.route.findFirst({
+    where: { id: routeId, vehicle: { orgId } },
+    select: { id: true, name: true, direction: true },
+  });
+  if (!route) return { route: null, trips: [] };
+
+  const trips = await fetchTripsByFilter(orgId, range, { routeId });
+  return { route, trips: trips.map(makeDetailRow) };
+}
+
+/**
+ * 단일 기사의 trip list (해당 기간). 다양한 노선 섞일 수 있음.
+ */
+export async function getDriverDetail(
+  orgId: string,
+  driverId: string,
+  range: AnalyticsRange,
+): Promise<{
+  driver: { id: string; name: string } | null;
+  trips: TripDetailRow[];
+}> {
+  const driver = await db.staff.findFirst({
+    where: { id: driverId, orgId, role: "DRIVER" },
+    select: { id: true, name: true },
+  });
+  if (!driver) return { driver: null, trips: [] };
+
+  const trips = await fetchTripsByFilter(orgId, range, { driverId });
+  return { driver, trips: trips.map(makeDetailRow) };
+}
+
 /** 기사별 집계. */
 export async function aggregateByDriver(
   orgId: string,

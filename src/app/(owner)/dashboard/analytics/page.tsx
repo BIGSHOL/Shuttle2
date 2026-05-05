@@ -100,7 +100,7 @@ export default async function AnalyticsPage({
             </p>
           ) : (
             <>
-              {/* 모바일 카드 */}
+              {/* 모바일 카드 — 행 전체 Link */}
               <ul className="space-y-2 p-3 lg:hidden">
                 {routeRows.map((r) => {
                   const dirCls =
@@ -109,7 +109,10 @@ export default async function AnalyticsPage({
                       : "bg-info-soft text-info";
                   return (
                     <li key={r.routeId}>
-                      <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                      <Link
+                        href={`/dashboard/analytics/routes/${r.routeId}?range=${range}`}
+                        className="hover:bg-muted/50 block rounded-lg border bg-card p-3.5 shadow-sm transition-colors"
+                      >
                         <div className="flex flex-wrap items-center gap-1.5">
                           <span
                             className={`${dirCls} rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide`}
@@ -135,13 +138,13 @@ export default async function AnalyticsPage({
                             </>
                           ) : null}
                         </p>
-                      </div>
+                      </Link>
                     </li>
                   );
                 })}
               </ul>
 
-              {/* 데스크톱 표 */}
+              {/* 데스크톱 표 — 각 셀이 Link로 행 전체 클릭 */}
               <div className="hidden lg:block">
                 <Table>
                   <TableHeader>
@@ -158,45 +161,68 @@ export default async function AnalyticsPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {routeRows.map((r) => (
-                      <TableRow key={r.routeId}>
-                        <TableCell className="font-medium">
-                          {r.routeName}
+                    {routeRows.map((r) => {
+                      const href = `/dashboard/analytics/routes/${r.routeId}?range=${range}`;
+                      return (
+                      <TableRow
+                        key={r.routeId}
+                        className="cursor-pointer hover:bg-muted/50"
+                      >
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-medium">
+                            {r.routeName}
+                          </Link>
                         </TableCell>
-                        <TableCell>
-                          <span
-                            className={
-                              r.direction === "PICKUP"
-                                ? "bg-success-soft text-success rounded-md px-2 py-0.5 text-xs font-bold"
-                                : "bg-info-soft text-info rounded-md px-2 py-0.5 text-xs font-bold"
-                            }
-                          >
-                            {DIRECTION_LABEL[r.direction]}
-                          </span>
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {r.tripCount}회
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {formatDuration(r.avgDurationSec)}
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {r.avgDistanceKm.toFixed(2)} km
-                        </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {r.avgSpeedKmh} km/h
-                        </TableCell>
-                        <TableCell className="pr-[18px] text-right font-mono text-sm">
-                          {r.noShowCount > 0 ? (
-                            <span className="text-destructive font-bold">
-                              {r.noShowCount}
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2">
+                            <span
+                              className={
+                                r.direction === "PICKUP"
+                                  ? "bg-success-soft text-success rounded-md px-2 py-0.5 text-xs font-bold"
+                                  : "bg-info-soft text-info rounded-md px-2 py-0.5 text-xs font-bold"
+                              }
+                            >
+                              {DIRECTION_LABEL[r.direction]}
                             </span>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-mono text-sm">
+                            {r.tripCount}회
+                          </Link>
+                        </TableCell>
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-mono text-sm">
+                            {formatDuration(r.avgDurationSec)}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-mono text-sm">
+                            {r.avgDistanceKm.toFixed(2)} km
+                          </Link>
+                        </TableCell>
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-mono text-sm">
+                            {r.avgSpeedKmh} km/h
+                          </Link>
+                        </TableCell>
+                        <TableCell className="p-0">
+                          <Link
+                            href={href}
+                            className="block pr-[18px] pl-2 py-2 text-right font-mono text-sm"
+                          >
+                            {r.noShowCount > 0 ? (
+                              <span className="text-destructive font-bold">
+                                {r.noShowCount}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">0</span>
+                            )}
+                          </Link>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
@@ -220,11 +246,14 @@ export default async function AnalyticsPage({
             </p>
           ) : (
             <>
-              {/* 모바일 카드 */}
+              {/* 모바일 카드 — 행 전체 Link */}
               <ul className="space-y-2 p-3 lg:hidden">
                 {driverRows.map((d) => (
                   <li key={d.driverId}>
-                    <div className="bg-card rounded-lg border p-3.5 shadow-sm">
+                    <Link
+                      href={`/dashboard/analytics/drivers/${d.driverId}?range=${range}`}
+                      className="hover:bg-muted/50 block rounded-lg border bg-card p-3.5 shadow-sm transition-colors"
+                    >
                       <div className="flex flex-wrap items-center gap-1.5">
                         <h3 className="text-sm font-extrabold tracking-tight">
                           {d.driverName}
@@ -245,12 +274,12 @@ export default async function AnalyticsPage({
                           </>
                         ) : null}
                       </p>
-                    </div>
+                    </Link>
                   </li>
                 ))}
               </ul>
 
-              {/* 데스크톱 표 */}
+              {/* 데스크톱 표 — 각 셀이 Link로 행 전체 클릭 */}
               <div className="hidden lg:block">
                 <Table>
                   <TableHeader>
@@ -266,34 +295,55 @@ export default async function AnalyticsPage({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {driverRows.map((d) => (
-                      <TableRow key={d.driverId}>
-                        <TableCell className="font-medium">
-                          {d.driverName}
+                    {driverRows.map((d) => {
+                      const href = `/dashboard/analytics/drivers/${d.driverId}?range=${range}`;
+                      return (
+                      <TableRow
+                        key={d.driverId}
+                        className="cursor-pointer hover:bg-muted/50"
+                      >
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-medium">
+                            {d.driverName}
+                          </Link>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {d.tripCount}회
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-mono text-sm">
+                            {d.tripCount}회
+                          </Link>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {formatDuration(d.avgDurationSec)}
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-mono text-sm">
+                            {formatDuration(d.avgDurationSec)}
+                          </Link>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {d.avgDistanceKm.toFixed(2)} km
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-mono text-sm">
+                            {d.avgDistanceKm.toFixed(2)} km
+                          </Link>
                         </TableCell>
-                        <TableCell className="font-mono text-sm">
-                          {d.avgSpeedKmh} km/h
+                        <TableCell className="p-0">
+                          <Link href={href} className="block px-2 py-2 font-mono text-sm">
+                            {d.avgSpeedKmh} km/h
+                          </Link>
                         </TableCell>
-                        <TableCell className="pr-[18px] text-right font-mono text-sm">
-                          {d.noShowCount > 0 ? (
-                            <span className="text-destructive font-bold">
-                              {d.noShowCount}
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground">0</span>
-                          )}
+                        <TableCell className="p-0">
+                          <Link
+                            href={href}
+                            className="block pr-[18px] pl-2 py-2 text-right font-mono text-sm"
+                          >
+                            {d.noShowCount > 0 ? (
+                              <span className="text-destructive font-bold">
+                                {d.noShowCount}
+                              </span>
+                            ) : (
+                              <span className="text-muted-foreground">0</span>
+                            )}
+                          </Link>
                         </TableCell>
                       </TableRow>
-                    ))}
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>
