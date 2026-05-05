@@ -15,10 +15,17 @@ import {
 import { TripRealtimeRefresher } from "@/components/trip-realtime-refresher";
 import { db } from "@/lib/db";
 import { requireOwnerTripAccess } from "@/lib/auth/owner-trip-access";
+import {
+  computeStopArrivals,
+  computeTripStats,
+  type PingPoint,
+} from "@/lib/geo/trip-stats";
 import { TripLiveMap } from "@/lib/map/trip-live-map";
 import type { TripLiveMapStop } from "@/lib/map/trip-live-map-inner";
 
 import { OwnerTripLiveMap } from "./_components/owner-trip-live-map";
+import { StopArrivalsTable } from "./_components/stop-arrivals-table";
+import { TripStatsCard } from "./_components/trip-stats-card";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
@@ -154,17 +161,73 @@ export default async function OwnerTripDetailPage({
   const isFinished = trip.endedAt !== null;
   const isScheduled = trip.startedAt === null;
 
-  // GPS trail fetch — 진행 중·종료 모두. 운행 중에는 진입 전까지의 누적 경로를
+  // GPS ping fetch — 진행 중·종료 모두. 운행 중에는 진입 전까지의 누적 경로를
   // 학원장이 즉시 보게 하고, 진입 후는 client에서 broadcast ping을 append (W19-B).
   // 예정 운행은 ping이 없으니 skip.
-  const trail =
+  // W19-D: trip 통계·정류장 도착 시각 계산용으로 source/speed/recordedAt 포함.
+  const allPings =
     isRunning || isFinished
       ? await db.locationPing.findMany({
           where: { tripId },
           orderBy: { recordedAt: "asc" },
-          select: { lat: true, lng: true },
+          select: {
+            lat: true,
+            lng: true,
+            recordedAt: true,
+            speed: true,
+            source: true,
+          },
         })
       : [];
+  const trail = allPings.map((p) => ({ lat: p.lat, lng: p.lng }));
+
+  // W19-D: 운행 통계 + 정류장 도착 시각.
+  // 운행 시작 안 한 trip은 stats 카드 안 보여줌 (계산 의미 없음).
+  const pingPoints: PingPoint[] = allPings.map((p) => ({
+    lat: p.lat,
+    lng: p.lng,
+    recordedAt: p.recordedAt,
+    speed: p.speed,
+    source: p.source,
+  }));
+  const tripStats =
+    !isScheduled && trip.startedAt
+      ? computeTripStats(pingPoints, trip.startedAt, trip.endedAt)
+      : null;
+  const stopArrivals =
+    !isScheduled && trip.startedAt
+      ? computeStopArrivals(
+          pingPoints,
+          trip.route.stops.map((rs) => ({
+            stopId: rs.stop.id,
+            stopName: rs.stop.name,
+            stopOrder: rs.order,
+          })),
+        )
+      : [];
+
+  // 정류장별 BoardingEvent 처리 건수 집계.
+  // BoardingEvent에는 stopId 필드가 직접 없으니 학생 → 정류장 매핑으로 derive.
+  const studentToStopId = new Map<string, string>();
+  for (const rs of trip.route.students) {
+    studentToStopId.set(rs.student.id, rs.stop.id);
+  }
+  const stopBoardCounts = new Map<string, number>();
+  const stopNoShowCounts = new Map<string, number>();
+  for (const e of trip.events) {
+    const stopId = studentToStopId.get(e.studentId);
+    if (!stopId) continue;
+    if (e.type === "BOARD" || e.type === "ALIGHT") {
+      stopBoardCounts.set(stopId, (stopBoardCounts.get(stopId) ?? 0) + 1);
+    } else if (e.type === "NO_SHOW" || e.type === "NO_DROPOFF") {
+      stopNoShowCounts.set(stopId, (stopNoShowCounts.get(stopId) ?? 0) + 1);
+    }
+  }
+  const stopArrivalRows = stopArrivals.map((a) => ({
+    ...a,
+    boardCount: stopBoardCounts.get(a.stopId) ?? 0,
+    noShowCount: stopNoShowCounts.get(a.stopId) ?? 0,
+  }));
 
   const eventType: "BOARD" | "ALIGHT" =
     trip.route.direction === "PICKUP" ? "BOARD" : "ALIGHT";
@@ -408,6 +471,16 @@ export default async function OwnerTripDetailPage({
             initialTrail={trail}
           />
         </section>
+      ) : null}
+
+      {/* W19-D: 운행 통계 카드 (운행 중·종료 모두) */}
+      {tripStats ? (
+        <TripStatsCard stats={tripStats} isRunning={isRunning} />
+      ) : null}
+
+      {/* W19-D: 정류장 도착 시각 + 구간 소요 표 (STOP_PASS 기록 있을 때만) */}
+      {stopArrivalRows.some((r) => r.arrivedAt !== null) ? (
+        <StopArrivalsTable rows={stopArrivalRows} />
       ) : null}
 
       {/* 종료된 운행: GPS 경로 재생 (LocationPing trail) */}
