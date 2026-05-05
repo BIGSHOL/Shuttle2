@@ -1,6 +1,9 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+
+import { Toaster } from "@/components/ui/sonner";
+
 import "./globals.css";
 
 // Pretendard — 1순위. 디자인 토큰 (docs/01) 명세.
@@ -69,6 +72,7 @@ export default function RootLayout({
     >
       <body className="flex min-h-full flex-col">
         {children}
+        <Toaster position="top-center" richColors />
         <SpeedInsights />
       </body>
     </html>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -32,6 +33,7 @@ export function RejectAbsenceButton({ id }: { id: string }) {
         }
         setOpen(false);
         setReason("");
+        toast.success("결석 신청을 반려했어요. 학부모에게 사유를 전달했습니다.");
       } catch (e) {
         console.error(e);
         setError("처리에 실패했어요.");

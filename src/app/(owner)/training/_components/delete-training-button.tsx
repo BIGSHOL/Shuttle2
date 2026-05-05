@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
@@ -21,9 +22,10 @@ export function DeleteTrainingButton({ id }: { id: string }) {
         startTransition(async () => {
           try {
             await deleteTrainingRecordAction(id);
+            toast.success("기록을 삭제했어요.");
           } catch (e) {
             console.error("delete failed:", e);
-            alert("삭제에 실패했어요.");
+            toast.error("삭제에 실패했어요.");
           }
         });
       }}

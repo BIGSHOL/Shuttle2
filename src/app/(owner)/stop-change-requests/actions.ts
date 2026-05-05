@@ -87,11 +87,12 @@ export async function approveStopChangeAction(
     return { newStopId: newStop.id, newStopName: newStop.name };
   });
 
-  // 학부모 push
+  // 학부모 push — /my-stop-changes (학부모 본인 신청 list, /stop-change-requests
+  // 는 학원장용)
   await sendToGuardian(reqRow.createdBy, {
     title: "정류장 변경 승인",
     body: `${reqRow.student.name} 자녀의 정류장이 ${result.newStopName}로 변경됐어요.`,
-    url: "/stop-change-requests",
+    url: "/my-stop-changes",
     category: "STOP_CHANGE_APPROVED",
   }).catch((e) => console.warn("guardian stop-change-approved push:", e));
 
@@ -172,7 +173,7 @@ export async function rejectStopChangeAction(
   await sendToGuardian(reqRow.createdBy, {
     title: "정류장 변경 반려",
     body: `${reqRow.student.name} · 사유: ${parsed.data.reason.slice(0, 80)}`,
-    url: "/stop-change-requests",
+    url: "/my-stop-changes",
     category: "STOP_CHANGE_REJECTED",
   }).catch((e) => console.warn("guardian stop-change-rejected push:", e));
 

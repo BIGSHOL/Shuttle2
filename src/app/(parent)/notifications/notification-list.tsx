@@ -71,6 +71,19 @@ const ICON_BY_CAT: Record<
   SHUTTLE_NEAR_CHILD: Bus,
 };
 
+// W20-B1: 학부모용 알림 fallback URL — 발송 시 url을 안 채운 legacy 알림 행도
+// 카테고리만으로 적절한 곳으로 보낼 수 있게.
+const FALLBACK_URL_BY_CAT: Partial<Record<NotifyCategory, string>> = {
+  ABSENCE_APPROVED: "/my-absences",
+  ABSENCE_REJECTED: "/my-absences",
+  STOP_CHANGE_APPROVED: "/my-stop-changes",
+  STOP_CHANGE_REJECTED: "/my-stop-changes",
+};
+
+function resolveItemUrl(item: { url: string | null; category: NotifyCategory }): string | null {
+  return item.url ?? FALLBACK_URL_BY_CAT[item.category] ?? null;
+}
+
 const URGENT_CATS = new Set<NotifyCategory>([
   "STUDENT_NO_SHOW",
   "STUDENT_NO_DROPOFF",
@@ -124,13 +137,14 @@ export function NotificationList({ items }: { items: Item[] }) {
   const unreadCount = items.filter((i) => i.readAt === null).length;
 
   function handleClick(item: Item) {
+    const targetUrl = resolveItemUrl(item);
     startTransition(async () => {
       try {
         if (item.readAt === null) {
           await markNotificationReadAction(item.id);
         }
-        if (item.url) {
-          router.push(item.url);
+        if (targetUrl) {
+          router.push(targetUrl);
         }
       } catch (e) {
         console.error("mark read failed:", e);
@@ -215,7 +229,7 @@ export function NotificationList({ items }: { items: Item[] }) {
             const wasResponded = respondedIds.has(item.id);
             return (
               <li key={item.id} className="space-y-1.5">
-                {item.url ? (
+                {resolveItemUrl(item) ? (
                   <button
                     type="button"
                     onClick={() => handleClick(item)}

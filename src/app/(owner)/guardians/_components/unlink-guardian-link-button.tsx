@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
@@ -34,9 +35,10 @@ export function UnlinkGuardianLinkButton({
         startTransition(async () => {
           try {
             await unlinkGuardianLinkAction(linkId);
+            toast.success(`${guardianName}님과 ${studentName} 연결을 해제했어요.`);
           } catch (e) {
             console.error("unlink failed:", e);
-            alert("연결 해제에 실패했어요.");
+            toast.error("연결 해제에 실패했어요.");
           }
         });
       }}

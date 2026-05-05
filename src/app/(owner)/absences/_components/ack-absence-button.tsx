@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 
@@ -18,9 +19,10 @@ export function AckAbsenceButton({ id }: { id: string }) {
         startTransition(async () => {
           try {
             await ackAbsenceAction(id);
+            toast.success("결석 신청이 승인됐어요. 학부모에게 알림을 보냈습니다.");
           } catch (e) {
             console.error("ack absence failed:", e);
-            alert("처리에 실패했어요. 잠시 후 다시 시도해 주세요.");
+            toast.error("처리에 실패했어요. 잠시 후 다시 시도해 주세요.");
           }
         });
       }}
