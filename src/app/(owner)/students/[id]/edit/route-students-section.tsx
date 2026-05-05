@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState, useTransition } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -74,9 +75,9 @@ export function RouteStudentsSection({
         {stops.length === 0 ? (
           <p className="text-destructive text-sm">
             먼저{" "}
-            <a href="/stops" className="font-medium underline">
+            <Link href="/stops" className="font-medium underline">
               정류장을 등록
-            </a>
+            </Link>
             해야 배정할 수 있습니다.
           </p>
         ) : null}
