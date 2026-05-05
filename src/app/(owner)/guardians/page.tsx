@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -106,7 +107,8 @@ export default async function GuardiansPage() {
         <div>
           <h2 className="text-2xl font-semibold">보호자</h2>
           <p className="text-muted-foreground text-sm">
-            학부모·보호자를 자녀와 연결합니다. 새 보호자는 초대 링크로 가입.
+            학부모·보호자를 자녀와 연결합니다. 보호자 이름을 누르면 30일 결석·정류장
+            변경 history와 푸시 디바이스 상태를 확인합니다.
           </p>
         </div>
         <Button asChild>
@@ -133,9 +135,12 @@ export default async function GuardiansPage() {
               <ul className="space-y-2 px-4 pb-4 lg:hidden">
                 {guardians.map((g) => (
                   <li key={g.id}>
-                    <div className="bg-card rounded-lg border p-3.5 shadow-sm">
-                      {/* 상단: 부모 정보 + 비번 초기화 */}
-                      <div className="flex items-start justify-between gap-3">
+                    <div className="bg-card overflow-hidden rounded-lg border shadow-sm">
+                      {/* 상단: 부모 정보 (Link) */}
+                      <Link
+                        href={`/guardians/${g.id}`}
+                        className="hover:bg-muted/40 flex items-start justify-between gap-3 p-3.5 transition-colors"
+                      >
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
                             <h3 className="text-sm font-extrabold tracking-tight">
@@ -149,46 +154,53 @@ export default async function GuardiansPage() {
                             ID {g.loginId ?? "—"} · {g.phone}
                           </p>
                         </div>
-                        {g.userId && g.loginId ? (
-                          <div className="shrink-0">
+                        <ChevronRight className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+                      </Link>
+
+                      {/* 자녀 list + 비번 초기화 (Link 밖) */}
+                      <div className="border-t px-3.5 py-2.5">
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+                            자녀 {g.children.length}명
+                          </span>
+                          {g.userId && g.loginId ? (
                             <ResetGuardianPasswordButton
                               guardianId={g.id}
                               name={g.name}
                             />
-                          </div>
-                        ) : null}
+                          ) : null}
+                        </div>
+                        <ul className="mt-1.5 space-y-1.5 text-xs">
+                          {g.children.map((c) => (
+                            <li
+                              key={c.linkId}
+                              className="flex items-center justify-between gap-2"
+                            >
+                              <Link
+                                href={`/students/${c.id}`}
+                                className="hover:underline min-w-0 truncate"
+                              >
+                                <span className="font-medium">{c.name}</span>
+                                <span className="text-muted-foreground ml-1">
+                                  ({c.relation}
+                                  {c.isPrimary ? "·주" : ""})
+                                </span>
+                              </Link>
+                              <UnlinkGuardianLinkButton
+                                linkId={c.linkId}
+                                guardianName={g.name}
+                                studentName={c.name}
+                              />
+                            </li>
+                          ))}
+                        </ul>
                       </div>
-
-                      {/* 자녀 list — 카드 전체 폭. border-t로 부모 정보와
-                          시각적 구분, 각 row는 left=이름, right=해제 버튼으로
-                          justify-between → 우측 빈 공간 활용. */}
-                      <ul className="mt-3 space-y-1.5 border-t pt-2.5 text-xs">
-                        {g.children.map((c) => (
-                          <li
-                            key={c.linkId}
-                            className="flex items-center justify-between gap-2"
-                          >
-                            <span className="min-w-0 truncate">
-                              <span className="font-medium">{c.name}</span>
-                              <span className="text-muted-foreground ml-1">
-                                ({c.relation}
-                                {c.isPrimary ? "·주" : ""})
-                              </span>
-                            </span>
-                            <UnlinkGuardianLinkButton
-                              linkId={c.linkId}
-                              guardianName={g.name}
-                              studentName={c.name}
-                            />
-                          </li>
-                        ))}
-                      </ul>
                     </div>
                   </li>
                 ))}
               </ul>
 
-              {/* 데스크톱: 표 */}
+              {/* 데스크톱: 표 — 이름·loginId·phone·상태 cell만 Link, 자녀·관리 cell은 그대로 */}
               <div className="hidden lg:block">
                 <Table>
                   <TableHeader>
@@ -203,15 +215,35 @@ export default async function GuardiansPage() {
                   </TableHeader>
                   <TableBody>
                     {guardians.map((g) => (
-                      <TableRow key={g.id}>
-                        <TableCell className="font-medium">{g.name}</TableCell>
-                        <TableCell className="font-mono text-xs">
-                          {g.loginId ?? (
-                            <span className="text-muted-foreground">—</span>
-                          )}
+                      <TableRow
+                        key={g.id}
+                        className="hover:bg-muted/50"
+                      >
+                        <TableCell className="p-0">
+                          <Link
+                            href={`/guardians/${g.id}`}
+                            className="block px-2 py-2 font-medium"
+                          >
+                            {g.name}
+                          </Link>
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {g.phone}
+                        <TableCell className="p-0">
+                          <Link
+                            href={`/guardians/${g.id}`}
+                            className="block px-2 py-2 font-mono text-xs"
+                          >
+                            {g.loginId ?? (
+                              <span className="text-muted-foreground">—</span>
+                            )}
+                          </Link>
+                        </TableCell>
+                        <TableCell className="p-0">
+                          <Link
+                            href={`/guardians/${g.id}`}
+                            className="text-muted-foreground block px-2 py-2 text-sm"
+                          >
+                            {g.phone}
+                          </Link>
                         </TableCell>
                         <TableCell className="text-sm">
                           <ul className="space-y-0.5">
@@ -220,7 +252,12 @@ export default async function GuardiansPage() {
                                 key={c.linkId}
                                 className="flex items-center gap-2"
                               >
-                                <span>{c.name}</span>
+                                <Link
+                                  href={`/students/${c.id}`}
+                                  className="hover:underline"
+                                >
+                                  {c.name}
+                                </Link>
                                 <span className="text-muted-foreground text-xs">
                                   ({c.relation}
                                   {c.isPrimary ? " · 주" : ""})
@@ -234,8 +271,13 @@ export default async function GuardiansPage() {
                             ))}
                           </ul>
                         </TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {g.userId ? "가입 완료" : "미가입"}
+                        <TableCell className="p-0">
+                          <Link
+                            href={`/guardians/${g.id}`}
+                            className="text-muted-foreground block px-2 py-2 text-sm"
+                          >
+                            {g.userId ? "가입 완료" : "미가입"}
+                          </Link>
                         </TableCell>
                         <TableCell className="text-right">
                           {g.userId && g.loginId ? (

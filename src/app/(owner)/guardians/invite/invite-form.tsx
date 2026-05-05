@@ -208,7 +208,7 @@ export function GuardianInviteForm({
           </CardContent>
           <CardFooter className="flex justify-end gap-2">
             <Button asChild type="button" variant="outline">
-              <a href="/guardians">취소</a>
+              <Link href="/guardians">취소</Link>
             </Button>
             <Button
               type="submit"
