@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 
 import { OrgDashboardRefresher } from "@/components/org-dashboard-refresher";
+import { MultiTripLiveSection } from "./_components/multi-trip-live-section";
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { todayUtcDateKst } from "@/lib/date/today";
@@ -148,32 +149,73 @@ export default async function DashboardPage() {
   const scheduledCount = todayTrips.filter((t) => t.startedAt === null).length;
   const runningTripIds = runningTrips.map((t) => t.id);
 
-  // Phase 2 — Phase 1 결과(noShowCounts·todayTrips)에 의존하는 두 쿼리 병렬화.
-  const [repeatNoShowStudents, runningBoardings] = await Promise.all([
-    repeatNoShowEntries.length > 0
-      ? db.student.findMany({
-          where: {
-            id: { in: repeatNoShowEntries.map((e) => e.studentId) },
-            orgId,
-          },
-          select: {
-            id: true,
-            name: true,
-            guardians: {
-              where: { isPrimary: true },
-              take: 1,
-              select: { guardian: { select: { name: true, phone: true } } },
+  // Phase 2 — Phase 1 결과(noShowCounts·todayTrips)에 의존하는 세 쿼리 병렬화.
+  // W19-C: runningTripsWithStops도 같이 fetch — 멀티 trip 라이브 지도용.
+  const [repeatNoShowStudents, runningBoardings, runningTripsWithStops] =
+    await Promise.all([
+      repeatNoShowEntries.length > 0
+        ? db.student.findMany({
+            where: {
+              id: { in: repeatNoShowEntries.map((e) => e.studentId) },
+              orgId,
             },
-          },
-        })
-      : Promise.resolve([]),
-    runningTripIds.length > 0
-      ? db.boardingEvent.findMany({
-          where: { tripId: { in: runningTripIds } },
-          select: { tripId: true, type: true },
-        })
-      : Promise.resolve([]),
-  ]);
+            select: {
+              id: true,
+              name: true,
+              guardians: {
+                where: { isPrimary: true },
+                take: 1,
+                select: { guardian: { select: { name: true, phone: true } } },
+              },
+            },
+          })
+        : Promise.resolve([]),
+      runningTripIds.length > 0
+        ? db.boardingEvent.findMany({
+            where: { tripId: { in: runningTripIds } },
+            select: { tripId: true, type: true },
+          })
+        : Promise.resolve([]),
+      runningTripIds.length > 0
+        ? db.trip.findMany({
+            where: { id: { in: runningTripIds } },
+            select: {
+              id: true,
+              vehicle: { select: { plate: true } },
+              route: {
+                select: {
+                  name: true,
+                  direction: true,
+                  stops: {
+                    orderBy: { order: "asc" },
+                    select: {
+                      id: true,
+                      order: true,
+                      stop: {
+                        select: { id: true, name: true, lat: true, lng: true },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          })
+        : Promise.resolve([]),
+    ]);
+
+  const liveMapTrips = runningTripsWithStops.map((t) => ({
+    id: t.id,
+    vehiclePlate: t.vehicle.plate,
+    routeName: t.route.name,
+    direction: t.route.direction,
+    stops: t.route.stops.map((rs) => ({
+      id: rs.id,
+      name: rs.stop.name,
+      lat: rs.stop.lat,
+      lng: rs.stop.lng,
+      order: rs.order,
+    })),
+  }));
 
   const repeatNoShowAlerts = repeatNoShowStudents
     .map((s) => {
@@ -221,6 +263,9 @@ export default async function DashboardPage() {
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-6">
       {/* W16-D: 같은 org의 어떤 trip이든 변동되면 운행 모니터·KPI 자동 갱신 */}
       <OrgDashboardRefresher orgId={orgId} />
+
+      {/* W19-C: 운행 중 셔틀들을 한 지도에 동시 표시 — 운행 중 0개면 자체 숨김 */}
+      <MultiTripLiveSection runningTrips={liveMapTrips} />
 
       {/* 인사 + 푸시 토글 */}
       <section className="flex flex-wrap items-end justify-between gap-3">
