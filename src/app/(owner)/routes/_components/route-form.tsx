@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useActionState, useState } from "react";
 
 import { Button } from "@/components/ui/button";
@@ -101,9 +102,9 @@ export function RouteForm({
           {vehicles.length === 0 ? (
             <p className="text-destructive text-sm">
               먼저{" "}
-              <a href="/vehicles" className="font-medium underline">
+              <Link href="/vehicles" className="font-medium underline">
                 차량을 등록
-              </a>
+              </Link>
               해야 노선을 만들 수 있습니다.
             </p>
           ) : (

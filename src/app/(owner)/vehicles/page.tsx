@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,8 +19,6 @@ import {
 } from "@/components/ui/table";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/auth/session";
-
-import { DeleteVehicleButton } from "./_components/delete-vehicle-button";
 
 const MODE_LABEL = {
   KIDS: "어린이용",
@@ -45,7 +44,8 @@ export default async function VehiclesPage() {
         <div>
           <h2 className="text-2xl font-semibold">차량</h2>
           <p className="text-muted-foreground text-sm">
-            셔틀버스 차량을 등록하고 어린이용·일반용 모드를 관리합니다.
+            셔틀버스 차량을 등록하고 어린이용·일반용 모드를 관리합니다. 카드를
+            누르면 30일 운행 통계·배정 노선·안전점검 이슈를 확인합니다.
           </p>
         </div>
         <Button asChild>
@@ -79,38 +79,34 @@ export default async function VehiclesPage() {
                   : "bg-muted text-muted-foreground";
               return (
                 <li key={v.id}>
-                  <div className="bg-card rounded-lg border p-3.5 shadow-sm">
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-1.5">
-                          <span
-                            className={`${modeCls} rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide`}
-                          >
-                            {MODE_LABEL[v.mode]}
-                          </span>
-                          <h3 className="text-sm font-extrabold tracking-tight">
-                            {v.plate}
-                          </h3>
-                        </div>
-                        <p className="text-muted-foreground mt-1.5 text-xs font-medium">
-                          신고증 {v.reportNo ?? "-"} · 보험 만료{" "}
-                          {formatDate(v.insuranceUntil)}
-                        </p>
+                  <Link
+                    href={`/vehicles/${v.id}`}
+                    className="bg-card hover:bg-muted/40 flex items-start justify-between gap-3 rounded-lg border p-3.5 shadow-sm transition-colors"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span
+                          className={`${modeCls} rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide`}
+                        >
+                          {MODE_LABEL[v.mode]}
+                        </span>
+                        <h3 className="text-sm font-extrabold tracking-tight">
+                          {v.plate}
+                        </h3>
                       </div>
-                      <div className="flex shrink-0 flex-col items-end gap-1.5">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/vehicles/${v.id}/edit`}>편집</Link>
-                        </Button>
-                        <DeleteVehicleButton id={v.id} plate={v.plate} />
-                      </div>
+                      <p className="text-muted-foreground mt-1.5 text-xs font-medium">
+                        신고증 {v.reportNo ?? "-"} · 보험 만료{" "}
+                        {formatDate(v.insuranceUntil)}
+                      </p>
                     </div>
-                  </div>
+                    <ChevronRight className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
+                  </Link>
                 </li>
               );
             })}
           </ul>
 
-          {/* 데스크톱: 표 */}
+          {/* 데스크톱: 표 — 행 전체 Link */}
           <Card className="hidden py-0 lg:block">
             <CardContent className="p-0">
               <Table>
@@ -120,35 +116,63 @@ export default async function VehiclesPage() {
                     <TableHead>모드</TableHead>
                     <TableHead>신고증명서</TableHead>
                     <TableHead>보험 만료</TableHead>
-                    <TableHead className="pr-[18px] text-right">관리</TableHead>
+                    <TableHead className="w-12 pr-[18px] text-right" />
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {vehicles.map((v) => (
-                    <TableRow key={v.id}>
-                      <TableCell className="font-medium">{v.plate}</TableCell>
-                      <TableCell>
-                        <span
-                          className={
-                            v.mode === "KIDS"
-                              ? "bg-bus text-bus-foreground rounded-md px-2 py-0.5 text-xs font-bold"
-                              : "bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-medium"
-                          }
+                    <TableRow
+                      key={v.id}
+                      className="cursor-pointer hover:bg-muted/50"
+                    >
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/vehicles/${v.id}`}
+                          className="block px-2 py-2 font-medium"
                         >
-                          {MODE_LABEL[v.mode]}
-                        </span>
+                          {v.plate}
+                        </Link>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {v.reportNo ?? "-"}
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/vehicles/${v.id}`}
+                          className="block px-2 py-2"
+                        >
+                          <span
+                            className={
+                              v.mode === "KIDS"
+                                ? "bg-bus text-bus-foreground rounded-md px-2 py-0.5 text-xs font-bold"
+                                : "bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-medium"
+                            }
+                          >
+                            {MODE_LABEL[v.mode]}
+                          </span>
+                        </Link>
                       </TableCell>
-                      <TableCell className="text-muted-foreground text-sm">
-                        {formatDate(v.insuranceUntil)}
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/vehicles/${v.id}`}
+                          className="text-muted-foreground block px-2 py-2 text-sm"
+                        >
+                          {v.reportNo ?? "-"}
+                        </Link>
                       </TableCell>
-                      <TableCell className="space-x-2 text-right">
-                        <Button asChild size="sm" variant="outline">
-                          <Link href={`/vehicles/${v.id}/edit`}>편집</Link>
-                        </Button>
-                        <DeleteVehicleButton id={v.id} plate={v.plate} />
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/vehicles/${v.id}`}
+                          className="text-muted-foreground block px-2 py-2 text-sm"
+                        >
+                          {formatDate(v.insuranceUntil)}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/vehicles/${v.id}`}
+                          className="text-muted-foreground flex items-center justify-end pr-[18px] py-2"
+                          aria-label="상세"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
                       </TableCell>
                     </TableRow>
                   ))}
