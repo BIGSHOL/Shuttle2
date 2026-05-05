@@ -6,7 +6,7 @@ import { useEffect, useRef } from "react";
 
 import { cn } from "@/lib/utils";
 
-import { buildOwnerNav } from "./_owner-nav";
+import { buildOwnerNav, findActiveNavHref } from "./_owner-nav";
 
 // 학원장 모바일 하단 nav. 항목 11개 — 4-tab 등분으로 부족해서 가로 스크롤.
 // 큰 아이콘 + 라벨로 모바일 엄지 조작 친화. safe-area-inset-bottom으로 iOS
@@ -24,6 +24,8 @@ export function OwnerBottomNav({
 }) {
   const pathname = usePathname();
   const nav = buildOwnerNav(orgType);
+  // 가장 긴 prefix match 1개만 active — sub-route 진입 시 부모도 active 되는 버그 방지.
+  const activeHref = findActiveNavHref(pathname, nav);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // 페이지 전환 시 active 항목을 화면 가운데로 자동 스크롤. 사용자가 현재 위치
@@ -50,8 +52,7 @@ export function OwnerBottomNav({
         className="scrollbar-hide flex items-stretch gap-0.5 overflow-x-auto px-3 py-2 [mask-image:linear-gradient(to_right,transparent_0,black_1.25rem,black_calc(100%-1.25rem),transparent_100%)] [-webkit-mask-image:linear-gradient(to_right,transparent_0,black_1.25rem,black_calc(100%-1.25rem),transparent_100%)]"
       >
         {nav.map(({ href, label, Icon }) => {
-          const active =
-            pathname === href || pathname.startsWith(`${href}/`);
+          const active = href === activeHref;
           return (
             <Link
               key={href}

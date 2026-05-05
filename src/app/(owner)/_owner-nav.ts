@@ -22,6 +22,30 @@ export type OwnerNavItem = {
   Icon: LucideIcon;
 };
 
+/**
+ * pathname에 가장 잘 매칭되는 nav 항목의 href를 반환. 매칭 없으면 null.
+ *
+ * 단순 `pathname.startsWith(href + "/")` 만 쓰면 `/dashboard/analytics` 진입 시
+ * "대시보드"(`/dashboard`)와 "분석"(`/dashboard/analytics`) 둘 다 매칭돼서 두
+ * nav 항목이 동시에 active로 보이는 버그가 발생. 가장 긴 prefix match만 active로
+ * 잡아 sub-route 항목이 우선되게 한다.
+ */
+export function findActiveNavHref(
+  pathname: string,
+  items: readonly { href: string }[],
+): string | null {
+  let best: { href: string; len: number } | null = null;
+  for (const item of items) {
+    const matches =
+      pathname === item.href || pathname.startsWith(`${item.href}/`);
+    if (!matches) continue;
+    if (!best || item.href.length > best.len) {
+      best = { href: item.href, len: item.href.length };
+    }
+  }
+  return best?.href ?? null;
+}
+
 export function buildOwnerNav(
   orgType: "ACADEMY" | "DAYCARE" | "KINDERGARTEN",
 ): OwnerNavItem[] {

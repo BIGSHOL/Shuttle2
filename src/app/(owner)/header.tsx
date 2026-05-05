@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
 
-import { buildOwnerNav } from "./_owner-nav";
+import { buildOwnerNav, findActiveNavHref } from "./_owner-nav";
 
 const ORG_TYPE_LABEL: Record<"ACADEMY" | "DAYCARE" | "KINDERGARTEN", string> = {
   ACADEMY: "학원·교습소",
@@ -39,6 +39,8 @@ export function OwnerHeader({
   const [pending, startTransition] = useTransition();
   const pathname = usePathname();
   const nav = buildOwnerNav(orgType);
+  // 가장 긴 prefix match 1개만 active — sub-route 진입 시 부모도 active 되는 버그 방지.
+  const activeHref = findActiveNavHref(pathname, nav);
 
   return (
     <header className="bg-background sticky top-0 z-30 border-b">
@@ -61,8 +63,7 @@ export function OwnerHeader({
             className="hidden items-stretch gap-0.5 lg:flex"
           >
             {nav.map(({ href, label, Icon }) => {
-              const active =
-                pathname === href || pathname.startsWith(`${href}/`);
+              const active = href === activeHref;
               return (
                 <Link
                   key={href}
