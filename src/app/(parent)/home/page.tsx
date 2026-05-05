@@ -10,6 +10,7 @@ import { GreetingSection } from "./_components/greeting-section";
 import { HomeActionsGrid } from "./_components/home-actions-grid";
 import { IdleTripCard } from "./_components/idle-trip-card";
 import { LiveTripCard } from "./_components/live-trip-card";
+import { PwaInstallBanner } from "./_components/pwa-install-banner";
 
 function fmtKstHHmm(d: Date): string {
   const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
@@ -23,7 +24,13 @@ export default async function ParentHomePage() {
 
   // 3개 sequential await → Promise.all 1번 (-100~250ms).
   // 모두 자녀 ID 기반이지만 의존성 없이 독립.
-  const [studentRows, todayCards, upcomingAbsences] = await Promise.all([
+  const [
+    studentRows,
+    todayCards,
+    upcomingAbsences,
+    pendingAbsenceCount,
+    pendingStopChangeCount,
+  ] = await Promise.all([
     db.student.findMany({
       where: { id: { in: studentIds } },
       select: {
@@ -42,6 +49,19 @@ export default async function ParentHomePage() {
       orderBy: { date: "asc" },
       take: 5,
       include: { student: { select: { id: true, name: true } } },
+    }),
+    // W20-D1: 학부모 홈 actions grid에 대기 카운트 표시용
+    db.absenceRequest.count({
+      where: {
+        createdBy: me.guardian.id,
+        status: { in: ["PENDING", "NOTIFIED_DRIVER"] },
+      },
+    }),
+    db.stopChangeRequest.count({
+      where: {
+        createdBy: me.guardian.id,
+        status: "PENDING",
+      },
     }),
   ]);
   const studentInfo = new Map(studentRows.map((s) => [s.id, s] as const));
@@ -62,6 +82,9 @@ export default async function ParentHomePage() {
   return (
     <main className="space-y-4 pb-6">
       <GreetingSection todayCount={tripCount} />
+
+      {/* W20-D2: PWA 설치 안내 (이미 standalone이거나 30일 내 닫음 시 자동 숨김) */}
+      <PwaInstallBanner />
 
       {/* 알림 토글 (W6-1 그대로 유지) */}
       {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
@@ -149,7 +172,10 @@ export default async function ParentHomePage() {
         </section>
       )}
 
-      <HomeActionsGrid />
+      <HomeActionsGrid
+        pendingAbsenceCount={pendingAbsenceCount}
+        pendingStopChangeCount={pendingStopChangeCount}
+      />
 
       <AbsencesPreview
         items={upcomingAbsences.map((a) => ({

@@ -267,6 +267,13 @@ vercel deploy --prod --yes  # 프로덕션 배포
   통계 카드 + 정류장 도착 시각 표, `/dashboard/analytics` 노선·기사별 평균
   통계 페이지 + nav 항목. trip-stats utility(`src/lib/geo/trip-stats.ts`)로
   안전운행기록 PDF의 누적거리 계산 코드도 DRY refactor.
+- W20: UX 풀세트 — 학생 360° 상세(`/students/[id]`) + Trip 상세 cross-link
+  (기사명→분석, 학생명→상세) + Dashboard 미탑승 학생 클릭 + 알림 routing
+  bug fix (학부모 stop-change url) + Toast(Sonner) 시스템 + error.tsx /
+  not-found.tsx + 기사 권한 사전 체크 카드 + 학부모 trip-live 기사 통화
+  CTA + GPS 끊김 복구 안내·재시도 + 학부모 홈 "내 신청 현황" 카드 (대기
+  카운트 배지) + PWA 설치 안내 배너 (Android beforeinstallprompt + iOS
+  Safari "공유→홈 화면에 추가" 안내).
 
 ### 알려진 미해결 (다음 세션)
 

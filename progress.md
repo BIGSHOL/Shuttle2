@@ -660,7 +660,109 @@
 - /dashboard/analytics 라우트 build 성공
 - LocationPing/realtime broadcast/RLS 변경 없음
 
-## 다음 우선순위 (W20+)
+## W20 UX 풀세트 (2026-05-06)
+
+전체 프로젝트 UX 감사 후 4개 묶음(A·B·C·D)을 추천 순으로 일괄 진행.
+한 세션에서 모든 묶음 commit + deploy.
+
+### W20-A 학생 360° + cross-link (`7d5924a`, `ebfdd7c`)
+
+**A1. 학생 상세 페이지 신설** (`/students/[id]`):
+- 헤더(연령 배지·이름·편집), 30일 통계 4-grid, 보호자 list(tel: 직접 통화),
+  노선·정류장 배정, 30일 BoardingEvent (행 클릭 → trip 상세), 결석·정류장
+  변경 history (사유·반려 사유 노출).
+- 학생 list 카드/표 행 → /students/[id] 링크 추가. 편집 버튼은 별도.
+- 부수: student-form / guardians invite-form 의 `<a href="/students">` →
+  `<Link>` 변경 (eslint @next/next/no-html-link-for-pages).
+
+**A2. Trip 상세 cross-link**:
+- 기사 이름 → /dashboard/analytics/drivers/[id]?range=30d (StaffRow에
+  optional analyticsHref prop).
+- 정류장 timeline의 학생 이름 3가지 케이스(NO_SHOW 이슈·결석·일반)
+  모두 → /students/[id].
+
+**A3. Dashboard 미탑승 학생 클릭**:
+- "최근 30일 미탑승·미하차 잦은 학생" alert 행 전체 → /students/[id].
+- 기존 보호자 연락처 노출 유지, hover bg 추가.
+
+학원장 운영 흐름:
+컴플레인 받음 → dashboard alert 학생 클릭 → 30일 history·보호자 전화
+바로 연결.
+
+### W20-B 인터랙션 풀세트 (`bf65989`)
+
+**B1. 알림 routing 보완**:
+- BUG: 학원장 stop-change-requests/actions.ts 가 학부모 push에 url을
+  학원장용 `/stop-change-requests`로 잘못 보냄 (승인·반려) → 학부모는
+  못 봄. → `/my-stop-changes`로 수정.
+- 학부모 notification-list.tsx 에 FALLBACK_URL_BY_CAT — 발송 시 url 없는
+  legacy 알림도 카테고리 기준 적절한 곳으로 (ABSENCE_* → /my-absences,
+  STOP_CHANGE_* → /my-stop-changes).
+
+**B2. Toast (Sonner) 시스템 통합**:
+- 루트 layout에 `<Toaster position="top-center" richColors />` 마운트.
+  next-themes로 자동 다크/라이트 대응.
+- AckAbsenceButton, RejectAbsenceButton, UnlinkGuardianLinkButton,
+  DeleteTrainingButton에 toast.success/error. 기존 alert() 제거.
+
+**B3. error.tsx + not-found.tsx**:
+- 신규 src/app/error.tsx — 전역 unhandled error UI. "다시 시도" + "메인" 버튼.
+- 신규 src/app/not-found.tsx — 404 안내 + 메인 link.
+- 기존 0개 → 2개 추가. Next.js 영문 stack trace 노출 방지.
+
+### W20-C 기사 안정성 (`dc03bdd`)
+
+**C1. 기사 /run 권한 사전 체크 카드**:
+- 신규 src/app/(driver)/run/_components/driver-permissions-card.tsx
+- 위치 권한 / 알림 권한 / Wake Lock 자동 체크 (Permissions API +
+  Notification.permission + 'wakeLock' in navigator).
+- 미허용 시 "권한 요청" 버튼 (in-place getCurrentPosition /
+  Notification.requestPermission). denied 상태는 자물쇠 가이드.
+- 모두 OK면 자동 collapse → "운행 환경 이상 없음" details.
+
+**C2. 학부모 trip-live 기사 직접 통화**:
+- driver select에 phone 추가, TripLiveShell driverPhone prop.
+- BottomSheet 운행 정보 카드 안에 tel: 링크 버튼 (phone icon + 번호).
+- 긴급 시 학부모가 즉시 기사 통화.
+
+**C3. GPS 끊김 복구 안내**:
+- gps-tracker hook에 retryKey state + retry() 메서드. effect deps에 retryKey
+  포함 → retry() 호출 시 watchPosition 재구독.
+- 기존 단일 텍스트 "GPS: error" → 안내 카드 (지하 주차장 안내 + 권한 가이드
+  + "GPS 다시 시도" 버튼). 일시적 신호 손실 후 자연스러운 복구.
+
+### W20-D 학부모 자기 추적 (이번 commit)
+
+**D1. 학부모 홈 "내 신청 현황" 카드**:
+- HomeActionsGrid 2x2 — Row 1(신청 new): 결석 신청 / 정류장 변경.
+  Row 2(현황 list): 내 결석 신청 [대기 N] / 내 정류장 변경 [대기 N].
+- home/page.tsx Promise.all에 pendingAbsenceCount + pendingStopChangeCount
+  카운트 fetch 추가 (orgId 필터 createdBy=guardian.id).
+- 대기 0건이면 배지 안 보임, 1건+ 노란 warning-soft 배지.
+
+**D2. PWA 설치 안내 배너**:
+- 신규 src/app/(parent)/home/_components/pwa-install-banner.tsx
+- Android Chrome: beforeinstallprompt 이벤트 → "홈 화면에 추가" 버튼.
+- iOS Safari: 이벤트 미발생 → "공유 → 홈 화면에 추가" 안내 텍스트.
+- 이미 standalone 모드면 표시 X. 사용자 X 닫으면 30일 suppress
+  (localStorage).
+- 학부모 홈 GreetingSection 직후 마운트.
+
+### W20 사용자 가치 요약
+
+- **학원장**: 컴플레인·미탑승 알림 → 한 클릭으로 학생 360° 상세 + 보호자 전화
+- **학원장**: 운영 액션 결과를 toast로 즉시 피드백
+- **기사**: 운행 시작 전 권한 누락 사전 발견, 운행 중 GPS 손실 시 명확한 복구 흐름
+- **학부모**: 알림이 항상 의도한 곳으로 라우팅, 긴급 시 기사 직접 통화, 신청
+  진행 현황 홈에서 한눈에, PWA 설치로 푸시 안정성 ↑
+
+### W20 검증
+
+- typecheck/lint/build 모두 clean
+- 신규 4개 라우트(/students/[id], /error, /not-found, 학부모 홈 PWA banner UI)
+- Supabase Realtime/RLS/LocationPing 변경 없음
+
+## 다음 우선순위 (W21+)
 
 ### W17-B: 가입 확인 메일 한국어 (선택)
 
