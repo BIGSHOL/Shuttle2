@@ -28,8 +28,8 @@ import {
   toggleBoardingEventAction,
   unmarkBoardingIssueAction,
   upsertSafetyCheckAction,
-  type SafetyFieldsInput,
 } from "../../run/actions";
+import type { SafetyFieldsInput } from "@/server/driver/types";
 import {
   EndTripModal,
   type UnprocessedItem,

@@ -82,10 +82,11 @@ export function NotificationToggle({
           );
         }
       } catch (err) {
+        console.error("[notification-toggle] init failed", err);
         if (!cancelled)
           setStatus({
             kind: "error",
-            message: err instanceof Error ? err.message : "알 수 없는 오류",
+            message: "알림 상태 확인에 실패했어요. 잠시 후 다시 시도해 주세요.",
           });
       }
     })();
@@ -127,9 +128,10 @@ export function NotificationToggle({
         }
         setStatus({ kind: "subscribed", endpoint: sub.endpoint });
       } catch (err) {
+        console.error("[notification-toggle] subscribe failed", err);
         setStatus({
           kind: "error",
-          message: err instanceof Error ? err.message : "구독에 실패했어요",
+          message: "알림 등록에 실패했어요. 잠시 후 다시 시도해 주세요.",
         });
       }
     });
@@ -147,9 +149,10 @@ export function NotificationToggle({
         }
         setStatus({ kind: "unsubscribed" });
       } catch (err) {
+        console.error("[notification-toggle] unsubscribe failed", err);
         setStatus({
           kind: "error",
-          message: err instanceof Error ? err.message : "해제 실패",
+          message: "알림 해제에 실패했어요. 잠시 후 다시 시도해 주세요.",
         });
       }
     });
