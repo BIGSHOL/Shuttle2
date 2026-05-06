@@ -49,6 +49,7 @@ async function main() {
       `  ↺ Found existing demo org ${orgId}, wiping demo children only…`,
     );
     await db.absenceRequest.deleteMany({ where: { student: { orgId } } });
+    await db.stopChangeRequest.deleteMany({ where: { orgId } });
     await db.locationPing.deleteMany({
       where: { trip: { vehicle: { orgId } } },
     });
@@ -71,6 +72,8 @@ async function main() {
     await db.route.deleteMany({ where: { vehicle: { orgId } } });
     await db.stop.deleteMany({ where: { orgId } });
     await db.trainingRecord.deleteMany({ where: { staff: { orgId } } });
+    await db.staffInvite.deleteMany({ where: { orgId } });
+    await db.guardianInvite.deleteMany({ where: { orgId } });
     await db.staff.deleteMany({ where: { orgId } });
     await db.vehicle.deleteMany({ where: { orgId } });
     await db.organization.delete({ where: { id: orgId } });
