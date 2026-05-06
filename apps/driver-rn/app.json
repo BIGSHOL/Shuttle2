@@ -19,6 +19,14 @@
         "FOREGROUND_SERVICE_LOCATION",
         "WAKE_LOCK",
         "POST_NOTIFICATIONS",
+        "INTERNET",
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "WAKE_LOCK",
+        "POST_NOTIFICATIONS",
         "INTERNET"
       ]
     },
@@ -41,6 +49,12 @@
         "projectId": "05ae9ebf-edc7-4aa9-8d85-5ff9dec655c7"
       }
     },
-    "owner": "bigshol"
+    "owner": "bigshol",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/05ae9ebf-edc7-4aa9-8d85-5ff9dec655c7"
+    }
   }
 }
