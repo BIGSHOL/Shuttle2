@@ -177,21 +177,21 @@ async function main() {
   console.log(`  ✓ Stops: ${stops.length}`);
 
   // 노선 2개 (등원/하원) — 둘 다 KIDS 차량에 (안전점검 데모를 위해)
-  // 월·수·금 (1+4+16 = 21)
+  // 매일 (월~일 = 1+2+4+8+16+32+64 = 127): 어떤 요일에 데모해도 운행 노출
   const pickupRoute = await db.route.create({
     data: {
       vehicleId: kidsVehicle.id,
-      name: "월수금 등원 (데모)",
+      name: "매일 등원 (데모)",
       direction: "PICKUP",
-      weekdays: 21,
+      weekdays: 127,
     },
   });
   const dropoffRoute = await db.route.create({
     data: {
       vehicleId: kidsVehicle.id,
-      name: "월수금 하원 (데모)",
+      name: "매일 하원 (데모)",
       direction: "DROPOFF",
-      weekdays: 21,
+      weekdays: 127,
     },
   });
   console.log(`  ✓ Routes: ${pickupRoute.name}, ${dropoffRoute.name}`);
