@@ -287,6 +287,9 @@ vercel deploy --prod --yes  # 프로덕션 배포
   cross-link, 정류장(`/stops/[id]`) 카카오맵 read-only(`stop-map-display`)·사용
   노선·home 학생·변경 요청 빈도, 학부모(`/guardians/[id]`) 자녀·결석/변경
   history·푸시 디바이스 진단. list page 행 클릭 → detail 통일.
+- W22: Suspense 스트리밍 — 학부모 `/home`·`/trip-live`, 학원장 `/dashboard`에서
+  빠른 KPI 즉시 paint + 무거운 nested fetch만 부분 stream. 가장 느린 한 쿼리에
+  첫 paint가 묶이던 패턴 해소.
 - **W23: 기사용 React Native 사이드로드 APK 분리** — iOS Safari PWA의 백그라운드
   GPS 한계 우회. 기사만 RN, 학부모·학원장·HELPER·iOS 기사는 PWA 그대로.
   - 모노레포 전환: `apps/driver-rn/`, `packages/shared-contracts/` (pnpm workspace).
@@ -319,14 +322,18 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - 가입 확인 메일 한국어 (W17-B, email_confirm bypass 해제 시)
 - 결제 통합 (Toss Payments 또는 Stripe)
 - 기사용 RN 앱 지도 (W23는 정류장 리스트만 — react-native-maps 본격 통합은 베타 후)
-- 사용자 작업 (베타 시작 전):
-  1. `pnpm db:migrate --name add_staff_fcm_subscription_w22` (StaffFcmSubscription)
-  2. Firebase Console에서 새 프로젝트 생성 → Android 앱 등록 → `google-services.json`
-     다운로드 → `apps/driver-rn/google-services.json` 위치 + 환경변수
-     (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`)
-  3. Supabase Storage `driver-apks` public bucket 생성
-  4. `eas build --platform android --profile preview` → APK 업로드 → 환경변수
-     `DRIVER_APP_LATEST_VERSION`, `DRIVER_APP_LATEST_APK_URL` 설정
+- 사용자 작업 (베타 시작 전 — W23-A 2026-05-07 진척):
+  - ✅ `pnpm db:migrate` (StaffFcmSubscription) — 처리 완료
+  - ✅ Firebase 프로젝트 + `apps/driver-rn/google-services.json` (private repo
+       commit `560876f`이므로 다른 컴퓨터로 별도 secret 이동 불필요)
+  - ✅ Vercel env: `FIREBASE_PROJECT_ID`/`CLIENT_EMAIL`/`PRIVATE_KEY` 등록 완료
+  - ✅ Vercel env: `DRIVER_APP_LATEST_VERSION = 1.0.0` (W23-A에서 등록)
+  - ✅ Supabase Storage `driver-apks` PUBLIC bucket (50MB)
+  - ⏳ EAS preview 빌드: 큐 진입 (Build `d79ca416-933d-4929-a2ae-af1593602a95`)
+       → 빌드 완료 후 APK 다운로드 → Storage 업로드 → Vercel env
+       `DRIVER_APP_LATEST_APK_URL` 등록
+  - ⚠️ EXPO_TOKEN 2개 회전 필수 — 채팅 transcript에 평문 노출. 베타 시작 전
+       expo.dev → Account → Access Tokens에서 revoke + 재발급 → 1Password 보관
 
 ### 환경 변수 가드레일 (W15-D·W18 트러블슈팅 결과)
 

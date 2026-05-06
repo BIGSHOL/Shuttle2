@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-06 (W21 학원장 메뉴 4종 360° drill-down 배포)
+> 마지막 업데이트: 2026-05-07 (W23-A EAS 빌드 진입 + Vercel env 정리)
 
 ## 완료된 마일스톤
 
@@ -33,6 +33,9 @@
 | W19   | 학원장 차량 모니터링 강화 — 운행 중 trail·멀티 trip 지도·운행 통계·`/dashboard/analytics` | `2ffc78e`, `41c698e`, `3acc2b3`, `967d8cb`, `7e3b50f`, `e20779a` | ✅ |
 | W20   | UX 풀세트 — 학생 360°·cross-link·toast·error.tsx·기사 권한·학부모 통화·신청 현황·PWA 배너 | `7d5924a`, `ebfdd7c`, `bf65989`, `dc03bdd`, `fdf25ed` | ✅ |
 | W21   | 학원장 메뉴 4종 360° drill-down — 차량·기사·정류장·학부모 detail + 카카오맵 read-only | `fdfbe99`, `3774fe1`, `8fcf3ae`, `0ab030b`, `651b76c` | ✅ |
+| W22   | Suspense 스트리밍 — 학부모 home/trip-live + 학원장 dashboard 부분 영역 stream             | `b990388`                                              | ✅ |
+| W23   | 기사용 RN 사이드로드 APK + FCM + monorepo 전환 (`apps/driver-rn`·`packages/shared-contracts`) | `2f746f5`                                          | ✅ 코드 |
+| W23-A | EAS 빌드 진입 fix — google-services prebuild + Vercel env 4/5 등록                       | `560876f`, `3f57835`                                   | ⏳ APK 대기 |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -1036,6 +1039,100 @@ broadcast 안정화.
 
 - PWA: `pnpm typecheck` + `pnpm lint` clean
 - RN: `pnpm --filter @shuttlee/driver-rn typecheck` clean
+
+## W23-A EAS 빌드 진입 fix + Vercel env 정리 (2026-05-07)
+
+다른 컴퓨터에서 시작한 W23 빌드 1차 시도가 expo doctor + prebuild 단계에서
+51초 만에 차단됐던 것을 fix. 빌드 큐 정상 진입, Vercel env 4/5 등록.
+남은 건 APK URL 1개 + EXPO_TOKEN 회전.
+
+### 워크트리·브랜치 정리
+
+- 머지 완료된 remote 브랜치 2개 삭제: `claude/check-progress-6e2KO`,
+  `claude/amazing-greider-b83b10` (PR #3 머지 commit이 origin/main HEAD).
+- 로컬 main fast-forward (5fe9941 → f527ef8 + 14 commit — W22·W23·manual·
+  /help·subagent·pre-push hook 흡수).
+
+### 완료된 fix
+
+- **prebuild 차단 해소** (`560876f`):
+  - `apps/driver-rn/app.json` android 블록에 `"googleServicesFile": "./google-services.json"`
+    추가. `@react-native-firebase/app` plugin이 prebuild 시 이 경로를 요구하는데
+    누락 → `withAndroidDangerousBaseMod: Path to google-services.json is not defined`
+    51초 fail.
+  - `.gitignore`에서 `/apps/driver-rn/google-services.json` 라인 삭제 — private
+    repo이므로 Firebase client config(API key·project ID) 포함 안전. SHA fingerprint·
+    package name으로 client 인증되어 server secret 아님.
+  - 이전 컴퓨터에서 디렉터리로 잘못 들어간 구조(`google-services.json/google-services.json`)
+    평탄화 후 commit.
+- **expo-updates 자동 셋업 반영** (`3f57835`):
+  - EAS CLI 첫 build 명령 시 `expo-updates` 자동 install + EAS Update URL 구성.
+  - `app.json`에 `runtimeVersion(policy: appVersion)` + `updates.url` 추가.
+  - OTA 업데이트(JS-only 변경 즉시 배포) 활성화의 표준 구성.
+
+### EAS 빌드 큐
+
+- **Build ID**: `d79ca416-933d-4929-a2ae-af1593602a95`
+- **Profile**: preview (internal distribution APK)
+- **Logs**: <https://expo.dev/accounts/bigshol/projects/shuttlee-driver/builds/d79ca416-933d-4929-a2ae-af1593602a95>
+- 진입 시각 약 2026-05-07 02:00 KST. 일반 10~20분 소요.
+
+### Vercel env (CLI 등록)
+
+`vercel link`된 프로젝트는 root의 `shuttle2` (prj_CPbOyuHXVE5p6Yow1UKANLHhhqN8).
+
+| 변수                          | 상태 | 비고                       |
+| ----------------------------- | ---- | -------------------------- |
+| `FIREBASE_PROJECT_ID`         | ✅   | 6시간 전 등록 (이전 컴퓨터) |
+| `FIREBASE_CLIENT_EMAIL`       | ✅   | 6시간 전 등록 (이전 컴퓨터) |
+| `FIREBASE_PRIVATE_KEY`        | ✅   | 6시간 전 등록 (이전 컴퓨터) |
+| `DRIVER_APP_LATEST_VERSION`   | ✅   | `1.0.0` (W23-A에서 등록)    |
+| `DRIVER_APP_LATEST_APK_URL`   | ⏳   | 빌드 끝난 후                |
+
+### Supabase Storage
+
+- ✅ `driver-apks` PUBLIC bucket — 50MB limit, Any mime types.
+
+### 빌드 끝난 후 마지막 단계
+
+1. EAS dashboard에서 APK 다운로드 (또는 build artifact URL 확보).
+2. `driver-apks` bucket에 업로드 (예: `v1.0.0.apk`).
+3. Vercel env 등록:
+   ```powershell
+   printf "<APK URL>" | npx -y vercel@latest env add DRIVER_APP_LATEST_APK_URL production
+   ```
+4. 학원장 dashboard `<DriverAppShareCard>` → 카톡 공유 동작 검증.
+5. `vercel deploy --prod --yes`로 새 env 반영된 production 재배포.
+
+### 보안 후속 (베타 시작 전 처리)
+
+- **EXPO_TOKEN 2개 회전 필수** — 두 토큰 모두 채팅 transcript 평문 노출됨.
+  - <https://expo.dev/settings/access-tokens> → 두 토큰 모두 revoke
+  - 새 토큰 발급 → 1Password / KeePass 등 안전 장소에만 보관
+  - 자동 처리(GitHub Actions, 다른 CI)에 등록됐다면 같이 갱신
+- 향후 토큰 사용: `$env:EXPO_TOKEN = "..."`로 PowerShell 세션 한정 set.
+  채팅에 평문 적지 말 것.
+
+### 다른 컴퓨터에서 이어갈 때 (W23-A 시점 보강)
+
+상단 "다른 컴퓨터에서 이어가기" 절차에 더해:
+
+1. `git pull` (최신 commit `3f57835`까지)
+2. `pnpm install` (root, 1~3분)
+3. `.env.local` (root) — 1Password 등 안전 채널로 이동.
+4. **`apps/driver-rn/google-services.json`은 이제 git 포함** — 별도 이동 불필요
+   (W23-A `560876f`에서 commit).
+5. EXPO_TOKEN: 회전한 새 토큰을 PowerShell 세션에 set:
+   ```powershell
+   $env:EXPO_TOKEN = "<new-token>"
+   ```
+6. 빌드 상태 확인:
+   ```powershell
+   cd apps/driver-rn
+   npx -y eas-cli@latest build:view d79ca416-933d-4929-a2ae-af1593602a95
+   ```
+7. 빌드 끝났으면 위 "빌드 끝난 후 마지막 단계" 1~5 진행 — 채팅으로
+   "빌드 끝났어. APK URL: <url>" 한 줄 알려주면 자동 처리 가능.
 
 ## 다음 우선순위 (W24+)
 
