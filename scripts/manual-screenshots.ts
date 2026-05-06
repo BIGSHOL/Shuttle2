@@ -41,7 +41,13 @@ async function login(page: Page, role: Role) {
   await page.fill('input[name="identifier"]', acc.id);
   await page.fill('input[name="password"]', PASS);
   await page.click('button[type="submit"]');
+  // 로그인 후 redirect URL 대기 — networkidle만으론 redirect 완료 보장 X.
+  // 역할별 home URL 패턴 확인.
+  const homePattern =
+    role === "owner" ? /\/dashboard/ : role === "driver" ? /\/run/ : /\/home/;
+  await page.waitForURL(homePattern, { timeout: 15000 });
   await page.waitForLoadState("networkidle");
+  await page.waitForTimeout(800);
 }
 
 async function shoot(page: Page, role: Role, name: string, opts: ShootOptions = {}) {
