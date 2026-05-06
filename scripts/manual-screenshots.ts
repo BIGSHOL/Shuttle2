@@ -253,28 +253,96 @@ async function runDriver(browser: Browser) {
     isMobile: true,
     deviceScaleFactor: 2,
     permissions: ["geolocation"],
-    geolocation: { latitude: 37.4979, longitude: 127.0276 }, // 강남역
+    geolocation: { latitude: 37.4979, longitude: 127.0276 }, // 강남역 default
   });
   const page = await ctx.newPage();
 
-  // 1. 가입·로그인 (토큰 가입은 토큰 필요 — login만 촬영)
+  // 1. login
   await navigate(page, "/login");
   await shoot(page, "driver", "02-login");
 
   // 2. /run 첫 진입
   await login(page, "driver");
-  await page.waitForTimeout(1000);
+  await page.waitForTimeout(1500);
   await shoot(page, "driver", "03-run-overview");
 
-  // 3. 알림 list
+  // 3. 권한 사전 체크 카드 (스크롤하면 보임)
+  await shoot(page, "driver", "04-permissions", { fullPage: true });
+
+  // 4. 운행 시작 버튼 클릭 → /trip/[id]로 이동
+  const startButton = page.getByRole("button", { name: /운행 시작/ }).first();
+  if (await startButton.isVisible()) {
+    await startButton.click();
+    await page.waitForURL(/\/trip\//, { timeout: 15000 });
+    await page.waitForTimeout(2000);
+
+    // 5. 운행 화면 헤더 + 정류장 진행도
+    await shoot(page, "driver", "05-trip-running");
+    await shoot(page, "driver", "06-trip-header-chips", {
+      clip: { x: 0, y: 0, width: 414, height: 220 },
+    });
+
+    // 6. KIDS 모드면 안전점검·동승자 카드 — 스크롤로 보이게
+    await shoot(page, "driver", "07-safety-check-pre", {
+      scrollTo: 200,
+    });
+    await shoot(page, "driver", "08-helper-picker", {
+      scrollTo: 350,
+    });
+
+    // 7. 정류장 자동 통과 시뮬 — GPS 좌표 첫 정류장으로 이동
+    // 강남역 데모 정류장 4개의 첫 번째 좌표로 강제 이동
+    await ctx.setGeolocation({ latitude: 37.4979, longitude: 127.0276 });
+    await page.waitForTimeout(8000); // GPS watchPosition tick 기다림
+
+    await shoot(page, "driver", "09-stop-passed", {
+      scrollTo: 500,
+      fullPage: true,
+    });
+
+    // 8. 학생 토글 (전체 페이지 fullPage)
+    await shoot(page, "driver", "10-student-toggle", {
+      fullPage: true,
+    });
+
+    // 9. 미탑승 보고 — 첫 학생 옆 ⚠️ 버튼 클릭
+    const issueButtons = page.locator('button[aria-label*="보고"]');
+    if (await issueButtons.count() > 0) {
+      await issueButtons.first().click();
+      await page.waitForTimeout(800);
+      await shoot(page, "driver", "11-no-show-report");
+
+      // 모달 닫기
+      const cancel = page.getByRole("button", { name: /취소/ });
+      if (await cancel.isVisible()) await cancel.click();
+    }
+
+    // 10. 운행 종료 버튼 시도 — 미처리 모달 표시
+    const endButton = page.getByRole("button", { name: /운행 종료/ });
+    if (await endButton.isVisible()) {
+      await endButton.click();
+      await page.waitForTimeout(1000);
+      await shoot(page, "driver", "14-end-trip");
+
+      // 모달 있으면 캡처
+      const dialog = page.locator('[role="dialog"]');
+      if (await dialog.isVisible()) {
+        await shoot(page, "driver", "15-end-modal");
+        // 닫기
+        const closeBtn = page.getByRole("button", { name: /닫기|취소/ }).last();
+        if (await closeBtn.isVisible()) await closeBtn.click();
+      }
+    }
+  } else {
+    console.log("  ⚠️  운행 시작 버튼 없음 — 동적 화면 skip");
+  }
+
+  // 11. 알림 list
   await navigate(page, "/run/notifications");
   await shoot(page, "driver", "17-notifications");
 
-  // TODO: 운행 시작 후 화면들은 trip 시작 server action 별도 필요
-  // 일단 정적 화면만 촬영. 동적 화면은 user에 안내.
-
   await ctx.close();
-  console.log(`✅ DRIVER 끝 (운행 화면은 별도 처리)`);
+  console.log(`✅ DRIVER 끝`);
 }
 
 // ────────────────────────────────────────────────────────────────────
@@ -298,6 +366,39 @@ async function runGuardian(browser: Browser) {
   await login(page, "guardian");
   await page.waitForTimeout(1500);
   await shoot(page, "guardian", "03-home-overview");
+  await shoot(page, "guardian", "04-push-toggle", {
+    clip: { x: 0, y: 130, width: 414, height: 100 },
+  });
+
+  // 운행 카드 종류 — 홈 페이지 fullPage로 다양한 카드 노출
+  await shoot(page, "guardian", "05-card-stack", { fullPage: true });
+
+  // trip-live 진입 — 운행 중 카드 클릭 (driver가 trip 시작했을 때)
+  const liveCard = page.locator('a[href^="/trip-live/"]').first();
+  if (await liveCard.isVisible()) {
+    const tripHref = await liveCard.getAttribute("href");
+    if (tripHref) {
+      await navigate(page, tripHref, { wait: 3000 }); // 카카오맵 로드
+      await shoot(page, "guardian", "12-trip-live-overview", { fullPage: false });
+      await shoot(page, "guardian", "13-trip-live-header", {
+        clip: { x: 0, y: 0, width: 414, height: 130 },
+      });
+      await shoot(page, "guardian", "14-trip-live-map", {
+        clip: { x: 0, y: 130, width: 414, height: 350 },
+      });
+      // ETA + 정류장 진행도 — 하단 sheet (스크롤 가능)
+      await shoot(page, "guardian", "15-eta-card", {
+        scrollTo: 400,
+        clip: { x: 0, y: 480, width: 414, height: 250 },
+      });
+      await shoot(page, "guardian", "17-stop-rail", {
+        scrollTo: 700,
+        fullPage: true,
+      });
+    }
+  } else {
+    console.log("  ⚠️  운행 중 카드 없음 — trip-live skip (driver script 먼저 돌렸는지 확인)");
+  }
 
   await navigate(page, "/notifications");
   await shoot(page, "guardian", "19-notifications");
@@ -314,15 +415,18 @@ async function runGuardian(browser: Browser) {
   await navigate(page, "/my-stop-changes");
   await shoot(page, "guardian", "24-stop-changes-history");
 
-  // BottomTabBar — 홈에서 클립으로
+  // 신청 현황 카드 + BottomTabBar — 홈에서 클립
   await navigate(page, "/home");
   await page.waitForTimeout(1500);
+  await shoot(page, "guardian", "25-pending-counts", {
+    clip: { x: 0, y: 230, width: 414, height: 160 },
+  });
   await shoot(page, "guardian", "26-bottom-tabs", {
     clip: { x: 0, y: 800, width: 414, height: 96 },
   });
 
   await ctx.close();
-  console.log(`✅ GUARDIAN 끝 (trip-live 풀스크린은 별도 처리)`);
+  console.log(`✅ GUARDIAN 끝`);
 }
 
 // ────────────────────────────────────────────────────────────────────
