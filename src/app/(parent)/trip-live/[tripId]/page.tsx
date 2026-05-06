@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { Suspense } from "react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -11,12 +12,15 @@ import {
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
 import { requireGuardianTripAccess } from "@/lib/auth/guardian-trip-access";
-import { getChildStopEta } from "@/lib/eta/route-stats";
 
+import { ChildEtaSection } from "./_components/child-eta-section";
 import { TripLiveShell } from "./_components/trip-live-shell";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
+// C안 Suspense 스트리밍: trip + pings는 즉시 fetch (지도·헤더에 필요).
+// getChildStopEta는 RouteStop별 평균 통과 분 계산이라 무거움 → Suspense로 분리.
+// 사용자는 지도·정류장 진행도 먼저 보고, ETA 카드는 stream되어 뒤따라 표시.
 export default async function TripLivePage({
   params,
 }: {
@@ -118,15 +122,18 @@ export default async function TripLivePage({
     );
   }
 
-  // 진행 중일 때만 ETA 학습 데이터 조회 (베타에 데이터 부족하면 null fallback)
-  const childEta = trip.startedAt
-    ? await getChildStopEta({
-        tripId: trip.id,
-        routeId: trip.routeId,
-        childStopId: access.childStudent.stopId,
-        startedAtMs: trip.startedAt.getTime(),
-      })
-    : null;
+  // 진행 중 trip — childEta는 Suspense 슬롯으로. fallback null이면 카드가 잠깐
+  // 비어 보였다가 학습 데이터 도착하면 스르륵 표시 (기존 UX와 동일하게 "없음→있음" 자연스러움).
+  const childEtaSlot = trip.startedAt ? (
+    <Suspense fallback={null}>
+      <ChildEtaSection
+        tripId={trip.id}
+        routeId={trip.routeId}
+        childStopId={access.childStudent.stopId}
+        startedAtMs={trip.startedAt.getTime()}
+      />
+    </Suspense>
+  ) : null;
 
   // 진행 중·예정 trip — 풀스크린 shell
   return (
@@ -152,7 +159,7 @@ export default async function TripLivePage({
       }))}
       passedStopIds={Array.from(passedStopIds)}
       startedAtISO={trip.startedAt?.toISOString() ?? null}
-      childEta={childEta}
+      childEtaSlot={childEtaSlot}
     />
   );
 }

@@ -921,10 +921,48 @@ vercel deploy --prod --yes   # Vercel CLI로 배포 (또는 main push 시 자동
 - 신규 2개 client component(stop-map-display{,.inner}) — dynamic import + SSR-safe
 - Supabase Realtime/RLS/LocationPing 변경 없음
 
-## 다음 우선순위 (W22+)
+## W22 C안 Suspense 스트리밍 (이번 commit)
 
-W21까지 학원장 운영 도구는 베타 운영 가능 수준에 도달. 다음은 베타 졸업·정식
-런칭 준비를 위한 항목 위주.
+A안(loading.tsx)·B안(auth dedupe) 다음 단계. 페이지 단일 `await Promise.all(...)` 묶음 안에
+빠른 KPI count와 무거운 nested fetch가 같이 있어 — 가장 느린 한 쿼리가 전체 페이지 첫 paint를
+막던 패턴 해소. 무거운 부분만 별도 server component로 분리하고 Suspense fallback skeleton.
+
+### W22-A 학부모 /home (`getTodayChildTrips` 분리)
+
+- `src/app/(parent)/home/_components/today-trips-section.tsx` 신규 — server component
+- page.tsx는 studentRows + upcomingAbsences + 2 counts만 즉시 fetch (모두 단순 query)
+- 자녀 N명 × 노선 × 오늘 운행 nested fetch만 Suspense → trip 카드 stream
+- GreetingSection은 todayCount prop 제거 (Suspense 분리 후 즉시 렌더 위해)
+
+### W22-B 학부모 /trip-live (`getChildStopEta` 분리)
+
+- `src/app/(parent)/trip-live/[tripId]/_components/child-eta-section.tsx` 신규 — server component
+- page.tsx는 trip + pings 즉시 fetch (지도·헤더에 필요)
+- RouteStop별 평균 통과 분 계산은 Suspense → 학부모는 지도·정류장 진행도 먼저 보고 ETA 카드 stream
+- TripLiveShell은 `childEta` prop → `childEtaSlot: ReactNode`로 변경 (server component slot 패턴)
+
+### W22-C 학원장 /dashboard (무거운 4개 section 분리)
+
+- 11 KPI count + org만 page에서 즉시 fetch (vehicle/student/stop/route count, absence/stop-change/no-show
+  count, trip total/running/finished count, org plan)
+- 무거운 4개를 server component로 추출:
+  - `today-trips-monitor.tsx` — todayTrips with includes + boarding stats
+  - `multi-trip-live-server.tsx` — 운행 중 trip nested fetch (route → stops) → MultiTripLiveSection client에 props
+  - `repeat-no-show-alert.tsx` — 30일 NO_SHOW groupBy + 학생 fetch
+  - `training-alert.tsx` — staffWithTraining nested
+  - `expiring-vehicle-alert.tsx` — 어린이용 차량 보험 D-30
+- "모든 운행 정상" 뱃지 제거 (4가지 alert 다 fetch 끝나야 알 수 있어 Suspense 후엔 의미 약화)
+
+### W22 검증
+
+- typecheck/lint clean
+- 페이지 architecture: 빠른 KPI 즉시 → 무거운 sections 차례로 stream
+- Suspense fallback skeleton은 page-level loading.tsx와 다름 — 페이지 안의 부분 영역 전용
+
+## 다음 우선순위 (W23+)
+
+W22까지 체감 속도(A·B·C안) + 학원장 운영 도구(W19~W21)는 베타 운영 가능 수준에 도달.
+다음은 베타 졸업·정식 런칭 준비를 위한 항목 위주.
 
 ### P1 — 베타 졸업 필수
 

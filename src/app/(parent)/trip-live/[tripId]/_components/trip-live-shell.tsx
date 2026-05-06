@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 
 import { estimateEtaMinutes } from "@/lib/geo/eta";
 import { useTripBroadcast } from "@/lib/geo/use-trip-broadcast";
@@ -38,7 +39,7 @@ export function TripLiveShell({
   stops,
   passedStopIds,
   startedAtISO,
-  childEta,
+  childEtaSlot,
 }: {
   tripId: string;
   childStudent: { id: string; name: string; stopId: string };
@@ -50,12 +51,9 @@ export function TripLiveShell({
   stops: Stop[];
   passedStopIds: string[];
   startedAtISO: string | null;
-  childEta: {
-    predictedAtMs: number | null;
-    sampleCount: number;
-    scheduledAt: string | null;
-    passed: boolean;
-  } | null;
+  // server-side fetch가 들어가는 server component를 Suspense로 감싸 page에서
+  // 넘기는 슬롯. trip-live-shell은 client component이므로 자체 fetch 불가.
+  childEtaSlot: ReactNode;
 }) {
   const ping = useTripBroadcast(tripId);
   const passedSet = useMemo(() => new Set(passedStopIds), [passedStopIds]);
@@ -198,9 +196,7 @@ export function TripLiveShell({
           hasPing={ping !== null}
         />
 
-        {childEta && !childEta.passed ? (
-          <ChildEtaCard eta={childEta} />
-        ) : null}
+        {childEtaSlot}
 
         <div className="bg-muted/40 mt-4 rounded-md px-3.5 py-2.5">
           <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
@@ -254,76 +250,3 @@ export function TripLiveShell({
   );
 }
 
-// 자녀 정류장 도착 예상 카드 — 학습된 평균 vs 정시 비교.
-function ChildEtaCard({
-  eta,
-}: {
-  eta: {
-    predictedAtMs: number | null;
-    sampleCount: number;
-    scheduledAt: string | null;
-    passed: boolean;
-  };
-}) {
-  // sampleCount가 충분(>= 3)하고 predictedAtMs 있으면 학습 평균 표시.
-  // 그 외에는 RouteStop.scheduledAt 기반 정시 안내 또는 "데이터 부족".
-  if (eta.predictedAtMs !== null) {
-    const kst = new Date(eta.predictedAtMs + 9 * 60 * 60 * 1000);
-    const hhmm = kst.toISOString().slice(11, 16);
-
-    // 정시(scheduledAt HH:mm) 대비 차이 — scheduledAt이 있으면 비교 표시
-    let diffLabel: string | null = null;
-    if (eta.scheduledAt) {
-      const [sh, sm] = eta.scheduledAt.split(":").map(Number);
-      const predHour = kst.getUTCHours();
-      const predMin = kst.getUTCMinutes();
-      const diffMin =
-        predHour * 60 + predMin - ((sh ?? 0) * 60 + (sm ?? 0));
-      if (Math.abs(diffMin) >= 1) {
-        diffLabel =
-          diffMin > 0 ? `정시보다 +${diffMin}분` : `정시보다 ${diffMin}분`;
-      } else {
-        diffLabel = "정시 도착 예상";
-      }
-    }
-
-    return (
-      <div className="bg-success-soft mt-4 rounded-md border border-success/30 px-3.5 py-3">
-        <p className="text-success text-[10px] font-extrabold tracking-wide uppercase">
-          자녀 정류장 도착 예상
-        </p>
-        <p className="text-foreground mt-1 font-mono text-2xl font-extrabold">
-          {hhmm}
-        </p>
-        {diffLabel ? (
-          <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-            {diffLabel} · 최근 {eta.sampleCount}건 평균 기반
-          </p>
-        ) : (
-          <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-            최근 {eta.sampleCount}건 운행 평균 기반
-          </p>
-        )}
-      </div>
-    );
-  }
-
-  // 데이터 부족 → scheduledAt 정시 안내
-  if (eta.scheduledAt) {
-    return (
-      <div className="bg-muted/40 mt-4 rounded-md px-3.5 py-3">
-        <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-          자녀 정류장 정시 도착
-        </p>
-        <p className="text-foreground mt-1 font-mono text-2xl font-extrabold">
-          {eta.scheduledAt}
-        </p>
-        <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-          평균 도착 시각은 운행이 누적되면 표시돼요
-        </p>
-      </div>
-    );
-  }
-
-  return null;
-}

@@ -1,131 +1,87 @@
 # 셔틀이 — 진행 작업 계획
 
-마지막 업데이트: 2026-05-04 (A안 + B안 + 로그인·dashboard 병렬화 완료)
+마지막 업데이트: 2026-05-06 (A·B·C안 모두 완료)
 
 ## 직전 진행 사항
 
-사용자 피드백 "웹앱 반응속도가 여전히 느린곳이 제법 있네", "로그인 중에서 너무 오래 걸리는데" 대응 완료. **A안(loading.tsx) + B안(auth dedupe) + 로그인 후 dashboard 병렬화** 모두 라이브. 또한 OWNER dashboard 알림 토글 문구가 학부모용으로 하드코딩된 버그(`63153d1`) 수정.
+체감 속도 개선 3안 모두 라이브:
+- **A안 (`b3d84aa` + `17838fc`)**: `loading.tsx` 9개 + 폼 페이지 13개 skeleton — 클릭 시 즉시 fallback
+- **B안 (`bc2098e`)**: middleware getUser 결과 header inject — 매 nav 50~200ms 단축
+- **로그인 핫픽스 (`3cf306f`)**: loginAction 병렬 + dashboard 12 query 단일 Promise.all
+- **C안 (이번 commit)**: 학부모 /home·/trip-live + 학원장 /dashboard에 Suspense 스트리밍
 
-## A안 완료 (이번 커밋)
+## C안 완료 (이번 commit)
 
-### 1) `<main>` 중첩 이슈 해결
+각 페이지의 단일 `await Promise.all(...)` 묶음에서 빠른 KPI와 무거운 nested fetch가
+같이 묶여 있던 구조 해소. 가장 느린 한 쿼리가 전체 첫 paint를 막던 부분 제거.
 
-**원인 진단**: 9개 `loading.tsx`와 그에 대응하는 `page.tsx`가 둘 다 `<main>`을 사용했음. Next.js streaming 중 잠깐 둘 다 DOM에 잡히는 케이스 발생 가능 + landmark 의미상 한 페이지에 `<main>` 1개여야 함.
+### 학부모 /home
 
-**해결**: 8개 `loading.tsx`에서 `<main>` → `<div>`로 전부 변경 (`trip-live`는 이미 `<div fixed inset-0 z-50>`이라 그대로). page.tsx만 `<main>` 유지.
+- `_components/today-trips-section.tsx` 신규 server component
+- page.tsx는 studentRows + upcomingAbsences + 2 counts만 즉시 fetch
+- `getTodayChildTrips` (자녀 N × 노선 × 오늘 운행 nested fetch) → Suspense
+- GreetingSection의 todayCount prop 제거 → 즉시 렌더 가능
+- Skeleton: trip 카드 2개 모양 (`TodayTripsSectionSkeleton`)
 
-**검증**: 로컬 dev에서 `curl http://localhost:3000/<route> | grep -oE "<main\b" | wc -l`로 `/login`, `/signup`, `/forgot-password`, `/`, `/pricing`, `/terms` 모두 `1` 반환 확인.
+### 학부모 /trip-live/[tripId]
 
-**바뀐 파일**:
+- `_components/child-eta-section.tsx` 신규 server component
+- page.tsx는 trip + pings (지도·헤더 필수) 즉시 fetch
+- `getChildStopEta` (RouteStop별 평균 통과 분 계산) → Suspense
+- `TripLiveShell` prop 변경: `childEta` → `childEtaSlot: ReactNode` (server component slot 패턴)
+- fallback null → 학습 데이터 도착 시 카드 fade-in (기존 UX와 동일)
 
-- `src/app/(auth)/loading.tsx` — outer container도 page.tsx 패턴(`bg-muted/40 flex min-h-screen items-center justify-center p-4`)에 맞춤
-- `src/app/(driver)/run/loading.tsx`
-- `src/app/(driver)/trip/[id]/loading.tsx`
-- `src/app/(helper)/loading.tsx`
-- `src/app/(owner)/dashboard/loading.tsx`
-- `src/app/(owner)/loading.tsx`
-- `src/app/(parent)/loading.tsx`
-- `src/app/(parent)/home/loading.tsx`
+### 학원장 /dashboard
 
-### 2) 편집·신규 폼 페이지 form skeleton 추가
+빠른 11 count + org만 page에서 즉시 fetch:
+- vehicleCount, studentCount, stopCount, routeCount
+- pendingAbsenceCount, pendingStopChangeCount, todayNoShowCount
+- todayTripsTotal, runningTripsCount, finishedTripsCount (KPI 카드용)
+- org (plan label)
 
-기존 `(owner)/loading.tsx`는 표 형식이라 form 페이지에서 시각 점프 발생. `FormSkeleton` 재사용 컴포넌트 + 13개 thin loading.tsx 추가.
+무거운 4개 section을 server component로 분리:
 
-**바뀐 파일**:
+| 컴포넌트 | 분리한 fetch | Skeleton |
+|---|---|---|
+| `today-trips-monitor.tsx` | todayTrips with includes + boarding stats per running trip | `TodayTripsMonitorSkeleton` (카드 2개) |
+| `multi-trip-live-server.tsx` | 운행 중 trip nested fetch → MultiTripLiveSection client에 props | 작은 Skeleton bar (운행 0대면 null) |
+| `repeat-no-show-alert.tsx` | 30일 NO_SHOW groupBy + 학생·보호자 fetch | null (없으면 안 보임) |
+| `training-alert.tsx` | staffWithTraining nested | null |
+| `expiring-vehicle-alert.tsx` | 어린이용 차량 보험 D-30 | null |
 
-- 신규: `src/components/skeletons/form-skeleton.tsx` — 카드 + N개 입력 row + 버튼 row
-- 신규 loading.tsx (11개, 3줄~5줄):
-  - `(owner)/vehicles/[id]/edit/loading.tsx`
-  - `(owner)/vehicles/new/loading.tsx`
-  - `(owner)/students/[id]/edit/loading.tsx`
-  - `(owner)/students/new/loading.tsx`
-  - `(owner)/routes/[id]/edit/loading.tsx`
-  - `(owner)/routes/new/loading.tsx`
-  - `(owner)/staff/invite/loading.tsx`
-  - `(owner)/guardians/invite/loading.tsx`
-  - `(owner)/training/new/loading.tsx`
-  - `(parent)/my-absences/new/loading.tsx`
-- 신규 loading.tsx — 카카오맵 picker 포함 (지도 placeholder가 핵심):
-  - `(owner)/stops/[id]/edit/loading.tsx`
-  - `(owner)/stops/new/loading.tsx`
-  - `(parent)/my-stop-changes/new/loading.tsx`
+"모든 운행 정상" 뱃지는 제거 (4가지 alert 다 fetch 끝나야 알 수 있어 Suspense 후엔 의미 약화).
 
-## 로그인 스피드 (이번 커밋)
+### 검증
 
-### 결과
+- typecheck/lint clean
+- 페이지 architecture: 빠른 KPI 즉시 → 무거운 sections 차례로 stream
+- Suspense fallback은 page-level `loading.tsx`와 별개 — 페이지 안의 부분 영역 전용
 
-사용자 피드백 "로그인 중 너무 오래 걸린다"에 대한 핫픽스. login → dashboard 진입 도착 시간 추정 800~1500ms 단축.
+## 남은 작업 (W23+)
 
-### 구현
+체감 속도 관련 핫스팟 검토는 사실상 마무리. 추가 후보:
 
-1. **`(auth)/login/actions.ts` loginAction**
-   - 로그인 후 role 결정 시 Staff lookup → (없으면) Guardian lookup으로 **순차** 호출 → 둘 다 `Promise.all`로 **병렬** (1 roundtrip 절약, 학부모 케이스 100~200ms 단축)
+### 측정 단계
 
-2. **`(owner)/dashboard/page.tsx`**
-   - 기존 3-phase sequential await: Phase 1(7 counts) → Phase 2(5 queries 의존성 0) → Phase 3 (groupBy 의존)
-   - 변경: Phase 1+2 → **단일 Promise.all 12개 쿼리 병렬** (의존성 없음)
-   - Phase 3 (repeatNoShow students) + Phase 4 (running boardings)도 둘 다 Phase 1+2 결과만 의존하므로 한 Promise.all로 묶음
-   - **3단계 순차 → 2단계로 압축**, DB roundtrip 시간 1/2~1/3 단축 추정
+- Vercel Speed Insights → /home, /trip-live, /dashboard p75 LCP·TTFB 비교 (W22 전후)
+- 사용자 체감 확인 — "클릭 직후 KPI/지도 보이고 alert는 차례로 표시되는지"
 
-### 측정 (사용자 점검 가능)
+### 작은 후보 (즉시 가능, 효과 작음)
 
-Vercel Speed Insights → /dashboard p75 LCP·TTFB 비교 (현재 vs 이전 커밋).
+- `revalidatePath` 빈도 검토 — `publishTripUpdate` 호출 후 너무 잦은 fresh fetch?
+- Vercel image optimization·preload font 활용도 점검
+- Prisma `select` 더 좁히기 (불필요한 컬럼 제거)
 
-## B안 완료
+### 기능 단계 (P1 — 베타 졸업 필수)
 
-### 결과
-
-매 nav마다 `supabase.auth.getUser()`가 두 번 호출되던 것 → 한 번으로 단축 (middleware만). 추정 50~200ms/nav.
-
-### 구현
-
-1. **`lib/supabase/middleware.ts`** — `updateSession`에서 검증된 user 정보를 forwarded request header에 inject
-   - 진입 시점에 `x-auth-user-id`, `x-auth-user-email`, `x-auth-checked` strip (위조 차단)
-   - `supabase.auth.getUser()` 후 sentinel `x-auth-checked: 1` + (있으면) user 정보 set
-   - `setAll` callback은 cookie만 갱신 (응답 재생성 안 함) → 우리가 모디 한 headers가 finalResponse에 보존
-   - finalResponse 재생성 + supabaseResponse cookies 복사
-
-2. **`lib/auth/session.ts`** — `resolveAuthUser()` 헬퍼 신규
-   - `headers()` 우선 read. `x-auth-checked: 1`이면 middleware 통과 → trust.
-   - sentinel 없으면 build/static gen 등 비-요청 컨텍스트 → fallback `supabase.auth.getUser()`
-   - `getCurrentUser()`, `getCurrentGuardian()`이 모두 이 헬퍼 사용
-
-### 보안 검증 (사용자 점검 가능)
-
-```bash
-# 1) 미인증 /dashboard → /login redirect
-curl -sI http://localhost:3000/dashboard | grep location
-# location: /login?redirectTo=/dashboard
-
-# 2) 헤더 위조 시도 — middleware가 strip하므로 여전히 redirect
-curl -sI -H "x-auth-checked: 1" -H "x-auth-user-id: fake" \
-  http://localhost:3000/dashboard | grep location
-# location: /login?redirectTo=/dashboard  ← 위조 차단 확인됨
-```
-
-## 남은 작업
-
-### C안 — Suspense 스트리밍
-
-dashboard·home처럼 여러 query를 모은 페이지에 적용. 빠른 부분 먼저 송출, 느린 부분은 Suspense fallback.
-
-후보:
-
-- `/dashboard` — KPI count 7개는 빠름, 보험 D-30 + 오늘 trip list는 무거움 → 후자만 Suspense로 분리
-- `/home` (parent) — student rows + today cards + upcoming absences 중 today cards가 무거움 (각 자녀별 trip 계산)
-- `/trip-live/[tripId]` — getChildStopEta()가 RouteStop별 평균 계산이라 느릴 수 있음. ETA 카드만 Suspense로 분리.
-
-작업량: 페이지당 30분~1시간 (Suspense + skeleton + 분리).
-
-### 우선순위 권장
-
-1. **C안** — Speed Insights 데이터 보고 hot spot 페이지부터 적용. dashboard·home·trip-live 후보. 페이지당 30분~1시간.
-2. 그 외 후보 (작아도 즉시 가능):
-   - revalidatePath 빈도 검토 (publishTripUpdate 후 router.refresh 받는 쪽 N+1 fetch?)
-   - Vercel image optimization·preload font 활용도 점검
+[progress.md](progress.md) `## 다음 우선순위 (W23+)` 참조:
+1. 결제 통합 (Toss Payments 또는 Stripe)
+2. 정식 법무 검토 (약관·개인정보처리방침)
+3. 가입 확인 메일 한국어
+4. 학부모 폰 OTP 가입
 
 ## 참고
 
-- A안·B안 완료 후 사용자 체감 측정 필요 — "클릭 → skeleton → 본 컨텐츠"가 부드러운지, "nav가 빨라졌는지" 확인.
-- W18-K까지의 진행 상황은 [progress.md](progress.md) 마일스톤 섹션 참조.
-- 사용자 사전 동의: 기능 추가가 아니라 **체감 속도** 개선이 목표 → 실제 fetch 단축(B·C)도 좋지만 skeleton(A)이 가장 즉각적인 win.
+- A안·B안·C안 완료 후 사용자 체감 측정 필요
+- 기능 추가가 아니라 **체감 속도** 개선이 목표였음 → A(즉각적 win)·B(매 nav 단축)·C(첫 paint 단축)
+  세 layer 모두 라이브
