@@ -51,7 +51,6 @@ next-env.d.ts
 /apps/driver-rn/ios/
 /apps/driver-rn/dist/
 /apps/driver-rn/web-build/
-/apps/driver-rn/google-services.json
 /apps/driver-rn/GoogleService-Info.plist
 
 # design 핸드오프 자료 (디자이너 zip — repo에 commit 안 함)

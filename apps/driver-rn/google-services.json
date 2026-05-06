@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "455443419361",
+    "project_id": "shuttlee-30264",
+    "storage_bucket": "shuttlee-30264.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:455443419361:android:5b1bd8107ddb90d3ace7a0",
+        "android_client_info": {
+          "package_name": "com.shuttlee.driver"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyA66rmVDE3dDnVhKT8dBujC2EwuxKMl-u4"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
