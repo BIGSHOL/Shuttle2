@@ -56,12 +56,22 @@ async function shoot(page: Page, role: Role, name: string, opts: ShootOptions = 
     await page.evaluate((y) => window.scrollTo(0, y as number), opts.scrollTo);
   }
   if (opts.wait) await page.waitForTimeout(opts.wait);
-  if (opts.fullPage !== false) await page.waitForLoadState("networkidle");
-  await page.screenshot({
-    path,
-    fullPage: opts.fullPage ?? false,
-    clip: opts.clip,
-  });
+  await page.waitForLoadState("networkidle");
+
+  // 우선순위: explicit clip > fullPage 명시 > main 자동 clip > viewport
+  if (opts.clip) {
+    await page.screenshot({ path, clip: opts.clip });
+  } else if (opts.fullPage) {
+    await page.screenshot({ path, fullPage: true });
+  } else {
+    // 자동 main 클립 — 짧은 폼 페이지의 빈 공간 제거. main 없으면 viewport.
+    const main = page.locator("main").first();
+    if (await main.count()) {
+      await main.screenshot({ path });
+    } else {
+      await page.screenshot({ path });
+    }
+  }
   console.log(`  📸 ${path}`);
 }
 
