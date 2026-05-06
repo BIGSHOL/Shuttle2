@@ -290,6 +290,23 @@ async function main() {
   );
   console.log(`  ✓ RouteStudents: ${students.length * 2}`);
 
+  // 결석 신청 1건 — 학원장이 "기사에 전달" 처리한 상태 (NOTIFIED_DRIVER).
+  // driver 운행 화면에 학생이 "결석 (전달됨)" 뱃지로 표시되어 메뉴얼 캡처용.
+  // 학생 4 (= 데모 학생 4)가 오늘 등하원 모두 결석.
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  await db.absenceRequest.create({
+    data: {
+      studentId: students[3]!.id,
+      createdBy: guardians[3]!.id,
+      date: today,
+      type: "ABSENT_BOTH",
+      reason: "병원 진료",
+      status: "NOTIFIED_DRIVER",
+    },
+  });
+  console.log(`  ✓ AbsenceRequest: 1 (학생 4, NOTIFIED_DRIVER)`);
+
   console.log("\n✅ Seed complete.\n");
   console.log("📋 Demo accounts (모두 비번 demo1234!):");
   console.log(`  - OWNER:    ${DEMO_OWNER_EMAIL}`);
