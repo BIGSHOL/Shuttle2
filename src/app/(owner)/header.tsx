@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Bell } from "lucide-react";
+import { Bell, HelpCircle } from "lucide-react";
 import { useTransition } from "react";
 
 import { logoutAction } from "@/app/(auth)/login/actions";
@@ -88,6 +88,16 @@ export function OwnerHeader({
         </div>
 
         <div className="flex items-center gap-1">
+          <Button
+            asChild
+            variant="ghost"
+            size="icon"
+            aria-label="도움말"
+          >
+            <Link href="/help?role=owner">
+              <HelpCircle className="h-4 w-4" />
+            </Link>
+          </Button>
           <Button
             asChild
             variant="ghost"

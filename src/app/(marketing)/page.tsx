@@ -143,6 +143,9 @@ export default function MarketingPage() {
               <Link href="/pricing">요금제</Link>
             </Button>
             <Button asChild variant="ghost" size="sm">
+              <Link href="/help">도움말</Link>
+            </Button>
+            <Button asChild variant="ghost" size="sm">
               <Link href="#pre-register">베타 신청</Link>
             </Button>
           </nav>

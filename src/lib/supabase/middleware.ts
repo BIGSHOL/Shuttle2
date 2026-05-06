@@ -74,12 +74,14 @@ export async function updateSession(request: NextRequest) {
     "/manifest.json", // PWA manifest (W4-3)
     "/sw.js", // service worker (W4-3)
     "/favicon.ico",
+    "/help", // W22+ 사용자 메뉴얼 (학원장·기사·학부모)
   ]);
   const isPublic =
     PUBLIC_PATHS.has(path) ||
     path.startsWith("/_next/") ||
     path.startsWith("/invite/") || // 직원 초대 토큰 가입 (W3-2)
     path.startsWith("/parent-invite/") || // 학부모 초대 토큰 가입 (W4-1)
+    path.startsWith("/manual/") || // 메뉴얼 스크린샷 (public/manual)
     /\.(png|svg|ico|webmanifest|txt|woff2|woff|ttf|otf|eot)$/.test(path); // 정적 자원·폰트
 
   if (!isPublic && !user) {

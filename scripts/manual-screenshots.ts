@@ -13,7 +13,7 @@
  *
  * 스크린샷 저장 위치: docs/manual/screenshots/{role}/NN-{name}.png
  */
-import { chromium, type Browser, type BrowserContext, type Page } from "playwright";
+import { chromium, type Browser, type Page } from "playwright";
 import { mkdirSync } from "node:fs";
 import { join } from "node:path";
 
