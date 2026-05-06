@@ -1,0 +1,37 @@
+{
+  "name": "@shuttlee/shared-contracts",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Next.js PWA와 기사용 RN 앱이 공유하는 zod 스키마 / 채널 상수 / loginId 헬퍼.",
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "default": "./src/index.ts"
+    },
+    "./login-id": {
+      "types": "./src/login-id.ts",
+      "default": "./src/login-id.ts"
+    },
+    "./realtime": {
+      "types": "./src/realtime.ts",
+      "default": "./src/realtime.ts"
+    },
+    "./driver-inputs": {
+      "types": "./src/driver-inputs.ts",
+      "default": "./src/driver-inputs.ts"
+    },
+    "./distance": {
+      "types": "./src/distance.ts",
+      "default": "./src/distance.ts"
+    },
+    "./driver-types": {
+      "types": "./src/driver-types.ts",
+      "default": "./src/driver-types.ts"
+    }
+  },
+  "dependencies": {
+    "zod": "^4.4.1"
+  }
+}

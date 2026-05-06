@@ -17,6 +17,7 @@ import { env } from "@/lib/env";
 
 import { StaffNotificationToggle } from "../notifications/staff-notification-toggle";
 
+import { DriverAppShareCard } from "./_components/driver-app-share-card";
 import { ExpiringVehicleAlert } from "./_components/expiring-vehicle-alert";
 import {
   MultiTripLiveServer,
@@ -210,6 +211,12 @@ export default async function DashboardPage() {
       <Suspense fallback={null}>
         <ExpiringVehicleAlert orgId={orgId} />
       </Suspense>
+
+      {/* W23: 기사용 RN 앱 공유 카드 */}
+      <DriverAppShareCard
+        apkUrl={process.env.DRIVER_APP_LATEST_APK_URL ?? null}
+        helpUrl={`${process.env.NEXT_PUBLIC_BASE_URL ?? "https://shuttlee.kr"}/help/driver-app`}
+      />
 
       {/* 빠른 이동 — 즉시 */}
       <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">

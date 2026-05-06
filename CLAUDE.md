@@ -110,8 +110,16 @@ src/
 prisma/
   schema.prisma         # Org, Vehicle, Route, Stop, Student, Trip, BoardingEvent,
                         # SafetyCheck, AbsenceRequest, StopChangeRequest,
-                        # Notification, PushSubscription, ...
+                        # Notification, PushSubscription, StaffFcmSubscription, ...
   migrations/           # 모든 변경 파일 (RLS는 별도 마이그레이션)
+
+apps/
+  driver-rn/            # W23: 기사용 RN 사이드로드 APK (안드로이드 전용)
+                        # Expo CNG + react-native-background-geolocation +
+                        # @react-native-firebase/messaging
+packages/
+  shared-contracts/     # W23: PWA·RN 양쪽 공유 — zod 스키마, 채널 상수,
+                        # loginId 헬퍼, distance, 타입 정의
 ```
 
 ### 라우트 충돌 회피 패턴
@@ -279,6 +287,30 @@ vercel deploy --prod --yes  # 프로덕션 배포
   cross-link, 정류장(`/stops/[id]`) 카카오맵 read-only(`stop-map-display`)·사용
   노선·home 학생·변경 요청 빈도, 학부모(`/guardians/[id]`) 자녀·결석/변경
   history·푸시 디바이스 진단. list page 행 클릭 → detail 통일.
+- **W23: 기사용 React Native 사이드로드 APK 분리** — iOS Safari PWA의 백그라운드
+  GPS 한계 우회. 기사만 RN, 학부모·학원장·HELPER·iOS 기사는 PWA 그대로.
+  - 모노레포 전환: `apps/driver-rn/`, `packages/shared-contracts/` (pnpm workspace).
+    `loginIdToEmail`, 채널 상수(`tripChannelName`/`TRIP_PING_EVENT`), zod 스키마
+    (`PingInputSchema` 등), `haversineMeters`, `TripDetailPayload` 타입을 공유.
+  - 서버: 기사 mutation 13개를 `src/server/driver/*`로 비즈니스 함수 추출, 기존 SA
+    + 새 Route Handler(`/api/driver/*` 12개)가 같은 함수 호출. middleware에 Bearer
+    토큰 분기 추가 (RN access_token → `supabase.auth.getUser(token)` 검증 → 기존
+    `x-auth-*` header inject 흐름 재사용). `/api/*`는 PUBLIC_PATHS에 추가 — 미인증
+    시 401 JSON.
+  - RN: Expo CNG (Expo SDK 53), `react-native-background-geolocation` Foreground
+    Service로 화면 꺼져도 5초 broadcast 유지 + 30초 INTERVAL ping + STOP_PASS
+    haversine 자동 판정. `expo-keep-awake`로 화면도 켬. 단순 useState navigation,
+    LoginScreen + RunListScreen + TripScreen + NotificationsScreen.
+  - 푸시: 새 `StaffFcmSubscription` 테이블, `firebase-admin/messaging`로 fan-out.
+    `sendToStaff`/`sendToOwnersOfOrg`가 web-push + FCM 양쪽 병렬 발송.
+    `@react-native-firebase/messaging`로 RN 토큰 등록·foreground listener.
+  - OTA: `/api/driver-app/version` GET endpoint + RN `version-check.ts`로 시작 시
+    fetch → 신 APK 있으면 강제 prompt → APK URL `Linking.openURL`. EAS Update
+    채널 3개(production/preview/development).
+  - 가이드: `/help/driver-app` 한글 사이드로드 가이드 페이지 (PUBLIC) +
+    `<DriverAppShareCard>` 학원장 dashboard 카드(다운로드+가이드 링크 클립보드 복사).
+  - 베타 운영 약속: 안드로이드 기사만 RN 앱, iOS 기사는 PWA 화면 켠 채. 베타
+    APK는 Supabase Storage `driver-apks` public bucket에서 서빙.
 
 ### 알려진 미해결 (다음 세션)
 
@@ -286,6 +318,15 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - 약관·개인정보처리방침 정식 법무 검토 (현재 베타 임시본)
 - 가입 확인 메일 한국어 (W17-B, email_confirm bypass 해제 시)
 - 결제 통합 (Toss Payments 또는 Stripe)
+- 기사용 RN 앱 지도 (W23는 정류장 리스트만 — react-native-maps 본격 통합은 베타 후)
+- 사용자 작업 (베타 시작 전):
+  1. `pnpm db:migrate --name add_staff_fcm_subscription_w22` (StaffFcmSubscription)
+  2. Firebase Console에서 새 프로젝트 생성 → Android 앱 등록 → `google-services.json`
+     다운로드 → `apps/driver-rn/google-services.json` 위치 + 환경변수
+     (`FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY`)
+  3. Supabase Storage `driver-apks` public bucket 생성
+  4. `eas build --platform android --profile preview` → APK 업로드 → 환경변수
+     `DRIVER_APP_LATEST_VERSION`, `DRIVER_APP_LATEST_APK_URL` 설정
 
 ### 환경 변수 가드레일 (W15-D·W18 트러블슈팅 결과)
 

@@ -959,7 +959,85 @@ A안(loading.tsx)·B안(auth dedupe) 다음 단계. 페이지 단일 `await Prom
 - 페이지 architecture: 빠른 KPI 즉시 → 무거운 sections 차례로 stream
 - Suspense fallback skeleton은 page-level loading.tsx와 다름 — 페이지 안의 부분 영역 전용
 
-## 다음 우선순위 (W23+)
+## W23 기사용 RN 사이드로드 APK (2026-05-06)
+
+iOS Safari PWA의 백그라운드 GPS 한계 우회. 기사만 RN, 학부모·학원장·HELPER·
+iOS 기사는 PWA 그대로 유지. 안드로이드 Foreground Service로 화면 꺼져도 5초
+broadcast 안정화.
+
+### 결과
+
+- **모노레포 전환**: `apps/driver-rn/` (Expo CNG, SDK 53) +
+  `packages/shared-contracts/` (zod 스키마, 채널 상수, `loginIdToEmail`,
+  `haversineMeters`, `TripDetailPayload`).
+  - `pnpm-workspace.yaml` + 루트 `tsconfig.json`에 `apps`·`packages` exclude
+    (자체 typecheck로 분리).
+- **서버 (PWA) — 비즈니스 로직 추출 + Bearer 인증**:
+  - `src/server/driver/*` 14개 비즈니스 함수 (start·end·recordPing·
+    upsertSafety·toggleBoarding·markIssue·unmarkIssue·assignHelper·
+    savePush·removePush·saveFcm·removeFcm·markNotifRead·markAllNotifRead +
+    getTripDetail).
+  - 기존 SA + 새 Route Handler `/api/driver/*` 13개 (start/end/ping/safety/
+    boarding/issue POST·DELETE/helper PUT/push-subscription POST·DELETE/
+    fcm-subscription POST·DELETE/today-routes/notifications/[id]/read·
+    read-all/trip-detail GET).
+  - `src/lib/supabase/middleware.ts`에 Bearer 토큰 분기 추가 — RN
+    access_token → `supabase.auth.getUser(token)` 검증 → 기존 `x-auth-*`
+    header inject 흐름 재사용. `/api/*`, `/help/*`를 PUBLIC_PATHS에 추가
+    (미인증 시 redirect 대신 Route Handler가 401 JSON 응답).
+  - `src/lib/auth/api-guard.ts` (`requireApiRole` + `apiError`)로 Route
+    Handler 보일러플레이트 축소.
+- **RN 클라이언트 (Expo SDK 53)**:
+  - LoginScreen + RunListScreen + TripScreen + NotificationsScreen.
+    useState 기반 단순 navigation (react-navigation은 베타 후 검토).
+  - `react-native-background-geolocation` Foreground Service: 5초
+    broadcast(Supabase channel.send) + 30초 INTERVAL ping + STOP_PASS
+    haversine 자동 판정 + START·END ping. PWA `gps-tracker.tsx` 로직 1:1 포팅.
+  - `expo-keep-awake`로 화면도 잠금 방지 (Foreground Service와 보완).
+  - BoardingRow + SafetyCheckCard + IssueModal — 학생별 BOARD/ALIGHT 토글,
+    NO_SHOW/NO_DROPOFF 보고, KIDS 안전점검.
+  - `useTripBroadcast` hook으로 Realtime 채널 구독 (PWA와 동일 채널·이벤트).
+- **푸시 — FCM 추가**:
+  - 새 `StaffFcmSubscription` 테이블 (Web Push와 분리 — 페이로드 형식이 다름).
+  - `firebase-admin/messaging` lazy singleton + `sendOneFcm`.
+  - `sendToStaff`/`sendToOwnersOfOrg`가 web-push + FCM 양쪽 병렬 fan-out
+    (`Promise.all`).
+  - RN: `@react-native-firebase/messaging` 토큰 등록 + foreground listener.
+- **OTA + 배포**:
+  - `/api/driver-app/version` GET endpoint + RN `version-check.ts` —
+    앱 시작 시 fetch → 신 APK 있으면 `Linking.openURL(downloadUrl)` prompt.
+  - EAS Update 채널 3개 (production/preview/development) — JS 변경은 OTA로
+    즉시 배포, 네이티브 변경 시에만 새 APK.
+  - APK 호스팅: Supabase Storage `driver-apks` public bucket.
+- **가이드 + 학원장 dashboard 통합**:
+  - `/help/driver-app` 한글 사이드로드 가이드 (5단계 + FAQ + 다운로드 버튼).
+  - `<DriverAppShareCard>` 학원장 dashboard에 통합 — 다운로드+가이드 링크
+    클립보드 복사로 카카오톡 share.
+
+### W23 결정사항·이슈
+
+- **지도는 베타 후로 미룸**: `react-native-maps` 대신 정류장 리스트로 운영
+  가능. 본격 통합은 W24+ 검토.
+- **iOS는 PWA 그대로**: Apple Developer $99 절약 + iOS 기사 비율 확인 후
+  W24+에서 TestFlight 검토.
+- **번호 충돌**: progress.md에 이미 W22 (Suspense 스트리밍) 등록 → 코드 주석
+  + CLAUDE.md를 W23으로 일괄 rename. progress.md/plan.md의 기존 W22는 그대로.
+- **베타 시작 전 사용자 작업**:
+  1. base repo에서 `pnpm db:migrate` (StaffFcmSubscription 적용)
+  2. Firebase Console — 새 프로젝트 + Android 앱(`com.shuttlee.driver`) →
+     `google-services.json` 다운로드 → `apps/driver-rn/google-services.json`
+  3. Vercel 환경변수: `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`,
+     `FIREBASE_PRIVATE_KEY`, `DRIVER_APP_LATEST_VERSION`,
+     `DRIVER_APP_LATEST_APK_URL`
+  4. Supabase Storage `driver-apks` public bucket 생성
+  5. `eas build --platform android --profile preview` → APK Storage 업로드
+
+### W23 검증
+
+- PWA: `pnpm typecheck` + `pnpm lint` clean
+- RN: `pnpm --filter @shuttlee/driver-rn typecheck` clean
+
+## 다음 우선순위 (W24+)
 
 W22까지 체감 속도(A·B·C안) + 학원장 운영 도구(W19~W21)는 베타 운영 가능 수준에 도달.
 다음은 베타 졸업·정식 런칭 준비를 위한 항목 위주.

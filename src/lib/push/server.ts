@@ -6,8 +6,13 @@ import type { NotificationCategory } from "@/generated/prisma/enums";
 import { db } from "@/lib/db";
 import { env } from "@/lib/env";
 
+import { sendOneFcm } from "./fcm";
+
 // VAPID 키가 설정돼 있을 때만 web-push 발송. 없으면 push 부분만 no-op.
 // DB Notification은 항상 미러 생성 (W10).
+//
+// W23: FCM 추가 — 기사용 RN 앱(안드로이드 사이드로드 APK).
+// sendToStaff / sendToOwnersOfOrg가 web-push와 FCM 양쪽으로 fan-out.
 let configured = false;
 function configurePush(): boolean {
   if (configured) return true;
@@ -89,6 +94,7 @@ async function createDbNotifications(
 }
 
 // 학부모(Guardian) 한 명에게 — Push fan-out + DB Notification 1건.
+// (학부모는 Web Push만 — RN 앱이 없음.)
 export async function sendToGuardian(
   guardianId: string,
   payload: PushPayload,
@@ -124,19 +130,11 @@ export async function sendToGuardian(
   };
 }
 
-// Staff 한 명에게.
-export async function sendToStaff(
+// W23: Staff에 대한 Web Push fan-out (기존 로직만 추출).
+async function sendWebPushToStaff(
   staffId: string,
   payload: PushPayload,
 ): Promise<{ sent: number; pruned: number }> {
-  const staff = await db.staff.findUnique({
-    where: { id: staffId },
-    select: { userId: true },
-  });
-  if (staff?.userId) {
-    await createDbNotifications([staff.userId], payload);
-  }
-
   if (!configurePush()) return { sent: 0, pruned: 0 };
 
   const subs = await db.staffPushSubscription.findMany({
@@ -159,7 +157,60 @@ export async function sendToStaff(
   };
 }
 
+// W23: Staff에 대한 FCM fan-out (RN 앱).
+async function sendFcmToStaff(
+  staffId: string,
+  payload: PushPayload,
+): Promise<{ sent: number; pruned: number }> {
+  const subs = await db.staffFcmSubscription.findMany({
+    where: { staffId },
+    select: { id: true, fcmToken: true },
+  });
+  if (subs.length === 0) return { sent: 0, pruned: 0 };
+
+  const results = await Promise.all(
+    subs.map((s) => sendOneFcm(s.fcmToken, payload)),
+  );
+  const goneIds = subs.filter((_, i) => results[i].gone).map((s) => s.id);
+  if (goneIds.length > 0) {
+    await db.staffFcmSubscription
+      .deleteMany({ where: { id: { in: goneIds } } })
+      .catch(() => {});
+  }
+
+  return {
+    sent: results.filter((r) => r.ok).length,
+    pruned: goneIds.length,
+  };
+}
+
+// Staff 한 명에게.
+// W23: web-push + FCM 양쪽으로 fan-out.
+export async function sendToStaff(
+  staffId: string,
+  payload: PushPayload,
+): Promise<{ sent: number; pruned: number }> {
+  const staff = await db.staff.findUnique({
+    where: { id: staffId },
+    select: { userId: true },
+  });
+  if (staff?.userId) {
+    await createDbNotifications([staff.userId], payload);
+  }
+
+  const [webResult, fcmResult] = await Promise.all([
+    sendWebPushToStaff(staffId, payload),
+    sendFcmToStaff(staffId, payload),
+  ]);
+
+  return {
+    sent: webResult.sent + fcmResult.sent,
+    pruned: webResult.pruned + fcmResult.pruned,
+  };
+}
+
 // org의 모든 OWNER에게 fan-out (결석 신청, 정류장 변경 요청 알림).
+// W23: FCM도 함께 fan-out (OWNER가 RN 앱을 깔면 동작 — 베타에는 OWNER는 PWA만).
 export async function sendToOwnersOfOrg(
   orgId: string,
   payload: PushPayload,
@@ -177,27 +228,18 @@ export async function sendToOwnersOfOrg(
     await createDbNotifications(userIds, payload);
   }
 
-  if (!configurePush()) return { sent: 0, pruned: 0 };
-
+  // 각 OWNER마다 web-push + FCM 병렬 fan-out
   let sent = 0;
   let pruned = 0;
-  // sendToStaff는 다시 DB mirror를 시도하므로 push만 보내는 inner 호출 별도 필요 —
-  // 단순화 위해 DB는 위에서 한 번만 처리, push는 직접 fan-out.
-  for (const o of owners) {
-    const subs = await db.staffPushSubscription.findMany({
-      where: { staffId: o.id },
-      select: { id: true, endpoint: true, p256dh: true, auth: true },
-    });
-    if (subs.length === 0) continue;
-    const results = await Promise.all(subs.map((s) => sendOne(s, payload)));
-    const goneIds = subs.filter((_, i) => results[i].gone).map((s) => s.id);
-    if (goneIds.length > 0) {
-      await db.staffPushSubscription
-        .deleteMany({ where: { id: { in: goneIds } } })
-        .catch(() => {});
-    }
-    sent += results.filter((r) => r.ok).length;
-    pruned += goneIds.length;
-  }
+  await Promise.all(
+    owners.map(async (o) => {
+      const [web, fcm] = await Promise.all([
+        sendWebPushToStaff(o.id, payload),
+        sendFcmToStaff(o.id, payload),
+      ]);
+      sent += web.sent + fcm.sent;
+      pruned += web.pruned + fcm.pruned;
+    }),
+  );
   return { sent, pruned };
 }
