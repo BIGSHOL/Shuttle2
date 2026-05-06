@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "셔틀이 기사",
+    "slug": "shuttlee-driver",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "scheme": "shuttlee-driver",
+    "newArchEnabled": true,
+    "android": {
+      "package": "com.shuttlee.driver",
+      "versionCode": 1,
+      "permissions": [
+        "ACCESS_FINE_LOCATION",
+        "ACCESS_COARSE_LOCATION",
+        "ACCESS_BACKGROUND_LOCATION",
+        "FOREGROUND_SERVICE",
+        "FOREGROUND_SERVICE_LOCATION",
+        "WAKE_LOCK",
+        "POST_NOTIFICATIONS",
+        "INTERNET"
+      ]
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.shuttlee.driver"
+    },
+    "plugins": [
+      [
+        "react-native-background-geolocation",
+        {
+          "license": ""
+        }
+      ],
+      "@react-native-firebase/app",
+      "@react-native-firebase/messaging"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "05ae9ebf-edc7-4aa9-8d85-5ff9dec655c7"
+      }
+    },
+    "owner": "bigshol"
+  }
+}

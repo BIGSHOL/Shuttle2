@@ -2,520 +2,126 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { z } from "zod";
 
-import { db } from "@/lib/db";
-import { requireDriver } from "@/lib/auth/session";
-import { requireTripAccess } from "@/lib/auth/trip-access";
-import { todayUtcDateKst } from "@/lib/date/today";
-import { haversineMeters } from "@/lib/geo/distance";
-import { publishTripUpdate } from "@/lib/geo/publish-trip-update";
-import { sendToGuardian, sendToOwnersOfOrg } from "@/lib/push/server";
+import { requireDriver, requireDriverOrHelper } from "@/lib/auth/session";
+import { assignHelper } from "@/server/driver/assign-helper";
+import { endTrip } from "@/server/driver/end-trip";
+import { markBoardingIssue } from "@/server/driver/mark-boarding-issue";
+import { recordPing } from "@/server/driver/record-ping";
+import { startTrip } from "@/server/driver/start-trip";
+import { toggleBoardingEvent } from "@/server/driver/toggle-boarding-event";
+import {
+  AssignHelperInputSchema,
+  BoardingInputSchema,
+  MarkIssueInputSchema,
+  PingInputSchema,
+  SafetyFieldsInputSchema,
+  StartTripInputSchema,
+  UnmarkIssueInputSchema,
+  type BoardingInput,
+  type MarkIssueInput,
+  type PingInput,
+  type SafetyFieldsInput,
+} from "@/server/driver/types";
+import { unmarkBoardingIssue } from "@/server/driver/unmark-boarding-issue";
+import { upsertSafetyCheck } from "@/server/driver/upsert-safety-check";
 
 // W3-3b: 기사 폰이 직접 좌표를 send. start/end 시 위치는 첫/마지막 ping에서 채워짐.
+// W23: 비즈니스 로직은 `src/server/driver/*`로 추출. 이 파일은 SA wrapper만 —
+// 검증(requireDriver/Helper) → zod parse → 비즈니스 함수 호출 → revalidatePath/redirect.
+// Route Handler(Day 2)도 동일 비즈니스 함수를 호출.
+
+// 외부 PWA UI 호환을 위한 type alias re-export.
+// (trip-running-view.tsx 등이 기존 이름으로 import 중)
+export type RecordPingInput = PingInput;
+export type BoardingInputType = BoardingInput;
+export type MarkIssueInputType = MarkIssueInput;
+export type { SafetyFieldsInput };
 
 export async function startTripAction(
   routeId: string,
   vehicleId: string,
 ): Promise<void> {
   const me = await requireDriver();
-  const orgId = me.org.id;
-
-  // route + vehicle 본 기관 검증
-  const [route, vehicle] = await Promise.all([
-    db.route.findFirst({
-      where: { id: routeId, vehicle: { orgId } },
-      select: { id: true, vehicleId: true },
-    }),
-    db.vehicle.findFirst({
-      where: { id: vehicleId, orgId },
-      select: { id: true },
-    }),
-  ]);
-  if (!route) throw new Error("해당 노선을 찾을 수 없습니다");
-  if (!vehicle) throw new Error("해당 차량을 찾을 수 없습니다");
-  if (route.vehicleId !== vehicleId) {
-    throw new Error("이 노선은 해당 차량에 묶여 있지 않습니다");
-  }
-
-  // 오늘 KST 자정 기준 (Date 컬럼은 시각 무시)
-  const today = todayUtcDateKst();
-
-  // upsert: 같은 vehicle/route/date 조합이 이미 있으면 그걸 다시 사용
-  // (driver가 종료 안 하고 다시 들어와도 같은 trip 이어감)
-  let trip = await db.trip.findUnique({
-    where: {
-      vehicleId_routeId_date: {
-        vehicleId,
-        routeId,
-        date: today,
-      },
-    },
-  });
-
-  if (trip && trip.endedAt) {
-    throw new Error("이 노선은 오늘 이미 운행이 종료되었습니다");
-  }
-
-  if (!trip) {
-    trip = await db.trip.create({
-      data: {
-        vehicleId,
-        routeId,
-        driverId: me.staff.id,
-        date: today,
-        startedAt: new Date(),
-      },
-    });
-  } else if (!trip.startedAt) {
-    trip = await db.trip.update({
-      where: { id: trip.id },
-      data: { startedAt: new Date(), driverId: me.staff.id },
-    });
-  }
-
-  await publishTripUpdate(trip.id, "trip-state", orgId);
+  const parsed = StartTripInputSchema.parse({ routeId, vehicleId });
+  const { tripId } = await startTrip(me, parsed);
   revalidatePath("/run");
   revalidatePath("/dashboard");
-  redirect(`/trip/${trip.id}`);
+  redirect(`/trip/${tripId}`);
 }
 
 export async function endTripAction(tripId: string): Promise<void> {
   const me = await requireDriver();
-  const orgId = me.org.id;
-
-  // trip이 본 기관 + 본인이 driver
-  const trip = await db.trip.findFirst({
-    where: {
-      id: tripId,
-      driverId: me.staff.id,
-      vehicle: { orgId },
-    },
-    select: { id: true, endedAt: true },
-  });
-  if (!trip) throw new Error("운행을 찾을 수 없습니다");
-  if (trip.endedAt) throw new Error("이미 종료된 운행입니다");
-
-  await db.trip.update({
-    where: { id: trip.id },
-    data: { endedAt: new Date() },
-  });
-
-  await publishTripUpdate(trip.id, "trip-state", orgId);
+  await endTrip(me, tripId);
   revalidatePath("/run");
   revalidatePath(`/trip/${tripId}`);
   revalidatePath("/dashboard");
   redirect("/run");
 }
 
-// ────────────────────────────────────────────────────────────────────
-// LocationPing 영구 저장
-//
-// 영구 저장 정책 (CLAUDE.md 명세):
-// - 30초 간격 INTERVAL ping
-// - 정류장 반경 진입 시점 STOP_PASS ping (자동 판정)
-// - 운행 시작 시점 START ping
-// - 운행 종료 시점 END ping
-// 실시간 broadcast (5초 간격)는 클라이언트에서 직접 Supabase channel.send,
-// DB 거치지 않음.
-// ────────────────────────────────────────────────────────────────────
-
-const PingInput = z.object({
-  tripId: z.string().min(1),
-  lat: z.number().min(-90).max(90),
-  lng: z.number().min(-180).max(180),
-  accuracy: z.number().min(0).optional(),
-  speed: z.number().optional(),
-  heading: z.number().min(0).max(360).optional(),
-  source: z.enum(["INTERVAL", "STOP_PASS", "START", "END"]),
-});
-
-export type RecordPingInput = z.infer<typeof PingInput>;
-
 export async function recordPingAction(input: RecordPingInput): Promise<void> {
-  const parsed = PingInput.safeParse(input);
-  if (!parsed.success) {
-    throw new Error("잘못된 좌표 데이터");
-  }
-
   const me = await requireDriver();
-  const orgId = me.org.id;
-
-  // 진행 중 trip + 본인이 driver 검증
-  const trip = await db.trip.findFirst({
-    where: {
-      id: parsed.data.tripId,
-      driverId: me.staff.id,
-      vehicle: { orgId },
-    },
-    select: { id: true, routeId: true, endedAt: true, startLat: true },
-  });
-  if (!trip) throw new Error("운행을 찾을 수 없습니다");
-  if (trip.endedAt) {
-    throw new Error("종료된 운행에는 좌표를 기록할 수 없습니다");
-  }
-
-  const data = parsed.data;
-  await db.locationPing.create({
-    data: {
-      tripId: data.tripId,
-      lat: data.lat,
-      lng: data.lng,
-      accuracy: data.accuracy ?? null,
-      speed: data.speed ?? null,
-      heading: data.heading ?? null,
-      source: data.source,
-    },
-  });
-
-  // 첫 START ping이면 trip.startLat/Lng도 채움
-  if (data.source === "START" && trip.startLat === null) {
-    await db.trip.update({
-      where: { id: trip.id },
-      data: { startLat: data.lat, startLng: data.lng },
-    });
-  }
-  // END ping이면 trip.endLat/Lng도 채움
-  if (data.source === "END") {
-    await db.trip.update({
-      where: { id: trip.id },
-      data: { endLat: data.lat, endLng: data.lng },
-    });
-  }
-
-  // STOP_PASS: 가장 가까운 RouteStop 매칭 → 그 stop을 정류장으로 가진
-  // 자녀들의 학부모에게 push. driver측 useGpsTracker가 같은 stop 1번만
-  // 보내므로 서버 측 중복 차단 불필요.
-  if (data.source === "STOP_PASS") {
-    await notifyGuardiansOfStopPass(trip.routeId, data.lat, data.lng).catch(
-      (e) => console.warn("stop-pass push failed:", e),
-    );
-  }
+  const parsed = PingInputSchema.safeParse(input);
+  if (!parsed.success) throw new Error("잘못된 좌표 데이터");
+  await recordPing(me, parsed.data);
 }
-
-const STOP_MATCH_RADIUS_M = 200; // 매칭 임계값
-
-async function notifyGuardiansOfStopPass(
-  routeId: string,
-  lat: number,
-  lng: number,
-): Promise<void> {
-  const stops = await db.routeStop.findMany({
-    where: { routeId },
-    include: {
-      stop: { select: { id: true, name: true, lat: true, lng: true } },
-    },
-  });
-
-  let bestStopId: string | null = null;
-  let bestName = "";
-  let bestDist = Infinity;
-  for (const rs of stops) {
-    const d = haversineMeters(lat, lng, rs.stop.lat, rs.stop.lng);
-    if (d < bestDist) {
-      bestDist = d;
-      bestStopId = rs.stop.id;
-      bestName = rs.stop.name;
-    }
-  }
-  if (!bestStopId || bestDist > STOP_MATCH_RADIUS_M) return;
-
-  // 이 stop을 자기 stop으로 가진 학생 + 그들의 보호자
-  const links = await db.guardianLink.findMany({
-    where: {
-      student: { routes: { some: { stopId: bestStopId, routeId } } },
-    },
-    select: {
-      guardianId: true,
-      student: { select: { name: true } },
-    },
-  });
-
-  if (links.length === 0) return;
-
-  // 같은 guardian이 여러 자녀를 가질 수 있어 dedupe
-  const byGuardian = new Map<string, string[]>(); // guardianId → [학생명...]
-  for (const l of links) {
-    const arr = byGuardian.get(l.guardianId) ?? [];
-    if (!arr.includes(l.student.name)) arr.push(l.student.name);
-    byGuardian.set(l.guardianId, arr);
-  }
-
-  await Promise.all(
-    Array.from(byGuardian.entries()).map(([gid, names]) =>
-      sendToGuardian(gid, {
-        title: "셔틀 도착",
-        body: `${names.join(", ")} 자녀의 정류장 (${bestName})에 셔틀이 도착했어요.`,
-        url: "/home",
-        category: "SHUTTLE_NEAR_CHILD",
-      }),
-    ),
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────
-// SafetyCheck — KIDS 모드 운행마다 1건. 도로교통법 §53⑦ 안전운행기록 원천.
-// driver/helper 둘 다 토글 가능.
-// ────────────────────────────────────────────────────────────────────
-
-const SafetyFields = z.object({
-  seatbeltAllOk: z.boolean().optional(),
-  helperPresent: z.boolean().optional(),
-  allAlightedOk: z.boolean().optional(),
-});
-
-export type SafetyFieldsInput = z.infer<typeof SafetyFields>;
 
 export async function upsertSafetyCheckAction(
   tripId: string,
   fields: SafetyFieldsInput,
 ): Promise<void> {
-  const parsed = SafetyFields.safeParse(fields);
+  const me = await requireDriverOrHelper();
+  const parsed = SafetyFieldsInputSchema.safeParse(fields);
   if (!parsed.success) throw new Error("잘못된 안전점검 데이터");
-
-  const access = await requireTripAccess(tripId);
-
-  const now = new Date();
-  const data: {
-    seatbeltAllOk?: boolean;
-    seatbeltCheckedAt?: Date | null;
-    helperPresent?: boolean;
-    allAlightedOk?: boolean;
-    alightCheckedAt?: Date | null;
-  } = {};
-  if (parsed.data.seatbeltAllOk !== undefined) {
-    data.seatbeltAllOk = parsed.data.seatbeltAllOk;
-    data.seatbeltCheckedAt = parsed.data.seatbeltAllOk ? now : null;
-  }
-  if (parsed.data.helperPresent !== undefined) {
-    data.helperPresent = parsed.data.helperPresent;
-  }
-  if (parsed.data.allAlightedOk !== undefined) {
-    data.allAlightedOk = parsed.data.allAlightedOk;
-    data.alightCheckedAt = parsed.data.allAlightedOk ? now : null;
-  }
-
-  await db.safetyCheck.upsert({
-    where: { tripId },
-    create: {
-      tripId,
-      seatbeltAllOk: parsed.data.seatbeltAllOk ?? false,
-      seatbeltCheckedAt: parsed.data.seatbeltAllOk ? now : null,
-      helperPresent: parsed.data.helperPresent ?? false,
-      allAlightedOk: parsed.data.allAlightedOk ?? false,
-      alightCheckedAt: parsed.data.allAlightedOk ? now : null,
-    },
-    update: data,
-  });
-
-  await publishTripUpdate(tripId, "safety", access.user.org.id);
+  await upsertSafetyCheck(me, tripId, parsed.data);
   revalidatePath(`/trip/${tripId}`);
   revalidatePath("/dashboard");
 }
 
-// ────────────────────────────────────────────────────────────────────
-// BoardingEvent — 학생 탑승·하차 (정류장에서)
-// 같은 trip + studentId + type이 이미 있으면 토글로 삭제, 없으면 추가.
-// ────────────────────────────────────────────────────────────────────
-
-const BoardingInput = z.object({
-  tripId: z.string().min(1),
-  studentId: z.string().min(1),
-  type: z.enum(["BOARD", "ALIGHT"]),
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
-  notes: z.string().max(200).optional(),
-});
-
-export type BoardingInputType = z.infer<typeof BoardingInput>;
-
 export async function toggleBoardingEventAction(
   input: BoardingInputType,
 ): Promise<void> {
-  const parsed = BoardingInput.safeParse(input);
+  const me = await requireDriverOrHelper();
+  const parsed = BoardingInputSchema.safeParse(input);
   if (!parsed.success) throw new Error("잘못된 탑승·하차 데이터");
-
-  const access = await requireTripAccess(parsed.data.tripId);
-
-  // 이미 같은 type 이벤트가 있으면 가장 최근 것 삭제 (토글)
-  const existing = await db.boardingEvent.findFirst({
-    where: {
-      tripId: parsed.data.tripId,
-      studentId: parsed.data.studentId,
-      type: parsed.data.type,
-    },
-    orderBy: { at: "desc" },
-  });
-
-  if (existing) {
-    await db.boardingEvent.delete({ where: { id: existing.id } });
-  } else {
-    await db.boardingEvent.create({
-      data: {
-        tripId: parsed.data.tripId,
-        studentId: parsed.data.studentId,
-        type: parsed.data.type,
-        lat: parsed.data.lat ?? null,
-        lng: parsed.data.lng ?? null,
-        notes: parsed.data.notes ?? null,
-      },
-    });
-  }
-
-  await publishTripUpdate(parsed.data.tripId, "boarding", access.user.org.id);
+  await toggleBoardingEvent(me, parsed.data);
   revalidatePath(`/trip/${parsed.data.tripId}`);
   revalidatePath(`/dashboard/trip/${parsed.data.tripId}`);
   revalidatePath("/dashboard");
 }
-
-// ────────────────────────────────────────────────────────────────────
-// 미탑승·미하차 mark — 학부모·학원장 즉시 푸시
-// W15-B: 미탑승은 등원 운행에서 학생이 정류장에 안 옴.
-//        미하차는 하원 운행에서 정류장에서 못 내림 (매우 위험).
-// ────────────────────────────────────────────────────────────────────
-
-const MarkIssueInput = z.object({
-  tripId: z.string().min(1),
-  studentId: z.string().min(1),
-  type: z.enum(["NO_SHOW", "NO_DROPOFF"]),
-  reason: z.string().min(1).max(200),
-  lat: z.number().min(-90).max(90).optional(),
-  lng: z.number().min(-180).max(180).optional(),
-});
-
-export type MarkIssueInputType = z.infer<typeof MarkIssueInput>;
 
 export async function markBoardingIssueAction(
   input: MarkIssueInputType,
 ): Promise<void> {
-  const parsed = MarkIssueInput.safeParse(input);
+  const me = await requireDriverOrHelper();
+  const parsed = MarkIssueInputSchema.safeParse(input);
   if (!parsed.success) throw new Error("잘못된 입력 데이터");
-
-  const access = await requireTripAccess(parsed.data.tripId);
-
-  // 같은 type이 이미 있으면 갱신, 없으면 새로 생성 (idempotent)
-  const existing = await db.boardingEvent.findFirst({
-    where: {
-      tripId: parsed.data.tripId,
-      studentId: parsed.data.studentId,
-      type: parsed.data.type,
-    },
-    orderBy: { at: "desc" },
-  });
-
-  if (existing) {
-    await db.boardingEvent.update({
-      where: { id: existing.id },
-      data: {
-        notes: parsed.data.reason,
-        lat: parsed.data.lat ?? null,
-        lng: parsed.data.lng ?? null,
-        at: new Date(),
-      },
-    });
-  } else {
-    await db.boardingEvent.create({
-      data: {
-        tripId: parsed.data.tripId,
-        studentId: parsed.data.studentId,
-        type: parsed.data.type,
-        notes: parsed.data.reason,
-        lat: parsed.data.lat ?? null,
-        lng: parsed.data.lng ?? null,
-      },
-    });
-  }
-
-  // 학부모·학원장 푸시 — 자녀의 보호자 모두 + org의 OWNER 모두
-  const student = await db.student.findUnique({
-    where: { id: parsed.data.studentId },
-    select: {
-      name: true,
-      orgId: true,
-      guardians: { select: { guardianId: true } },
-    },
-  });
-
-  if (student) {
-    const isNoShow = parsed.data.type === "NO_SHOW";
-    const title = isNoShow
-      ? `${student.name} 미탑승`
-      : `${student.name} 미하차 — 확인 필요`;
-    const body = isNoShow
-      ? `정류장에 자녀가 보이지 않아 출발했어요. 사유: ${parsed.data.reason}`
-      : `정류장에서 자녀가 내리지 못했어요. 사유: ${parsed.data.reason}`;
-    const category = isNoShow ? "STUDENT_NO_SHOW" : "STUDENT_NO_DROPOFF";
-
-    // 보호자 fan-out
-    for (const g of student.guardians) {
-      await sendToGuardian(g.guardianId, {
-        category,
-        title,
-        body,
-        url: "/home",
-      }).catch((e) => console.error("push to guardian failed:", e));
-    }
-
-    // 학원장 fan-out
-    await sendToOwnersOfOrg(student.orgId, {
-      category,
-      title,
-      body,
-      url: "/dashboard",
-    }).catch((e) => console.error("push to owners failed:", e));
-  }
-
-  await publishTripUpdate(parsed.data.tripId, "issue", access.user.org.id);
+  await markBoardingIssue(me, parsed.data);
   revalidatePath(`/trip/${parsed.data.tripId}`);
   revalidatePath(`/dashboard/trip/${parsed.data.tripId}`);
   revalidatePath("/dashboard");
 }
 
-// 미탑승·미하차 mark 해제 (실수로 누른 경우)
 export async function unmarkBoardingIssueAction(
   tripId: string,
   studentId: string,
   type: "NO_SHOW" | "NO_DROPOFF",
 ): Promise<void> {
-  const access = await requireTripAccess(tripId);
-
-  await db.boardingEvent.deleteMany({
-    where: { tripId, studentId, type },
-  });
-
-  await publishTripUpdate(tripId, "issue", access.user.org.id);
+  const me = await requireDriverOrHelper();
+  const parsed = UnmarkIssueInputSchema.parse({ tripId, studentId, type });
+  await unmarkBoardingIssue(me, parsed);
   revalidatePath(`/trip/${tripId}`);
   revalidatePath(`/dashboard/trip/${tripId}`);
   revalidatePath("/dashboard");
 }
-
-// ────────────────────────────────────────────────────────────────────
-// Trip helper 지정 (driver만)
-// ────────────────────────────────────────────────────────────────────
 
 export async function assignHelperAction(
   tripId: string,
   helperId: string | null,
 ): Promise<void> {
   const me = await requireDriver();
-  const orgId = me.org.id;
-
-  // helper로 지정하려면 같은 org의 HELPER role 검증
-  if (helperId !== null) {
-    const helper = await db.staff.findFirst({
-      where: { id: helperId, orgId, role: "HELPER" },
-      select: { id: true },
-    });
-    if (!helper) throw new Error("선택한 동승자를 찾을 수 없습니다");
-  }
-
-  const result = await db.trip.updateMany({
-    where: { id: tripId, driverId: me.staff.id },
-    data: { helperId },
-  });
-  if (result.count === 0) throw new Error("운행을 찾을 수 없습니다");
-
-  await publishTripUpdate(tripId, "trip-state", orgId);
+  const parsed = AssignHelperInputSchema.parse({ tripId, helperId });
+  await assignHelper(me, parsed);
   revalidatePath(`/trip/${tripId}`);
   revalidatePath("/dashboard");
 }

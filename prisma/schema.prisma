@@ -132,6 +132,7 @@ model Staff {
   driverTrips       Trip[]                  @relation("DriverTrips")
   helperTrips       Trip[]                  @relation("HelperTrips")
   pushSubscriptions StaffPushSubscription[]
+  fcmSubscriptions  StaffFcmSubscription[]
 
   @@index([orgId])
   @@index([userId])
@@ -421,6 +422,24 @@ model StaffPushSubscription {
   auth      String
   userAgent String?
   createdAt DateTime @default(now())
+
+  @@index([staffId])
+}
+
+// W23: 기사용 RN 앱(안드로이드 사이드로드 APK) FCM 토큰.
+// StaffPushSubscription(Web Push)과 별도 테이블 — 같은 기사가 PWA와 RN 앱을
+// 동시에 쓸 수 있고, web-push와 firebase-admin SDK는 페이로드 형식이 달라
+// 한 테이블로 합치면 if-else가 sendToStaff 호출처마다 들어감. fan-out은
+// src/lib/push/server.ts에서 양쪽 테이블 각각 조회 후 병렬 발송.
+model StaffFcmSubscription {
+  id         String   @id @default(cuid())
+  staffId    String
+  staff      Staff    @relation(fields: [staffId], references: [id], onDelete: Cascade)
+  fcmToken   String   @unique
+  platform   String // "android" | "ios" — 베타는 android만
+  appVersion String? // 강제 업데이트 판정·디버깅용
+  userAgent  String?
+  createdAt  DateTime @default(now())
 
   @@index([staffId])
 }
