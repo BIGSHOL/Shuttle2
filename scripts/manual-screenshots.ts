@@ -235,6 +235,17 @@ async function runOwner(browser: Browser) {
     scrollTo: 600,
   });
 
+  // 운행 상세 — 운행 중 trip이 있으면 dashboard/trip/[id]로 이동해 캡처
+  const runningTripHref = await page
+    .locator('a[href^="/dashboard/trip/"]')
+    .first()
+    .getAttribute("href")
+    .catch(() => null);
+  if (runningTripHref) {
+    await navigate(page, runningTripHref, { wait: 3000 });
+    await shoot(page, "owner", "26-trip-detail-running");
+  }
+
   await navigate(page, "/dashboard/analytics");
   await shoot(page, "owner", "28-analytics");
 
