@@ -61,7 +61,21 @@ export function useWakeLock(active: boolean): {
         }
       } catch (err) {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : "Wake Lock 획득 실패");
+          // 영문 native error 메시지를 한국어로 매핑.
+          // 가장 흔한 케이스: iOS Safari의 wakeLock 거부, 안드로이드 Chrome
+          // standalone 모드 아닐 때, OS의 visibility/permission 정책 차단.
+          const raw =
+            err instanceof Error ? err.message.toLowerCase() : "";
+          let message: string;
+          if (raw.includes("permission") || raw.includes("not allowed")) {
+            message =
+              "화면 자동 꺼짐 방지 권한이 거부됐어요. 시스템 설정에서 자동 잠금을 꺼주세요";
+          } else if (raw.includes("not supported") || raw.includes("unsupported")) {
+            message = "이 브라우저는 화면 잠금 방지를 지원하지 않습니다";
+          } else {
+            message = "화면 잠금 방지를 사용할 수 없습니다";
+          }
+          setError(message);
           setHeld(false);
         }
       }

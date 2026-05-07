@@ -14,6 +14,8 @@ import { z } from "zod";
 export const StartTripInputSchema = z.object({
   routeId: z.string().min(1),
   vehicleId: z.string().min(1),
+  // W23+: 운행 시작 시 동승자 같이 지정 (KIDS 모드는 필수, 일반은 optional/null).
+  helperId: z.string().min(1).nullable().optional(),
 });
 export type StartTripInput = z.infer<typeof StartTripInputSchema>;
 

@@ -19,14 +19,6 @@
         "FOREGROUND_SERVICE_LOCATION",
         "WAKE_LOCK",
         "POST_NOTIFICATIONS",
-        "INTERNET",
-        "ACCESS_FINE_LOCATION",
-        "ACCESS_COARSE_LOCATION",
-        "ACCESS_BACKGROUND_LOCATION",
-        "FOREGROUND_SERVICE",
-        "FOREGROUND_SERVICE_LOCATION",
-        "WAKE_LOCK",
-        "POST_NOTIFICATIONS",
         "INTERNET"
       ]
     },
@@ -36,9 +28,13 @@
     },
     "plugins": [
       [
-        "react-native-background-geolocation",
+        "expo-location",
         {
-          "license": ""
+          "locationAlwaysAndWhenInUsePermission": "운행 중 셔틀 위치를 학부모에게 실시간 전달하기 위해 사용합니다",
+          "locationWhenInUsePermission": "운행 중 셔틀 위치를 학부모에게 실시간 전달하기 위해 사용합니다",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       "@react-native-firebase/app",

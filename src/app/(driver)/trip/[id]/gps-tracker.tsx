@@ -164,7 +164,20 @@ export function useGpsTracker({
         }
       },
       (err) => {
-        setError(err.message);
+        // GeolocationPositionError 코드를 한국어로 매핑.
+        let message: string;
+        if (err.code === err.PERMISSION_DENIED) {
+          message =
+            "위치 권한이 거부됐어요. 브라우저·시스템 설정에서 위치 사용을 허용해 주세요";
+        } else if (err.code === err.POSITION_UNAVAILABLE) {
+          message =
+            "위치 정보를 받지 못했어요. 야외로 이동하거나 GPS를 켰는지 확인해 주세요";
+        } else if (err.code === err.TIMEOUT) {
+          message = "위치 요청 시간이 초과됐어요. GPS 신호가 약합니다";
+        } else {
+          message = "위치 정보 오류가 발생했어요";
+        }
+        setError(message);
       },
       {
         enableHighAccuracy: true,

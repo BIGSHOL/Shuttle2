@@ -20,19 +20,27 @@ export default async function RunPage() {
   const bit = todayBitKst();
 
   // 오늘 운행하는 노선만 (weekdays 비트마스크에 오늘 비트가 켜진 것)
-  const allRoutes = await db.route.findMany({
-    where: { vehicle: { orgId } },
-    orderBy: [{ direction: "asc" }, { name: "asc" }],
-    include: {
-      vehicle: { select: { plate: true, mode: true } },
-      stops: {
-        orderBy: { order: "asc" },
-        take: 1,
-        select: { scheduledAt: true },
+  const [allRoutes, helpers] = await Promise.all([
+    db.route.findMany({
+      where: { vehicle: { orgId } },
+      orderBy: [{ direction: "asc" }, { name: "asc" }],
+      include: {
+        vehicle: { select: { plate: true, mode: true } },
+        stops: {
+          orderBy: { order: "asc" },
+          take: 1,
+          select: { scheduledAt: true },
+        },
+        _count: { select: { stops: true } },
       },
-      _count: { select: { stops: true } },
-    },
-  });
+    }),
+    // W23+: 동승자를 운행 시작 시점에 같이 지정. KIDS 모드는 필수.
+    db.staff.findMany({
+      where: { orgId, role: "HELPER" },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
   const todaysRoutes = allRoutes.filter((r) => (r.weekdays & bit) !== 0);
 
   // 이미 진행 중인 trip이 있으면 곧장 그 화면으로 안내
@@ -157,6 +165,9 @@ export default async function RunPage() {
                   <StartTripButton
                     routeId={r.id}
                     vehicleId={r.vehicleId}
+                    vehicleMode={r.vehicle.mode}
+                    routeName={r.name}
+                    helpers={helpers}
                     disabled={r._count.stops === 0 || activeTrip !== null}
                   />
                 </div>
