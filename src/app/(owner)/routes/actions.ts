@@ -224,3 +224,56 @@ export async function deleteRouteStopAction(
 
   revalidatePath(`/routes/${routeId}/edit`);
 }
+
+const RouteStopUpdateInput = z.object({
+  order: z.coerce
+    .number()
+    .int("순서는 정수")
+    .min(1, "순서는 1 이상")
+    .max(99, "순서가 너무 큽니다"),
+  scheduledAt: z
+    .string()
+    .regex(/^[0-2][0-9]:[0-5][0-9]$/, "시간은 HH:mm 형식 (예: 08:30)"),
+});
+
+export async function updateRouteStopAction(
+  routeId: string,
+  routeStopId: string,
+  input: { order: number; scheduledAt: string },
+): Promise<{ error: string } | undefined> {
+  const parsed = RouteStopUpdateInput.safeParse(input);
+  if (!parsed.success) {
+    const flat = parsed.error.flatten();
+    const firstFieldError =
+      Object.values(flat.fieldErrors).flat()[0] ??
+      flat.formErrors[0] ??
+      "입력값이 올바르지 않습니다";
+    return { error: firstFieldError };
+  }
+
+  const orgId = await getOrgId();
+
+  if (!(await ensureRouteInOrg(routeId, orgId))) {
+    return { error: "해당 노선을 찾을 수 없습니다" };
+  }
+
+  try {
+    const result = await db.routeStop.updateMany({
+      where: { id: routeStopId, route: { id: routeId, vehicle: { orgId } } },
+      data: parsed.data,
+    });
+    if (result.count === 0) {
+      return { error: "해당 정류장 항목을 찾을 수 없습니다" };
+    }
+  } catch (err) {
+    return {
+      error:
+        err instanceof Error && err.message.includes("Unique")
+          ? "같은 순서의 정류장이 이미 있습니다"
+          : "수정에 실패했습니다",
+    };
+  }
+
+  revalidatePath(`/routes/${routeId}/edit`);
+  return undefined;
+}

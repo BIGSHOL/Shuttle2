@@ -26,6 +26,7 @@ import {
 import {
   addRouteStopAction,
   deleteRouteStopAction,
+  updateRouteStopAction,
   type RouteStopFormState,
 } from "../../actions";
 
@@ -179,35 +180,121 @@ function RouteStopRowView({
   routeId: string;
   row: RouteStopRow;
 }) {
+  const [editing, setEditing] = useState(false);
+  const [orderValue, setOrderValue] = useState(String(row.order));
+  const [scheduledValue, setScheduledValue] = useState(row.scheduledAt);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
+  function cancelEdit() {
+    setEditing(false);
+    setOrderValue(String(row.order));
+    setScheduledValue(row.scheduledAt);
+    setError(null);
+  }
+
+  function save() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const result = await updateRouteStopAction(routeId, row.id, {
+          order: Number(orderValue),
+          scheduledAt: scheduledValue,
+        });
+        if (result && "error" in result) {
+          setError(result.error);
+        } else {
+          setEditing(false);
+        }
+      } catch (err) {
+        console.error("[route-stop-row] update failed", err);
+        setError("수정에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      }
+    });
+  }
+
+  function remove() {
+    setError(null);
+    startTransition(async () => {
+      try {
+        await deleteRouteStopAction(routeId, row.id);
+      } catch (err) {
+        console.error("[route-stop-row] delete failed", err);
+        setError("삭제에 실패했어요. 잠시 후 다시 시도해 주세요.");
+      }
+    });
+  }
+
   return (
     <TableRow>
-      <TableCell className="font-mono text-sm">{row.order}</TableCell>
+      <TableCell className="font-mono text-sm">
+        {editing ? (
+          <Input
+            type="number"
+            min={1}
+            max={99}
+            value={orderValue}
+            onChange={(e) => setOrderValue(e.target.value)}
+            className="h-8 w-16"
+          />
+        ) : (
+          row.order
+        )}
+      </TableCell>
       <TableCell>{row.stop.name}</TableCell>
-      <TableCell className="font-mono text-sm">{row.scheduledAt}</TableCell>
+      <TableCell className="font-mono text-sm">
+        {editing ? (
+          <Input
+            type="time"
+            value={scheduledValue}
+            onChange={(e) => setScheduledValue(e.target.value)}
+            className="h-8 w-28"
+          />
+        ) : (
+          row.scheduledAt
+        )}
+      </TableCell>
       <TableCell className="text-right">
-        <Button
-          size="sm"
-          variant="ghost"
-          disabled={pending}
-          onClick={() => {
-            setError(null);
-            startTransition(async () => {
-              try {
-                await deleteRouteStopAction(routeId, row.id);
-              } catch (err) {
-                setError(err instanceof Error ? err.message : "삭제 실패");
-              }
-            });
-          }}
-        >
-          {pending ? "..." : "삭제"}
-        </Button>
-        {error ? (
-          <span className="text-destructive ml-2 text-xs">{error}</span>
-        ) : null}
+        <div className="flex flex-col items-end gap-1">
+          <div className="flex gap-1">
+            {editing ? (
+              <>
+                <Button size="sm" disabled={pending} onClick={save}>
+                  {pending ? "..." : "저장"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={cancelEdit}
+                >
+                  취소
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setEditing(true)}
+                >
+                  편집
+                </Button>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={remove}
+                >
+                  {pending ? "..." : "삭제"}
+                </Button>
+              </>
+            )}
+          </div>
+          {error ? (
+            <span className="text-destructive text-xs">{error}</span>
+          ) : null}
+        </div>
       </TableCell>
     </TableRow>
   );
