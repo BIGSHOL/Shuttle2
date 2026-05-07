@@ -30,9 +30,13 @@ export function StartTripButton({
           setError(null);
           startTransition(async () => {
             try {
-              await startTripAction(routeId, vehicleId);
+              const result = await startTripAction(routeId, vehicleId);
+              if (result && "error" in result) {
+                setError(result.error);
+              }
             } catch (err) {
-              setError(err instanceof Error ? err.message : "시작 실패");
+              console.error("[start-trip-button] failed", err);
+              setError("운행 시작에 실패했어요. 잠시 후 다시 시도해 주세요.");
             }
           });
         }}
