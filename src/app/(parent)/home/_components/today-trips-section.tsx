@@ -15,8 +15,6 @@ type StudentMeta = {
   org: { name: string; type: "ACADEMY" | "DAYCARE" | "KINDERGARTEN" };
 };
 
-// Server component — getTodayChildTrips만 fetch. 부모 page에서 Suspense로 감싸 streaming.
-// studentInfo는 parent layout에서 이미 캐시된 가벼운 데이터라 page에서 props로 넘김.
 export async function TodayTripsSection({
   students,
   studentInfo,
@@ -28,17 +26,27 @@ export async function TodayTripsSection({
 
   if (todayCards.length === 0) {
     return (
-      <div className="bg-card mx-4 rounded-lg border p-6 text-center">
-        <p className="text-base font-bold">연결된 자녀가 아직 없어요</p>
-        <p className="text-muted-foreground mt-1 text-xs font-medium">
-          학원장·원장님께 보호자 초대를 다시 요청해 주세요.
+      <section className="space-y-2.5 px-4">
+        <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+          오늘 운행
         </p>
-      </div>
+        <div className="bg-card rounded-xl border p-6 text-center shadow-sm">
+          <p className="text-base font-extrabold tracking-tight">
+            연결된 자녀가 아직 없어요
+          </p>
+          <p className="text-muted-foreground mt-1.5 text-xs font-medium leading-relaxed">
+            학원장·원장님께 보호자 초대를 다시 요청해 주세요.
+          </p>
+        </div>
+      </section>
     );
   }
 
   return (
-    <section className="space-y-3 px-4">
+    <section className="space-y-2.5 px-4">
+      <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+        오늘 운행
+      </p>
       {todayCards.flatMap((c) =>
         c.cards.map((card, i) => {
           const info = studentInfo.get(c.studentId);
@@ -90,7 +98,6 @@ export async function TodayTripsSection({
               />
             );
           }
-          // none
           return (
             <IdleTripCard
               key={key}
@@ -108,12 +115,14 @@ export async function TodayTripsSection({
   );
 }
 
-// Suspense fallback — trip 카드 2개 모양과 동일.
 export function TodayTripsSectionSkeleton() {
   return (
-    <section className="space-y-3 px-4">
+    <section className="space-y-2.5 px-4">
+      <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+        오늘 운행
+      </p>
       {Array.from({ length: 2 }).map((_, i) => (
-        <div key={i} className="bg-card space-y-3 rounded-lg border p-4">
+        <div key={i} className="bg-card space-y-3 rounded-xl border p-4">
           <div className="flex items-center gap-3">
             <Skeleton className="h-10 w-10 rounded-full" />
             <div className="flex-1 space-y-1">

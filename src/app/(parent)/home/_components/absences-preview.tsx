@@ -9,19 +9,18 @@ const ABSENCE_TYPE_SHORT = {
 type Item = {
   id: string;
   studentName: string;
-  dateISO: string; // YYYY-MM-DD
+  dateISO: string;
   type: "ABSENT_BOTH" | "ABSENT_PICKUP" | "ABSENT_DROPOFF";
   status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED" | "REJECTED";
 };
 
-// 다가오는 결석 신청 미리보기. /my-absences로 이어짐.
 export function AbsencesPreview({ items }: { items: Item[] }) {
   if (items.length === 0) return null;
 
   return (
-    <section className="space-y-2 px-4 pt-1">
+    <section className="space-y-2.5 px-4 pt-2">
       <div className="flex items-center justify-between">
-        <h3 className="text-[11px] font-extrabold tracking-wide uppercase text-muted-foreground">
+        <h3 className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
           예정된 결석
         </h3>
         <Link
@@ -31,14 +30,16 @@ export function AbsencesPreview({ items }: { items: Item[] }) {
           전체 보기 →
         </Link>
       </div>
-      <ul className="space-y-1.5">
+      <ul className="space-y-2">
         {items.map((a) => (
           <li
             key={a.id}
-            className="bg-card flex items-center justify-between gap-2 rounded-md border px-3.5 py-2.5 text-sm shadow-sm"
+            className="bg-card flex items-center justify-between gap-2 rounded-xl border px-3.5 py-3 text-sm shadow-sm"
           >
             <span>
-              <span className="font-bold">{a.studentName}</span>
+              <span className="font-extrabold tracking-tight">
+                {a.studentName}
+              </span>
               <span className="text-muted-foreground ml-2 text-xs font-medium">
                 {a.dateISO} · {ABSENCE_TYPE_SHORT[a.type]}
               </span>

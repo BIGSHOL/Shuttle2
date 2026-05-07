@@ -13,11 +13,11 @@ function todayKstLabel(): string {
 
 export function GreetingSection() {
   return (
-    <section className="bg-background border-b px-5 py-4">
-      <p className="text-muted-foreground text-[11px] font-semibold tracking-wide">
+    <section className="bg-background border-b px-5 pt-5 pb-4">
+      <p className="text-muted-foreground text-[11px] font-bold tracking-[0.08em] uppercase">
         {todayKstLabel()}
       </p>
-      <h2 className="mt-0.5 text-2xl font-extrabold tracking-tight">
+      <h2 className="mt-1 text-[28px] font-black tracking-tight leading-tight">
         오늘 일정
       </h2>
     </section>

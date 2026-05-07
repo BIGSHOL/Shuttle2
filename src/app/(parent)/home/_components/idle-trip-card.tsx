@@ -4,9 +4,6 @@ import { ChildAvatar } from "@/components/child-avatar";
 import { ModeBadge } from "@/components/mode-badge";
 import { TripStatusBadge } from "@/components/trip-status-badge";
 
-// 운행 중이 아닌 자녀 카드. scheduled/finished/none/absent 모두 처리.
-// 디자인(parent.jsx ParentHome 자녀 2 카드) 따라 white bg + soft chip + bg-muted info row.
-
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
 export type IdleCardProps =
@@ -19,7 +16,7 @@ export type IdleCardProps =
       routeName: string;
       direction: "PICKUP" | "DROPOFF";
       childStopName: string;
-      scheduledFirstAt: string | null; // "HH:mm"
+      scheduledFirstAt: string | null;
     }
   | {
       kind: "finished";
@@ -48,7 +45,7 @@ const ORG_TYPE_LABEL = {
 
 export function IdleTripCard(props: IdleCardProps) {
   return (
-    <article className="bg-card rounded-lg border p-3.5 shadow-sm">
+    <article className="bg-card rounded-xl border p-4 shadow-sm">
       <div className="mb-2.5 flex items-center gap-2.5">
         <ChildAvatar name={props.childName} tone="idle" size="default" />
         <div className="flex-1">
@@ -101,13 +98,13 @@ function ScheduledRow({
         </p>
         <TripStatusBadge kind="scheduled" />
       </div>
-      <div className="bg-muted/60 mt-2.5 flex items-center gap-2.5 rounded-lg px-3 py-2.5">
-        <Calendar className="text-muted-foreground h-3.5 w-3.5" />
-        <span className="text-muted-foreground flex-1 text-xs font-semibold">
+      <div className="bg-muted/50 border-border/50 mt-3 flex items-center gap-2.5 rounded-lg border px-3 py-2.5">
+        <Calendar className="text-muted-foreground h-3.5 w-3.5 shrink-0" />
+        <span className="text-foreground/80 flex-1 truncate text-xs font-semibold">
           {childStopName}
         </span>
         {scheduledFirstAt ? (
-          <span className="text-foreground text-xs font-extrabold tabular-nums">
+          <span className="text-foreground text-sm font-extrabold tracking-tight tabular-nums">
             {scheduledFirstAt}
           </span>
         ) : null}
@@ -143,6 +140,8 @@ function NoneRow({ reason }: { reason: "no_route" | "off_day" }) {
       ? "노선이 아직 배정되지 않았어요"
       : "오늘 예정된 운행이 없어요";
   return (
-    <p className="text-muted-foreground text-xs font-medium">{text}</p>
+    <p className="text-muted-foreground bg-muted/40 mt-1 rounded-lg px-3 py-2.5 text-center text-xs font-semibold">
+      {text}
+    </p>
   );
 }
