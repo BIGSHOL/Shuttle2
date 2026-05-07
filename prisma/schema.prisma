@@ -222,6 +222,9 @@ model Student {
   org       Organization @relation(fields: [orgId], references: [id])
   name      String
   birthYear Int // KIDS 모드 자동 판정용
+  // W23+: 학교 (선택). 일괄 등록·정류장 그룹·학원장 학생 list 검색용.
+  // 외부 시스템 export(예: "달성초")는 normalize 거쳐 "달성초등학교" 형태로 저장.
+  school    String?
 
   guardians          GuardianLink[]
   routes             RouteStudent[]
