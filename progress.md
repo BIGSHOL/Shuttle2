@@ -1231,6 +1231,10 @@ dashboard에서 카톡 공유로 즉시 install 가능.
 - 🟡 **다른 driver server action 패턴 통일** — boarding/safety/issue 등도
   `Promise<{error}|undefined>` 패턴으로. 사용자 trigger 빈도 낮아 베타 운영 중
   이슈 보이면 추가 fix.
+- 📋 **정류장 통과 시각 list inline 통합** — 학원장 trip 상세 + 학부모
+  trip-live의 정류장 row에 STOP_PASS 도착 시각·구간 소요 표시. 별도 plan
+  문서 [`docs/plans/stop-arrival-inline.md`](docs/plans/stop-arrival-inline.md)
+  로 정리(다른 컴퓨터에서 즉시 이어 진행 가능).
 
 ### 다른 컴퓨터에서 즉시 실행 (W23-B baseline)
 
