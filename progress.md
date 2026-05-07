@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-07 (W23-B 베타 진입 패키지 — APK 배포·PWA hotfix·결석 알림 흐름)
+> 마지막 업데이트: 2026-05-07 (W23-C 학원장 학생 목록 페이지네이션·필터·정렬)
 
 ## 완료된 마일스톤
 
@@ -37,6 +37,7 @@
 | W23   | 기사용 RN 사이드로드 APK + FCM + monorepo 전환 (`apps/driver-rn`·`packages/shared-contracts`) | `2f746f5`                                          | ✅ 코드 |
 | W23-A | EAS 빌드 진입 fix — google-services prebuild + Vercel env 4/5 등록                       | `560876f`, `3f57835`                                   | ✅   |
 | W23-B | 베타 진입 패키지 — PWA hotfix·가로폭·splash·결석 알림 직접 fan-out·EAS APK 배포·hnd1 region | `e805d01`·`fb50c88`·`d75a3f1`·`c1c9981`·`d5ccbaa`·`d840ec6`·`f8ac320`·`2d71e23`·`f2c9cd9`·`f183c6b`·`0cbcceb`·`6f64b8a`·`1bb8d29`·`d785f50` | ✅ 베타 시작 가능 |
+| W23-C | 학원장 학생 목록 페이지네이션·필터·정렬 — 검색·학년 6종·학교·노선·이름/학년/학교 ↑↓·10/20/50 페이지 (searchParams 단일 소스, `_lib/query.ts` + toolbar/list/pagination 분리) | (TBD)                                                  | ⏳   |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
