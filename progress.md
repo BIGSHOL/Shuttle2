@@ -1367,6 +1367,111 @@ cross-org · Users 비번 reset 대행 · APK release · Push 테스트 · Imper
   `(owner)/layout.tsx` impersonate 통합 + `api/driver-app/version/route.ts`
   DB fallback + 기존 admin 두 페이지 hardcoded 가드 제거 + `.env.example`.
 
+## W23-E (2026-05-07 저녁) — 기사 RN APK 흰 화면 root cause·핸드오프
+
+### 진단 결정타 (logcat)
+
+```
+FATAL EXCEPTION: expo-updates-error-recovery
+Process: com.shuttlee.driver
+com.facebook.react.common.JavascriptException: TypeError: Cannot read property 'useState' of null
+at App (index.android.bundle:1:853047), js engine: hermes
+```
+
+→ **React duplication** (monorepo + pnpm workspace에서 두 React 버전 병존):
+- `apps/driver-rn/node_modules/react` = `19.0.0` (RN 0.79.6 peer)
+- `D:/shuttle2/node_modules/react` = `19.2.4` (Next.js 16용)
+
+metro가 둘 다 번들에 포함 → React가 두 개 → 첫 render의 `useState` 호출
+시 hooks 컨텍스트가 끊겨 `null`. `expo-updates-error-recovery` 스레드의
+`FATAL EXCEPTION`이라 OS가 process kill → splash 후 즉시 종료. 두 번째
+실행부터는 partial state로 재시작해 흰 화면 + JS bridge 죽음.
+
+### 시도 순서·실패 내역 (시간순)
+
+1. **1.0.0** (W23 EAS 빌드) — 흰 화면. 사용자 시점엔 빌드 결과 확인 안 했었음.
+2. **1.0.1** (commit `fe3a738`) — `eas.json` env 블록 + supabase.ts lazy throw +
+   api-client.ts fallback URL `shuttle2-nine.vercel.app` + `.env.example`. 같은 흰 화면.
+3. **1.0.2** (commit `bb3d849`) — `newArchEnabled: false` + `<AppErrorBoundary>` +
+   `gps.ts` `TaskManager.defineTask` lazy + FCM useEffect try/catch. 같은 흰 화면.
+   ErrorBoundary도 React 자체가 깨졌으니 마운트 실패.
+4. **logcat 추출** (실기기 USB 직결, 폰 시리얼로 `adb devices` 인식) — root cause 확정.
+5. **1.0.3** (commit `057f362`) — `metro.config.js`에 `extraNodeModules`로
+   react·react-native·jsx-runtime 단일화. **빌드 진행 중 (퇴근 직전 시점).**
+
+### 1.0.3 빌드 끝난 후 다음 액션 (집에서 이어가기)
+
+```powershell
+# 0) 새 PowerShell 창 — winget이 PATH 추가했어도 새 셸이 인식.
+#    EXPO_TOKEN은 1Password에서 다시 set:
+$env:EXPO_TOKEN = "<1Password에서 복원>"
+
+# 1) 빌드 끝났는지 확인
+Set-Location D:\shuttle2\apps\driver-rn
+eas build:view --json 2>$null | ConvertFrom-Json | Select-Object -ExpandProperty artifacts
+
+# buildUrl 값 복사 — `https://expo.dev/artifacts/eas/<해시>.apk`
+
+# 2) /admin/apk에 1.0.3 등록 (스크립트 재사용)
+Set-Location D:\shuttle2
+pnpm dotenv -e .env.local -- pnpm tsx scripts/register-driver-apk.ts "1.0.3" "<APK_URL>" "React duplication 수정 (metro extraNodeModules)"
+
+# 3) 검증
+curl https://shuttle2-nine.vercel.app/api/driver-app/version
+# → latestVersion: 1.0.3 + 새 downloadUrl
+
+# 4) 폰에서 1.0.2 uninstall → 1.0.3 새로 설치 → 실행
+#    기대: 로그인 화면 진입 (흰 화면 해소 가능성 매우 높음)
+```
+
+### DB 상태 (스냅샷)
+
+`DriverAppRelease` 테이블 (createdAt desc):
+- ★ `1.0.2` (2026-05-07 11:35Z) — `xw87nK7fBmETGsmWUbxkBT.apk`
+-   `1.0.1` (2026-05-07 10:54Z) — `jKptohnNsYvqwn9Z63h6u6.apk`
+- (1.0.3 등록 예정)
+
+### 결과별 분기 (집에서 확인 후)
+
+- 🟢 **로그인 화면** → React duplication이 정확한 원인. `extraNodeModules`로 해결.
+  베타 진입 OK. CLAUDE.md 사용자 역할에 W23 RN 앱 잠재 원인 패턴 메모만 추가.
+- 🔴 **빨간 ErrorBoundary 화면** → React는 살아났지만 다른 throw. 스택 캡처해서
+  추가 분석.
+- ⚪ **여전히 흰 화면** → 또 다른 module-level/native crash. 같은 logcat 흐름:
+  ```powershell
+  adb shell am force-stop com.shuttlee.driver
+  adb logcat -c
+  # (앱 실행 → 강제 종료 대기)
+  adb logcat -d | Select-String "FATAL|AndroidRuntime|com.shuttlee.driver|JavascriptException"
+  ```
+
+### 중요 배경 정보
+
+- **logcat USB 직결 절차** (맥북/다른 PC에서 이어갈 때):
+  - 폰 설정 → 휴대전화 정보 → 빌드 번호 7번 탭 → 개발자 옵션 활성화 → USB 디버깅 ON
+  - USB 케이블로 PC 연결 (충전 전용 케이블 ❌ — 데이터 전송 가능 케이블 필수)
+  - 폰 알림 패널 → "이 기기를 USB로 충전 중" 탭 → "파일 전송(MTP)" 선택
+  - PC에 ADB: `winget install --id=Google.PlatformTools` (Win) 또는 `brew install android-platform-tools` (mac)
+  - `adb devices` → 폰 시리얼이 `device` 상태로 보여야 OK
+- **BlueStacks ADB 동시 사용 시 충돌**: `adb kill-server; adb start-server`로 정리.
+  BlueStacks 종료 권장.
+- **폰 강제 정지 + 로그 클리어**: `adb shell am force-stop com.shuttlee.driver` → `adb logcat -c`.
+- **`scripts/register-driver-apk.ts` + `scripts/list-driver-apk.ts`**: 응급 등록·디버깅용
+  CLI. 1.0.3 등록 후에도 보존 결정 보류 (사용자 결정 필요).
+
+### 임시 파일 정리 결정 (이슈)
+
+- `D:/shuttle2/scripts/register-driver-apk.ts` (60줄, 응급 등록 CLI)
+- `D:/shuttle2/scripts/list-driver-apk.ts` (디버그용)
+- `D:/shuttle2/rn-crash.log` (logcat 덤프, untracked)
+
+→ **A안**: 응급 도구로 commit 보존. **B안**: 베타 안정 후 삭제. 사용자 결정 보류.
+
+### 보안 후속 (W23-E 발견)
+
+- ⚠️ **EXPO_TOKEN 평문이 PowerShell 세션·history에 남음** — 베타 시작 전 revoke + 재발급 후 1Password.
+- ⚠️ **logcat 파일에 민감 정보 가능** — `D:/shuttle2/rn-crash.log` 처리 결정 필요.
+
 ## 다음 우선순위 (W25+)
 
 W24까지 베타 운영 도구 풀세트 완비. W25부터는 베타 졸업·정식 런칭 준비.
