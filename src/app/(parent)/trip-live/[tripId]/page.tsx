@@ -82,16 +82,21 @@ export default async function TripLivePage({
   // 종료된 trip — parent layout 안에서 일반 카드 (풀스크린 X)
   if (trip.endedAt) {
     return (
-      <main className="mx-auto max-w-md space-y-4 p-4">
-        <Card className="bg-muted/40">
-          <CardHeader>
-            <CardTitle>운행 종료</CardTitle>
+      <main className="mx-auto max-w-md space-y-4 p-4 pt-6">
+        <Card className="bg-muted/40 border-2 shadow-sm rounded-2xl">
+          <CardHeader className="pb-3">
+            <div className="bg-muted text-muted-foreground inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-extrabold tracking-tight uppercase">
+              종료됨
+            </div>
+            <CardTitle className="text-2xl font-black tracking-tight">
+              운행 종료
+            </CardTitle>
             <CardDescription>
               <span className="font-bold">{trip.route.name}</span>{" "}
               {DIRECTION_LABEL[trip.route.direction]} 운행은 종료되었습니다.
             </CardDescription>
           </CardHeader>
-          <CardContent className="text-muted-foreground space-y-1 text-sm">
+          <CardContent className="text-muted-foreground space-y-2 text-sm">
             <p>
               시작:{" "}
               <span className="font-mono">

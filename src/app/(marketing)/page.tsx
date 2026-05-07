@@ -162,15 +162,17 @@ export default function MarketingPage() {
 
       {/* Hero */}
       <section className="relative overflow-hidden">
-        <div className="bg-bus/8 absolute inset-0 -z-10" />
+        <div className="bg-gradient-to-b from-bus/12 via-bus/4 to-transparent absolute inset-0 -z-10" />
+        <div className="bg-bus/15 absolute -top-32 -right-20 -z-10 h-96 w-96 rounded-full blur-3xl" />
+        <div className="bg-info/10 absolute -bottom-40 -left-20 -z-10 h-96 w-96 rounded-full blur-3xl" />
         <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-6">
           <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
             <div className="space-y-6">
-              <span className="bg-bus-soft text-bus-foreground inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold tracking-wide">
+              <span className="bg-bus text-bus-foreground inline-flex items-center gap-1.5 rounded-full border-2 border-bus-foreground/15 px-3 py-1.5 text-xs font-black tracking-tight shadow-sm">
                 <Sparkles className="h-3.5 w-3.5" />
                 법정 의무 + 학부모 만족 한 번에
               </span>
-              <h2 className="text-4xl font-extrabold tracking-tight sm:text-5xl lg:text-6xl">
+              <h2 className="text-4xl font-black tracking-tighter sm:text-5xl lg:text-[64px] leading-[1.05]">
                 셔틀버스 운영,
                 <br />
                 <span className="text-bus-foreground bg-bus inline-block rounded-lg px-2">
@@ -178,13 +180,17 @@ export default function MarketingPage() {
                 </span>
                 .
               </h2>
-              <p className="text-muted-foreground max-w-xl text-base font-medium sm:text-lg">
+              <p className="text-muted-foreground max-w-xl text-base font-medium leading-relaxed sm:text-lg">
                 매 운행 자동 누적되는 안전점검·운행 기록을 분기마다 PDF로
                 추출하고, 학부모는 카카오맵에서 셔틀 위치를 실시간으로 봅니다.
                 어린이통학버스 안전운행기록 의무를 자동으로 충족시키는 셔틀 운영 서비스.
               </p>
               <div className="flex flex-wrap gap-3">
-                <Button asChild size="lg" className="text-base font-extrabold">
+                <Button
+                  asChild
+                  size="lg"
+                  className="text-base font-black tracking-tight bg-bus text-bus-foreground hover:bg-bus/90 shadow-[var(--shadow-live)] h-12 px-6 border-2 border-bus-foreground/10"
+                >
                   <Link href="#pre-register">
                     베타 신청 <ChevronRight className="ml-0.5 h-4 w-4" />
                   </Link>
@@ -193,10 +199,37 @@ export default function MarketingPage() {
                   asChild
                   size="lg"
                   variant="outline"
-                  className="text-base font-bold"
+                  className="text-base font-extrabold tracking-tight h-12 px-6 border-2"
                 >
                   <Link href="/pricing">요금제 보기</Link>
                 </Button>
+              </div>
+              {/* 소셜프루프 stat strip */}
+              <div className="grid grid-cols-3 gap-4 pt-4 border-t">
+                <div>
+                  <p className="text-2xl font-black tracking-tight tabular-nums">
+                    2
+                  </p>
+                  <p className="text-muted-foreground text-[11px] font-semibold mt-0.5">
+                    베타 운영 기관
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black tracking-tight tabular-nums">
+                    5초
+                  </p>
+                  <p className="text-muted-foreground text-[11px] font-semibold mt-0.5">
+                    위치 갱신 주기
+                  </p>
+                </div>
+                <div>
+                  <p className="text-2xl font-black tracking-tight tabular-nums">
+                    PDF
+                  </p>
+                  <p className="text-muted-foreground text-[11px] font-semibold mt-0.5">
+                    분기 자동 추출
+                  </p>
+                </div>
               </div>
               <div className="text-muted-foreground flex flex-wrap items-center gap-x-4 gap-y-1 text-xs font-medium">
                 <span className="inline-flex items-center gap-1">
@@ -216,7 +249,8 @@ export default function MarketingPage() {
 
             {/* 모바일 mock */}
             <div className="relative">
-              <div className="bg-card relative mx-auto max-w-sm rounded-3xl border-8 border-zinc-900 p-3 shadow-2xl">
+              <div className="bg-card relative mx-auto max-w-sm rounded-[36px] border-[10px] border-zinc-900 p-3 shadow-2xl rotate-[1.5deg] hover:rotate-0 transition-transform duration-500">
+                <div className="absolute -top-1 left-1/2 -translate-x-1/2 h-1.5 w-16 bg-zinc-900 rounded-b-lg" />
                 <div className="bg-muted/40 rounded-lg p-4">
                   <div className="bg-card mb-3 rounded-md border p-3 shadow-sm">
                     <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
@@ -273,10 +307,10 @@ export default function MarketingPage() {
       <section className="border-y bg-muted/30 py-16 lg:py-20">
         <div className="mx-auto max-w-6xl space-y-10 px-4 lg:px-6">
           <div className="text-center">
-            <p className="text-muted-foreground text-xs font-extrabold tracking-wide uppercase">
+            <p className="text-muted-foreground text-[11px] font-black tracking-[0.15em] uppercase">
               왜 만들었나요
             </p>
-            <h3 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <h3 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl leading-tight">
               현재 운영자들의 진짜 부담
             </h3>
           </div>
@@ -291,17 +325,17 @@ export default function MarketingPage() {
               return (
                 <div
                   key={p.title}
-                  className="bg-card rounded-lg border p-5 shadow-sm"
+                  className="bg-card rounded-2xl border p-6 shadow-sm hover:shadow-md transition-shadow"
                 >
                   <span
-                    className={`flex h-10 w-10 items-center justify-center rounded-full ${t}`}
+                    className={`flex h-12 w-12 items-center justify-center rounded-xl border-2 border-current/15 ${t}`}
                   >
                     <p.Icon className="h-5 w-5" />
                   </span>
-                  <h4 className="mt-3 text-base font-extrabold tracking-tight">
+                  <h4 className="mt-4 text-lg font-black tracking-tight leading-tight">
                     {p.title}
                   </h4>
-                  <p className="text-muted-foreground mt-2 text-sm font-medium">
+                  <p className="text-muted-foreground mt-2 text-sm font-medium leading-relaxed">
                     {p.body}
                   </p>
                 </div>
@@ -330,22 +364,22 @@ export default function MarketingPage() {
             {FEATURES.map((f) => (
               <div
                 key={f.title}
-                className="bg-card rounded-lg border p-6 shadow-sm"
+                className="bg-card rounded-2xl border p-6 shadow-sm hover:shadow-md hover:border-foreground/20 transition-all"
               >
                 <div className="flex items-start gap-3">
-                  <span className="bg-bus-soft text-bus-foreground flex h-10 w-10 shrink-0 items-center justify-center rounded-md">
+                  <span className="bg-bus-soft text-bus-foreground flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border-2 border-bus/15">
                     <f.Icon className="h-5 w-5" />
                   </span>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <h4 className="text-base font-extrabold tracking-tight">
+                      <h4 className="text-lg font-black tracking-tight">
                         {f.title}
                       </h4>
-                      <span className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase">
+                      <span className="bg-bus text-bus-foreground rounded-full px-2 py-0.5 text-[10px] font-black tracking-tight uppercase">
                         {f.tag}
                       </span>
                     </div>
-                    <p className="text-muted-foreground mt-2 text-sm font-medium">
+                    <p className="text-muted-foreground mt-2 text-sm font-medium leading-relaxed">
                       {f.body}
                     </p>
                   </div>
@@ -360,10 +394,10 @@ export default function MarketingPage() {
       <section className="border-y bg-muted/30 py-16 lg:py-20">
         <div className="mx-auto max-w-4xl space-y-8 px-4 lg:px-6">
           <div className="text-center">
-            <p className="text-muted-foreground text-xs font-extrabold tracking-wide uppercase">
+            <p className="text-muted-foreground text-[11px] font-black tracking-[0.15em] uppercase">
               차별점
             </p>
-            <h3 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <h3 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl leading-tight">
               셔틀이 vs 기존 솔루션
             </h3>
           </div>
@@ -412,10 +446,10 @@ export default function MarketingPage() {
       <section className="py-16 lg:py-20">
         <div className="mx-auto max-w-6xl space-y-10 px-4 lg:px-6">
           <div className="mx-auto max-w-2xl text-center">
-            <p className="text-muted-foreground text-xs font-extrabold tracking-wide uppercase">
+            <p className="text-muted-foreground text-[11px] font-black tracking-[0.15em] uppercase">
               요금제
             </p>
-            <h3 className="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <h3 className="mt-3 text-3xl font-black tracking-tight sm:text-4xl leading-tight">
               필요한 만큼만
             </h3>
             <p className="text-muted-foreground mt-3 text-base font-medium">
@@ -429,8 +463,8 @@ export default function MarketingPage() {
                 key={p.name}
                 className={
                   p.highlight
-                    ? "border-bus relative rounded-lg border-2 p-6 shadow-md"
-                    : "bg-card rounded-lg border p-6 shadow-sm"
+                    ? "border-bus relative rounded-2xl border-2 p-7 shadow-lg lg:scale-105"
+                    : "bg-card rounded-2xl border p-6 shadow-sm hover:shadow-md transition-shadow"
                 }
                 style={
                   p.highlight
@@ -442,18 +476,16 @@ export default function MarketingPage() {
                 }
               >
                 {p.badge ? (
-                  <span className="bg-bus text-bus-foreground absolute -top-3 right-5 inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-extrabold tracking-wide uppercase">
+                  <span className="bg-bus text-bus-foreground absolute -top-3 right-5 inline-flex items-center gap-1 rounded-full border-2 border-bus-foreground/15 px-3 py-1 text-[11px] font-black tracking-tight uppercase shadow-sm">
                     <Sparkles className="h-3 w-3" />
                     {p.badge}
                   </span>
                 ) : null}
-                <h4 className="text-base font-extrabold tracking-tight">
-                  {p.name}
-                </h4>
-                <p className="text-muted-foreground mt-1 text-xs font-medium">
+                <h4 className="text-xl font-black tracking-tight">{p.name}</h4>
+                <p className="text-muted-foreground mt-1 text-xs font-semibold">
                   {p.desc}
                 </p>
-                <p className="mt-4 text-2xl font-extrabold tracking-tight">
+                <p className="mt-5 text-3xl font-black tracking-tighter tabular-nums">
                   {p.price}
                 </p>
                 <ul className="mt-4 space-y-1.5">
@@ -494,15 +526,17 @@ export default function MarketingPage() {
       {/* Pre-register CTA */}
       <section
         id="pre-register"
-        className="border-y bg-muted/30 py-16 lg:py-20"
+        className="border-y bg-gradient-to-b from-muted/30 to-bus-soft/40 py-16 lg:py-20 relative overflow-hidden"
       >
-        <div className="mx-auto max-w-2xl space-y-6 px-4 lg:px-6">
+        <div className="bg-bus/10 absolute -top-20 right-1/4 h-72 w-72 rounded-full blur-3xl" />
+        <div className="bg-info/8 absolute -bottom-20 left-1/4 h-72 w-72 rounded-full blur-3xl" />
+        <div className="mx-auto max-w-2xl space-y-6 px-4 lg:px-6 relative">
           <div className="text-center">
-            <span className="bg-bus-soft text-bus-foreground inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold tracking-wide">
+            <span className="bg-bus text-bus-foreground inline-flex items-center gap-1.5 rounded-full border-2 border-bus-foreground/15 px-3 py-1.5 text-xs font-black tracking-tight shadow-sm">
               <Sparkles className="h-3.5 w-3.5" />
               베타 모집 중
             </span>
-            <h3 className="mt-3 text-3xl font-extrabold tracking-tight sm:text-4xl">
+            <h3 className="mt-4 text-4xl font-black tracking-tighter sm:text-5xl leading-tight">
               베타 사전등록
             </h3>
             <p className="text-muted-foreground mt-3 text-base font-medium">

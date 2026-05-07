@@ -122,13 +122,20 @@ export default async function DashboardPage() {
       {/* 인사 + 푸시 토글 — 즉시 */}
       <section className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-extrabold tracking-tight lg:text-3xl">
+          <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+            원장 대시보드
+          </p>
+          <h2 className="mt-1 text-3xl font-black tracking-tight lg:text-4xl leading-tight">
             {user.org.name}
           </h2>
-          <p className="text-muted-foreground mt-1 text-sm font-medium">
-            {ORG_TYPE_LABEL[user.org.type]} · 요금제{" "}
-            {org ? PLAN_LABEL[org.plan] : "-"}
-          </p>
+          <div className="mt-2 flex items-center gap-2">
+            <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-[11px] font-extrabold">
+              {ORG_TYPE_LABEL[user.org.type]}
+            </span>
+            <span className="bg-bus-soft text-bus-foreground rounded-md px-2 py-0.5 text-[11px] font-extrabold">
+              {org ? PLAN_LABEL[org.plan] : "-"} 요금제
+            </span>
+          </div>
         </div>
         {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
           <StaffNotificationToggle
@@ -138,7 +145,11 @@ export default async function DashboardPage() {
       </section>
 
       {/* KPI 4 cards — 즉시 */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <section className="space-y-3">
+        <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+          오늘 한눈에
+        </p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <KpiCard
           label="오늘 운행"
           value={todayTripsTotal}
@@ -180,16 +191,20 @@ export default async function DashboardPage() {
           Icon={Users}
           tone="muted"
         />
+        </div>
       </section>
 
       {/* 오늘 운행 모니터 — Suspense (todayTrips with includes + boarding stats) */}
       <section className="space-y-3">
         <div className="flex items-end justify-between gap-3">
           <div>
-            <h3 className="text-lg font-extrabold tracking-tight">
+            <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+              실시간 모니터링
+            </p>
+            <h3 className="mt-1 text-xl font-black tracking-tight">
               오늘 운행 모니터
             </h3>
-            <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+            <p className="text-muted-foreground mt-1 text-xs font-semibold">
               지금 진행 중·예정·완료된 운행. 카드 클릭하면 실시간 화면으로 이동.
             </p>
           </div>
@@ -219,31 +234,36 @@ export default async function DashboardPage() {
       />
 
       {/* 빠른 이동 — 즉시 */}
-      <section className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <QuickLink
-          href="/vehicles"
-          label="차량"
-          value={vehicleCount}
-          Icon={Bus}
-        />
-        <QuickLink
-          href="/stops"
-          label="정류장"
-          value={stopCount}
-          Icon={MapPin}
-        />
-        <QuickLink
-          href="/routes"
-          label="노선"
-          value={routeCount}
-          Icon={Route}
-        />
-        <QuickLink
-          href="/students"
-          label={studentLabel}
-          value={studentCount}
-          Icon={Users}
-        />
+      <section className="space-y-3">
+        <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+          빠른 이동
+        </p>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <QuickLink
+            href="/vehicles"
+            label="차량"
+            value={vehicleCount}
+            Icon={Bus}
+          />
+          <QuickLink
+            href="/stops"
+            label="정류장"
+            value={stopCount}
+            Icon={MapPin}
+          />
+          <QuickLink
+            href="/routes"
+            label="노선"
+            value={routeCount}
+            Icon={Route}
+          />
+          <QuickLink
+            href="/students"
+            label={studentLabel}
+            value={studentCount}
+            Icon={Users}
+          />
+        </div>
       </section>
     </main>
   );
@@ -280,22 +300,30 @@ function KpiCard({
 }) {
   const t = TONE_CLS[tone];
   return (
-    <div className="bg-card rounded-lg border p-4 shadow-sm">
-      <div className="flex items-start gap-2">
+    <div className="bg-card rounded-2xl border p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
+      {pulse ? (
+        <div className="from-destructive/8 pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-gradient-to-br to-transparent blur-2xl" />
+      ) : null}
+      <div className="flex items-start gap-2 relative">
         <span
-          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${t.bg} ${t.text}`}
+          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.bg} ${t.text} border-2 border-current/15`}
         >
-          <Icon className="h-4 w-4" />
+          <Icon className="h-5 w-5" />
         </span>
-        <p className="text-muted-foreground min-w-0 flex-1 pt-1 text-[11px] font-extrabold tracking-wide uppercase leading-tight">
+        <p className="text-muted-foreground min-w-0 flex-1 pt-1.5 text-[11px] font-black tracking-[0.08em] uppercase leading-tight">
           {label}
         </p>
         {pulse ? (
-          <span className="bg-bus mt-2 inline-block h-2 w-2 shrink-0 animate-pulse rounded-full" />
+          <span className="relative mt-2 inline-flex h-2 w-2 shrink-0">
+            <span className="bg-destructive absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
+            <span className="bg-destructive relative inline-flex h-2 w-2 rounded-full" />
+          </span>
         ) : null}
       </div>
-      <p className="mt-3 text-3xl font-extrabold tracking-tight">{value}</p>
-      <p className="text-muted-foreground mt-1 text-[11px] font-medium leading-tight">
+      <p className="mt-4 text-4xl font-black tracking-tighter tabular-nums leading-none">
+        {value}
+      </p>
+      <p className="text-muted-foreground mt-2 text-[11px] font-semibold leading-relaxed">
         {subtext}
       </p>
     </div>
@@ -316,15 +344,19 @@ function QuickLink({
   return (
     <Link
       href={href}
-      className="bg-card hover:border-primary hover:bg-muted/40 flex items-center justify-between rounded-lg border p-4 shadow-sm transition-colors"
+      className="bg-card hover:border-foreground/30 hover:bg-muted/40 flex items-center justify-between rounded-2xl border p-5 shadow-sm transition-all"
     >
       <div>
-        <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
+        <p className="text-muted-foreground text-[11px] font-black tracking-[0.08em] uppercase">
           {label}
         </p>
-        <p className="mt-1 text-2xl font-extrabold tracking-tight">{value}</p>
+        <p className="mt-1.5 text-3xl font-black tracking-tighter tabular-nums leading-none">
+          {value}
+        </p>
       </div>
-      <Icon className="text-muted-foreground h-6 w-6" />
+      <div className="bg-muted/60 flex h-10 w-10 items-center justify-center rounded-xl">
+        <Icon className="text-muted-foreground h-5 w-5" />
+      </div>
     </Link>
   );
 }

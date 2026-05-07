@@ -23,7 +23,7 @@ export function TripHeader({
   isLive: boolean;
 }) {
   return (
-    <header className="bg-background relative z-10 flex items-center gap-3 border-b px-3 py-3 shadow-sm">
+    <header className="bg-background/95 backdrop-blur-md relative z-10 flex items-center gap-3 border-b px-3 py-3.5 shadow-sm">
       <Link
         href="/home"
         className="bg-muted/60 hover:bg-muted flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors"
@@ -40,12 +40,12 @@ export function TripHeader({
         </p>
       </div>
       {isLive ? (
-        <span className="border-bus/40 bg-bus/10 text-bus-foreground inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold">
-          <LivePulseDot />
+        <span className="bg-bus text-bus-foreground inline-flex items-center gap-1.5 rounded-full border-2 border-bus-foreground/15 px-2.5 py-1 text-[11px] font-extrabold tracking-tight shadow-[var(--shadow-live)]">
+          <LivePulseDot className="[&_span]:bg-bus-foreground" />
           운행 중
         </span>
       ) : (
-        <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-[11px] font-bold">
+        <span className="bg-muted text-muted-foreground rounded-full px-2.5 py-1 text-[11px] font-bold border border-border/60">
           신호 대기
         </span>
       )}
