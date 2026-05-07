@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -22,6 +23,7 @@ export function DeleteVehicleButton({
   id: string;
   plate: string;
 }) {
+  const router = useRouter();
   const [open, setOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
@@ -62,13 +64,14 @@ export function DeleteVehicleButton({
             onClick={() => {
               setError(null);
               startTransition(async () => {
-                try {
-                  await deleteVehicleAction(id);
+                const result = await deleteVehicleAction(id);
+                if (result.ok) {
                   setOpen(false);
-                } catch (err) {
-                  setError(
-                    err instanceof Error ? err.message : "삭제에 실패했습니다",
-                  );
+                  // 차량 detail/edit 페이지에서 클릭한 경우 → 목록으로 이동.
+                  // 목록 페이지에서 클릭한 경우엔 revalidatePath로 갱신되므로 push 무해.
+                  router.push("/vehicles");
+                } else {
+                  setError(result.error);
                 }
               });
             }}

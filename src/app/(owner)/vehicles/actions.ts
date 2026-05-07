@@ -139,19 +139,58 @@ export async function updateVehicleAction(
   redirect("/vehicles");
 }
 
-export async function deleteVehicleAction(id: string): Promise<void> {
+export type DeleteVehicleResult =
+  | { ok: true }
+  | { ok: false; error: string };
+
+export async function deleteVehicleAction(
+  id: string,
+): Promise<DeleteVehicleResult> {
   const orgId = await getOrgId();
 
-  // 차량에 노선·운행이 묶여 있으면 schema relation 때문에 실패함.
-  // W2-3에서 cascade 정책 다시 검토.
-  const result = await db.vehicle.deleteMany({
+  // 차량에 노선·운행이 묶여 있으면 schema relation 때문에 삭제 실패함.
+  // 사용자에게 raw Prisma 메시지가 노출되지 않게 사전 체크로 한국어 메시지.
+  const vehicle = await db.vehicle.findFirst({
     where: { id, orgId },
+    select: { _count: { select: { routes: true, trips: true } } },
   });
 
-  if (result.count === 0) {
-    throw new Error("해당 차량을 찾을 수 없습니다");
+  if (!vehicle) {
+    return { ok: false, error: "해당 차량을 찾을 수 없습니다" };
+  }
+
+  const routeCount = vehicle._count.routes;
+  const tripCount = vehicle._count.trips;
+
+  if (routeCount > 0 || tripCount > 0) {
+    const parts: string[] = [];
+    if (routeCount > 0) parts.push(`노선 ${routeCount}개`);
+    if (tripCount > 0) parts.push(`운행 기록 ${tripCount}건`);
+    return {
+      ok: false,
+      error: `이 차량에 ${parts.join("·")}이(가) 묶여 있어 삭제할 수 없습니다. 먼저 해당 노선·운행 기록을 정리해 주세요.`,
+    };
+  }
+
+  // race condition fallback — 사전 체크 후 다른 트랜잭션이 노선·운행 추가 시 P2003.
+  try {
+    await db.vehicle.delete({ where: { id } });
+  } catch (err) {
+    if (
+      err &&
+      typeof err === "object" &&
+      "code" in err &&
+      (err as { code: string }).code === "P2003"
+    ) {
+      return {
+        ok: false,
+        error: "이 차량에 묶인 노선·운행 기록이 있어 삭제할 수 없습니다.",
+      };
+    }
+    throw err;
   }
 
   revalidatePath("/dashboard");
   revalidatePath("/vehicles");
+  return { ok: true };
 }

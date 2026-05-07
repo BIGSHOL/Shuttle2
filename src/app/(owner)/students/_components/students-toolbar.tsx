@@ -118,31 +118,31 @@ export function StudentsToolbar({
     <section
       aria-label={`${termLabel} 검색·필터`}
       className={cn(
-        "bg-card space-y-3 rounded-lg border p-3 transition-opacity",
+        "bg-card rounded-lg border p-3 transition-opacity",
         isPending && "opacity-70",
       )}
     >
-      {/* 1행: 검색 input (full-width) */}
-      <div className="relative">
-        <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-        <Input
-          type="search"
-          value={searchInput}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder={`${termLabel} 이름·학교 검색`}
-          className="pl-8"
-          maxLength={50}
-        />
-      </div>
+      {/* 검색·필터·정렬·페이지·초기화 한 줄 (좁은 폭에서는 자동 wrap) */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* 검색 */}
+        <div className="relative w-full sm:w-64">
+          <Search className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+          <Input
+            type="search"
+            value={searchInput}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder={`${termLabel} 이름·학교 검색`}
+            className="pl-8"
+            maxLength={50}
+          />
+        </div>
 
-      {/* 2행: 필터 select 4개 */}
-      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {/* 학년 */}
         <Select
           value={current.grade ?? ALL}
           onValueChange={(v) => setParam("grade", v)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-32">
             <SelectValue placeholder="학년 전체" />
           </SelectTrigger>
           <SelectContent>
@@ -164,7 +164,7 @@ export function StudentsToolbar({
           onValueChange={(v) => setParam("school", v)}
           disabled={schools.length === 0}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-40">
             <SelectValue
               placeholder={schools.length === 0 ? "학교 없음" : "학교 전체"}
             />
@@ -185,7 +185,7 @@ export function StudentsToolbar({
           value={current.routes ?? ALL}
           onValueChange={(v) => setParam("routes", v)}
         >
-          <SelectTrigger>
+          <SelectTrigger className="w-32">
             <SelectValue placeholder="노선 전체" />
           </SelectTrigger>
           <SelectContent>
@@ -199,41 +199,19 @@ export function StudentsToolbar({
           </SelectContent>
         </Select>
 
-        {/* 페이지 사이즈 */}
-        <Select
-          value={String(current.size)}
-          onValueChange={(v) => setParam("size", v)}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {PAGE_SIZES.map((n) => (
-              <SelectItem key={n} value={String(n)}>
-                {n}명씩
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* 3행: 정렬 + 초기화 */}
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-1.5">
-          <span className="text-muted-foreground text-xs font-medium">
-            정렬
-          </span>
+        {/* 정렬 + 방향 */}
+        <div className="flex items-center gap-1">
           <Select
             value={current.sort}
             onValueChange={(v) => setParam("sort", v)}
           >
-            <SelectTrigger className="w-32">
+            <SelectTrigger className="w-28">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               {SORT_OPTIONS.map((opt) => (
                 <SelectItem key={opt.value} value={opt.value}>
-                  {opt.label}
+                  {opt.label} 순
                 </SelectItem>
               ))}
             </SelectContent>
@@ -244,7 +222,9 @@ export function StudentsToolbar({
             size="icon-sm"
             onClick={toggleDir}
             aria-label={
-              current.dir === "asc" ? "오름차순 (클릭 시 내림차순)" : "내림차순 (클릭 시 오름차순)"
+              current.dir === "asc"
+                ? "오름차순 (클릭 시 내림차순)"
+                : "내림차순 (클릭 시 오름차순)"
             }
             title={current.dir === "asc" ? "오름차순" : "내림차순"}
           >
@@ -256,25 +236,36 @@ export function StudentsToolbar({
           </Button>
         </div>
 
+        {/* 페이지 사이즈 */}
+        <Select
+          value={String(current.size)}
+          onValueChange={(v) => setParam("size", v)}
+        >
+          <SelectTrigger className="w-24">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {PAGE_SIZES.map((n) => (
+              <SelectItem key={n} value={String(n)}>
+                {n}명씩
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        {/* 초기화 — 활성 필터 있을 때만, 우측 정렬 */}
         {hasAnyFilter ? (
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={onResetAll}
+            className="ml-auto"
           >
             <RotateCcw className="size-3.5" />
-            필터 초기화
+            초기화
           </Button>
-        ) : (
-          // hidden but reserves space — keeps layout calm during isPending
-          <span aria-hidden className="invisible">
-            <Button variant="ghost" size="sm" tabIndex={-1}>
-              <RotateCcw className="size-3.5" />
-              필터 초기화
-            </Button>
-          </span>
-        )}
+        ) : null}
       </div>
 
       {/* a11y — 검색 진행 중 안내 */}
