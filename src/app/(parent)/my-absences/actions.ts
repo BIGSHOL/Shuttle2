@@ -166,3 +166,65 @@ export async function createAbsenceRequestAction(
   revalidatePath("/home");
   redirect("/my-absences");
 }
+
+// 결석 신청 취소. 학부모가 갑자기 사정 바뀌어 다시 등·하원 가능할 때.
+// PENDING/NOTIFIED_DRIVER 상태에서만 가능 — 이미 처리(ACKNOWLEDGED/REJECTED)
+// 됐거나 운행이 시작된 후엔 운영 일관성 위해 lock.
+export async function cancelAbsenceRequestAction(
+  absenceId: string,
+): Promise<{ error: string } | undefined> {
+  const me = await requireGuardian();
+
+  const absence = await db.absenceRequest.findFirst({
+    where: {
+      id: absenceId,
+      // 자녀 보호자만 취소 가능
+      student: {
+        guardians: { some: { guardianId: me.guardian.id } },
+      },
+    },
+    include: {
+      student: { select: { name: true, orgId: true } },
+    },
+  });
+  if (!absence) {
+    return { error: "결석 신청을 찾을 수 없습니다" };
+  }
+  if (absence.status === "ACKNOWLEDGED" || absence.status === "REJECTED") {
+    return { error: "이미 처리된 결석은 취소할 수 없습니다" };
+  }
+
+  // 운행이 이미 시작됐으면 취소 불가
+  const startedTrip = await db.trip.findFirst({
+    where: {
+      date: absence.date,
+      route: { students: { some: { studentId: absence.studentId } } },
+      startedAt: { not: null },
+    },
+    select: { id: true },
+  });
+  if (startedTrip) {
+    return { error: "운행이 이미 시작되어 취소할 수 없습니다" };
+  }
+
+  await db.absenceRequest.delete({ where: { id: absenceId } });
+
+  // OWNER에게 정보성 push (driver/helper는 운행 시작 전이라 어차피 인지 X)
+  const dateLabel = absence.date.toISOString().slice(0, 10);
+  const typeLabel =
+    absence.type === "ABSENT_BOTH"
+      ? "등·하원"
+      : absence.type === "ABSENT_PICKUP"
+        ? "등원"
+        : "하원";
+  await sendToOwnersOfOrg(absence.student.orgId, {
+    title: "결석 취소",
+    body: `${absence.student.name} · ${dateLabel} · ${typeLabel} 결석 취소`,
+    url: "/absences",
+    category: "ABSENCE_REQUESTED",
+  }).catch((e) => console.warn("absence cancel owner push failed:", e));
+
+  revalidatePath("/my-absences");
+  revalidatePath("/home");
+  return undefined;
+}

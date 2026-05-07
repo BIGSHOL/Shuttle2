@@ -10,6 +10,8 @@ import {
 import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
 
+import { CancelAbsenceButton } from "./_components/cancel-absence-button";
+
 const ABSENCE_TYPE_LABEL = {
   ABSENT_BOTH: "등·하원 모두",
   ABSENT_PICKUP: "등원만",
@@ -92,11 +94,17 @@ export default async function ParentAbsencesPage() {
                       ) : null}
                     </CardDescription>
                   </div>
-                  <span
-                    className={`rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[a.status]}`}
-                  >
-                    {STATUS_LABEL[a.status]}
-                  </span>
+                  <div className="flex flex-col items-end gap-1.5">
+                    <span
+                      className={`rounded-md px-2 py-0.5 text-xs font-medium ${STATUS_COLOR[a.status]}`}
+                    >
+                      {STATUS_LABEL[a.status]}
+                    </span>
+                    {a.status === "PENDING" ||
+                    a.status === "NOTIFIED_DRIVER" ? (
+                      <CancelAbsenceButton absenceId={a.id} />
+                    ) : null}
+                  </div>
                 </div>
               </CardHeader>
             </Card>
