@@ -173,7 +173,7 @@ export function EndTripModal({
                     {actionLabel}했어요
                   </Button>
                 </div>
-                <details className="mt-2">
+                <details className="mt-2 block w-full">
                   <summary className="text-destructive cursor-pointer text-xs font-bold">
                     {issueLabel} 보고
                   </summary>

@@ -109,7 +109,7 @@ export function DriverPermissionsCard() {
 
   if (allOk) {
     return (
-      <details className="bg-success-soft/40 border-success/30 rounded-lg border px-4 py-2.5 text-sm shadow-sm">
+      <details className="bg-success-soft/40 border-success/30 block w-full rounded-lg border px-4 py-2.5 text-sm shadow-sm">
         <summary className="text-success flex cursor-pointer items-center gap-2 text-xs font-bold tracking-wide uppercase">
           <CheckCircle2 className="h-3.5 w-3.5" />
           운행 환경 이상 없음
