@@ -178,4 +178,10 @@
     display: block;
     width: 100%;
   }
+  details > summary {
+    width: 100%;
+    /* native marker(▶/▼)를 summary box 안쪽 inline으로 — outside marker가
+       summary 좌측 외곽 영역 측정에 영향 줄 수 있어 inside로 통일. */
+    list-style-position: inside;
+  }
 }
