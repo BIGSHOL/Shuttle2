@@ -3,6 +3,9 @@
 //
 // 5단계 학년 카테고리(미취학·초·중·고·대학·성인) + "어린이용 모드(만 13세 미만)" 토글.
 // gradeFromBirthYear()의 schoolYear 규칙(3월 1일 새 학년)과 동일.
+//
+// 상수·타입은 _lib/constants.ts로 분리 (client component가 import해도 안전).
+// 이 파일은 server-only — Prisma·zod 사용.
 
 import "server-only";
 
@@ -10,36 +13,34 @@ import { z } from "zod";
 
 import { db } from "@/lib/db";
 
-export const SORT_KEYS = ["name", "year", "school"] as const;
-export type SortKey = (typeof SORT_KEYS)[number];
+import {
+  GRADE_CATEGORIES,
+  PAGE_SIZES,
+  ROUTE_FILTERS,
+  SORT_DIRS,
+  SORT_KEYS,
+  type GradeCategory,
+  type PageSize,
+  type ParsedParams,
+} from "./constants";
 
-export const SORT_DIRS = ["asc", "desc"] as const;
-export type SortDir = (typeof SORT_DIRS)[number];
-
-export const PAGE_SIZES = [10, 20, 50] as const;
-export type PageSize = (typeof PAGE_SIZES)[number];
-
-export const GRADE_CATEGORIES = [
-  "pre", // 미취학 (만 0~6세)
-  "elem", // 초등 (만 7~12세)
-  "mid", // 중등 (만 13~15세)
-  "high", // 고등 (만 16~18세)
-  "adult", // 대학·성인 (만 19세+)
-  "kids", // 어린이용 모드 대상 (만 13세 미만)
-] as const;
-export type GradeCategory = (typeof GRADE_CATEGORIES)[number];
-
-export const GRADE_LABELS: Record<GradeCategory, string> = {
-  pre: "미취학",
-  elem: "초등",
-  mid: "중등",
-  high: "고등",
-  adult: "대학·성인",
-  kids: "어린이용 모드 (만 13세 미만)",
-};
-
-export const ROUTE_FILTERS = ["assigned", "unassigned"] as const;
-export type RouteFilter = (typeof ROUTE_FILTERS)[number];
+// re-export — 기존 import path 호환 유지.
+export {
+  GRADE_CATEGORIES,
+  GRADE_LABELS,
+  PAGE_SIZES,
+  ROUTE_FILTERS,
+  SORT_DIRS,
+  SORT_KEYS,
+} from "./constants";
+export type {
+  GradeCategory,
+  PageSize,
+  ParsedParams,
+  RouteFilter,
+  SortDir,
+  SortKey,
+} from "./constants";
 
 export const studentsParamsSchema = z.object({
   q: z
@@ -69,7 +70,9 @@ export const studentsParamsSchema = z.object({
     }),
 });
 
-export type ParsedParams = z.infer<typeof studentsParamsSchema>;
+// ParsedParams는 constants.ts에서 export. zod schema와 동기화 유지.
+// (constants.ts의 ParsedParams 타입과 z.infer<typeof studentsParamsSchema>이
+//  일치하는지 build·typecheck로 1차 보장)
 
 export type RawSearchParams = Record<
   string,

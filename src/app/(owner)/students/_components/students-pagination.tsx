@@ -3,7 +3,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-import type { ParsedParams } from "../_lib/query";
+import type { ParsedParams } from "../_lib/constants";
 
 type PageItem =
   | { type: "page"; page: number }
