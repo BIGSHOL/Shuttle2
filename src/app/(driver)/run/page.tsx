@@ -88,7 +88,7 @@ export default async function RunPage() {
       {/* W20-C1: 운행 시작 전 브라우저 권한·기능 사전 체크 (활성 trip 없을 때만) */}
       {activeTrip ? null : <DriverPermissionsCard />}
 
-      <details className="bg-card rounded-lg border px-4 py-3 text-sm shadow-sm">
+      <details className="bg-card block w-full rounded-lg border px-4 py-3 text-sm shadow-sm">
         <summary className="text-foreground cursor-pointer text-xs font-bold tracking-wide uppercase">
           운행 전 확인사항
         </summary>
