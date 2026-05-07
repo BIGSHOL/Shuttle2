@@ -1574,6 +1574,57 @@ adb -s 127.0.0.1:5555 logcat -d > F:\Shuttle2\rn-crash-1.0.4-bluestacks.log
 - ⚠️ `eas.json`에 `EXPO_PUBLIC_SUPABASE_ANON_KEY` 평문 commit — anon key는
   RLS로 보호되지만 일반적으로 .env 분리 권장. 베타 안정화 후 정리 후보.
 
+## W23-G (2026-05-08 새벽) — 1.0.4 결정 해결 검증 완료
+
+### BlueStacks 검증 결과 ✅
+
+1.0.4 APK(`wtnWsQc9HqwVWU2u15DPTy.apk`)를 BlueStacks Android 11 인스턴스에서
+`install -r`로 1.0.3 위 덮어쓰기 후 실행:
+
+- ✅ **로그인 화면 정상 진입** — "셔틀이 기사" 헤더 + 아이디/비밀번호 input
+  + 노란 로그인 버튼 (`--bus` 디자인 토큰) + 한글 안내 문구 (Pretendard)
+- ✅ 1.0.2~1.0.3에서 매번 보였던 `useState of null` FATAL EXCEPTION 완전히 사라짐
+- ✅ `expo-updates DownloadError`도 사라짐 (App component mount 자체가 깨졌던
+  부수 증상이라 React fix와 함께 자연 해소)
+
+→ W23-F의 root cause 가설(react@19.0.0 vs root react@19.2.4 병존)과 fix 방향
+(metro `resolveRequest` hook이 hierarchical lookup 우선) 모두 결정적으로 검증.
+
+### 결정 해결의 메커니즘
+
+`apps/driver-rn/metro.config.js`의 `resolveRequest` hook이 metro의 first-class
+API라 **모든 import 전에 호출**됨. hierarchical lookup이 시작되기 전에
+`react`·`react-native`·`react/jsx-runtime`을 driver-rn local entry로 강제
+redirect → 번들에 단일 인스턴스만 포함.
+
+대조적으로 1.0.3의 `extraNodeModules`는 fallback resolver였기 때문에
+hierarchical lookup이 성공하면 무시됨 → 0 effect.
+
+### 추가 검증 권유 (베타 시작 전)
+
+- [ ] BlueStacks에서 실제 driver 계정 로그인 → 운행 list 화면 진입 확인
+- [ ] BlueStacks 백그라운드/포그라운드 토글 → state 유지 확인
+- [ ] **실기(안드로이드 폰)에서 1.0.4 설치 → 로그인 → GPS 송신 확인**
+  (BlueStacks는 GPS mock이라 실기 검증 별도 필요. 데이터 케이블 + USB 디버깅)
+- [ ] FCM 토큰 등록 → 학부모/학원장에서 발송한 푸시가 polling 없이 와닿는지
+
+### 베타 시작 baseline
+
+- 안드로이드 기사: 1.0.4 APK 사이드로드 (활성 버전, `/admin/apk`에 등록됨)
+- iOS 기사: PWA 화면 켠 상태 유지 권장 (백그라운드 GPS 한계)
+- 학부모·학원장·동승자: PWA 그대로
+
+### 보안 후속 (즉시 처리)
+
+- ⚠️ **EXPO_TOKEN revoke + 재발급 즉시** — 1.0.4 빌드 시작 시점에 채팅 transcript
+  + PowerShell history 양쪽 평문 노출. expo.dev → Settings → Access Tokens →
+  Revoke → 신 token 발급 → **1Password 보관**. 다음 빌드부터는 `<1Password에서>`
+  placeholder로만 작업.
+- ⚠️ logcat 덤프 처리 결정: `F:\Shuttle2\rn-crash-1.0.3-bluestacks.log`
+  (working tree untracked) — 베타 안정 후 삭제 또는 `_archive/`로 이동.
+- ⚠️ `eas.json`에 `EXPO_PUBLIC_SUPABASE_ANON_KEY` 평문 commit — anon key는
+  RLS로 보호되지만 일반적으로 `.env`로 분리 권장. 베타 안정화 후 정리 후보.
+
 ## 다음 우선순위 (W25+)
 
 W24까지 베타 운영 도구 풀세트 완비. W25부터는 베타 졸업·정식 런칭 준비.
