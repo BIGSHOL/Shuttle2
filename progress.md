@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-07 (W23-A EAS 빌드 진입 + Vercel env 정리)
+> 마지막 업데이트: 2026-05-07 (W23-B 베타 진입 패키지 — APK 배포·PWA hotfix·결석 알림 흐름)
 
 ## 완료된 마일스톤
 
@@ -35,7 +35,8 @@
 | W21   | 학원장 메뉴 4종 360° drill-down — 차량·기사·정류장·학부모 detail + 카카오맵 read-only | `fdfbe99`, `3774fe1`, `8fcf3ae`, `0ab030b`, `651b76c` | ✅ |
 | W22   | Suspense 스트리밍 — 학부모 home/trip-live + 학원장 dashboard 부분 영역 stream             | `b990388`                                              | ✅ |
 | W23   | 기사용 RN 사이드로드 APK + FCM + monorepo 전환 (`apps/driver-rn`·`packages/shared-contracts`) | `2f746f5`                                          | ✅ 코드 |
-| W23-A | EAS 빌드 진입 fix — google-services prebuild + Vercel env 4/5 등록                       | `560876f`, `3f57835`                                   | ⏳ APK 대기 |
+| W23-A | EAS 빌드 진입 fix — google-services prebuild + Vercel env 4/5 등록                       | `560876f`, `3f57835`                                   | ✅   |
+| W23-B | 베타 진입 패키지 — PWA hotfix·가로폭·splash·결석 알림 직접 fan-out·EAS APK 배포·hnd1 region | `e805d01`·`fb50c88`·`d75a3f1`·`c1c9981`·`d5ccbaa`·`d840ec6`·`f8ac320`·`2d71e23`·`f2c9cd9`·`f183c6b`·`0cbcceb`·`6f64b8a`·`1bb8d29`·`d785f50` | ✅ 베타 시작 가능 |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -1133,6 +1134,129 @@ broadcast 안정화.
    ```
 7. 빌드 끝났으면 위 "빌드 끝난 후 마지막 단계" 1~5 진행 — 채팅으로
    "빌드 끝났어. APK URL: <url>" 한 줄 알려주면 자동 처리 가능.
+
+## W23-B 베타 진입 패키지 — PWA hotfix + 결석 알림 + APK 배포 (2026-05-07)
+
+W23-A 빌드 큐 진입 후 production 검증으로 발견한 9개 이슈를 한 세션에 정리.
+**이 시점이 베타 시작 가능한 baseline.** 안드로이드 기사용 APK가 학원장
+dashboard에서 카톡 공유로 즉시 install 가능.
+
+### Fix 묶음 (commit 14개)
+
+- **PWA hotfix** (`e805d01`·`f8ac320`):
+  - `actions.ts`의 `export type {...}` re-export가 turbopack module evaluation에서
+    ReferenceError → driver SA 전체 fail. underlying type을 직접 import.
+  - 비즈니스 throw도 production redact 대상 → start/end Trip server action을
+    `Promise<{error}|undefined>` discriminated union 패턴으로 → 한국어 메시지
+    그대로 client에 도달.
+  - NotificationToggle catch 3곳 + start-trip-button + trip-running-view doEnd에서
+    raw err.message 노출 차단 + console.error.
+- **가로폭 통일** (`c1c9981`·`d5ccbaa`·`2d71e23`·`f2c9cd9`·`0cbcceb`):
+  - native `<details>` PWA standalone에서 펼침/접힘 width 차이.
+  - component-level `block w-full` + globals.css base reset
+    (`details{display:block;width:100%}` + `summary{width:100%; list-style-position:inside}`).
+  - 사용자 빈도 높은 `/run` "운행 전 확인사항"은 `<details>` → `useState` 기반
+    `RunChecklistCard` (controlled collapsible). native rendering 의존 0.
+- **PWA splash·아이콘** (`d840ec6`):
+  - manifest.json `background_color` `#ffffff` → `#fbbf24` (brand 노란색).
+  - `public/icon.png` 192·`apple-icon.png` 180 brand bg + 셔틀버스 모티브.
+  - `scripts/generate-pwa-icons.ts` (sharp) — SVG → PNG 자동 생성. 향후 디자이너
+    자산 받으면 동일 path로 교체.
+- **EAS RN 빌드 monorepo transitive resolve** (`fb50c88`·`d75a3f1`·`f183c6b`·`1bb8d29`):
+  - `@babel/runtime` direct dep + `expo install --fix` SDK 53 5개 패키지 정렬.
+  - `.npmrc` `public-hoist-pattern` → 결국 `node-linker=hoisted`로 전환.
+    npm/yarn 같은 flat 구조로 transitive whack-a-mole(@babel/runtime →
+    react-native-is-edge-to-edge → invariant ...) 종료.
+  - hoisted 환경에 맞춰 `apps/driver-rn/metro.config.js`의 monorepo override
+    제거 — Expo doctor mismatch 경고 해소.
+- **성능 — Vercel hnd1 region** (`f183c6b`):
+  - `vercel.json` 신규: `regions: ["hnd1"]` (Tokyo). 기존 default region(미국)
+    대비 한국 사용자 server response 150~250ms 단축.
+- **결석 알림 흐름 변경** (`6f64b8a`):
+  - 기존: 학부모 신청 → status=PENDING → 학원장 confirm → status=NOTIFIED_DRIVER
+    → 기사 푸시 (학원장 응답 시간만큼 지연)
+  - 변경: 학부모 신청 → status=NOTIFIED_DRIVER **직접** + 학원장·기사·동승자
+    **동시** push.
+  - 그날 trip이 이미 만들어진 경우 trip.driverId/helperId 직접 push;
+    trip 없으면(운행 시작 전) 학원장만. 운행 시작 시 W15-B 미탑승 안내가 커버.
+  - 학원장 통제 유지 영역(보호자 추가·정류장 변경)은 confirm 단계 그대로.
+- **데모 시드 update** (PR #4 squash, `d785f50`):
+  - 노선 weekdays 21(평일) → 127(매일) — 어느 요일이든 데모 검증 가능.
+  - 정류장 4개 서울 강남 → 대구 북구 산격·침산동 동선 (radiusM 50→150).
+  - production demo org `pnpm db:seed` 실행 완료.
+
+### EAS APK 배포 완료
+
+- **Build ID**: `a554e87c-3411-4a14-a6fb-8f134ffd02cf` (gitCommit `1bb8d29`,
+  12분 4초, success).
+- **APK URL**: `https://expo.dev/artifacts/eas/mq7XeiXxmqTAzsvzknxKea.apk`
+  (EAS Free plan 30일 retention, **약 2026-05-21 만료**).
+- **Vercel env 5/5 등록 완료**:
+  - FIREBASE_PROJECT_ID / CLIENT_EMAIL / PRIVATE_KEY (이전)
+  - DRIVER_APP_LATEST_VERSION = `1.0.0`
+  - DRIVER_APP_LATEST_APK_URL = `https://expo.dev/artifacts/eas/mq7XeiXxmqTAzsvzknxKea.apk`
+- **Production redeploy 완료** (`shuttle2-oz9np5p1a-bigshols-projects.vercel.app`).
+- Supabase Storage `driver-apks` PUBLIC bucket 존재하지만 Free plan
+  **single file 50MB hard limit**으로 73MB APK 업로드 차단 — EAS artifact URL
+  직접 사용으로 우회. Pro plan 또는 다른 host는 30일 만료 전 결정.
+
+### 베타 진입 흐름 (학원장 → 기사)
+
+1. OWNER 로그인 → `/dashboard` → `<DriverAppShareCard>`에서 다운로드+가이드 링크
+   클립보드 복사 → 카카오톡으로 기사에게 공유.
+2. 기사 안드로이드 폰: 링크 클릭 → APK 다운로드 → "출처를 알 수 없는 앱"
+   허용 → install.
+3. 앱 첫 실행: `/api/driver-app/version` fetch (DRIVER_APP_LATEST_VERSION/URL
+   Vercel env 사용) → 새 버전 있으면 prompt → loginId 로그인.
+4. 운행 시작 → Foreground Service GPS + 5초 broadcast + 학부모·학원장 실시간
+   카카오맵.
+5. JS-only 변경(button 텍스트·색상·로직 등)은 EAS Update OTA로 새 APK 없이
+   즉시 배포 (`eas update --channel preview`). 네이티브 변경(plugins·permissions)
+   시에만 새 APK 빌드.
+
+### 사용자 측 베타 시작 전·중 잔여 (W23-B 시점)
+
+- ⚠️ **EXPO_TOKEN 2개 회전 필수** — 채팅 transcript에 평문 노출 (`k0WX...9ta`,
+  `G4TU...VZIl`). [expo.dev/settings/access-tokens](https://expo.dev/settings/access-tokens)
+  → 두 토큰 모두 revoke + 새 토큰 발급 → 1Password 보관.
+- ⏰ **EAS artifact 30일 retention** (~2026-05-21 만료). 베타 첫 달 안에 결정:
+  - Supabase Pro upgrade ($25/월, single file 5GB) — 이미 작성된
+    `scripts/upload-driver-apk.ts`로 즉시 전환 가능
+  - GitHub public repo 별도 만들어 Releases (무료, 영구)
+  - Vercel Blob storage (Vercel project당 1GB 무료)
+- 🟡 **나머지 3곳 native `<details>`** (driver-permissions-card · end-trip-modal
+  · pricing FAQ) → `<RunChecklistCard>`처럼 controlled로 통일 (베타 후).
+- 🟡 **`/absences` 학원장 UI 정리** — 결석이 NOTIFIED_DRIVER 자동 transit이라
+  "확인" 버튼이 redundant. 베타 후 readonly history로 정리.
+- 🟡 **다른 driver server action 패턴 통일** — boarding/safety/issue 등도
+  `Promise<{error}|undefined>` 패턴으로. 사용자 trigger 빈도 낮아 베타 운영 중
+  이슈 보이면 추가 fix.
+
+### 다른 컴퓨터에서 즉시 실행 (W23-B baseline)
+
+```powershell
+git clone https://github.com/BIGSHOL/Shuttle2.git
+cd Shuttle2
+pnpm install                                          # node-linker=hoisted, ~3분
+# .env.local: 1Password에서 받아 root에 저장 (8개 키)
+# google-services.json: 이미 git 포함 (private repo, 560876f)
+$env:EXPO_TOKEN = "<회전한 새 토큰>"                   # 회전 후 1Password에서
+pnpm dev                                              # localhost:3000
+# 또는 prod 즉시 사용: https://shuttle2-nine.vercel.app/
+```
+
+EAS 새 빌드가 필요하면:
+```powershell
+cd apps\driver-rn
+npx -y eas-cli@latest build --platform android --profile preview
+# 끝나면 채팅에 build URL 공유 → 클로드가 artifact URL 추출 + Vercel env 자동 갱신
+```
+
+JS-only 변경 OTA 즉시 배포:
+```powershell
+cd apps\driver-rn
+npx -y eas-cli@latest update --channel preview --message "fix: ..."
+```
 
 ## 다음 우선순위 (W24+)
 

@@ -322,16 +322,21 @@ vercel deploy --prod --yes  # 프로덕션 배포
 - 가입 확인 메일 한국어 (W17-B, email_confirm bypass 해제 시)
 - 결제 통합 (Toss Payments 또는 Stripe)
 - 기사용 RN 앱 지도 (W23는 정류장 리스트만 — react-native-maps 본격 통합은 베타 후)
-- 사용자 작업 (베타 시작 전 — W23-A 2026-05-07 진척):
+- 사용자 작업 (W23-B 2026-05-07 시점 — 베타 시작 가능):
   - ✅ `pnpm db:migrate` (StaffFcmSubscription) — 처리 완료
   - ✅ Firebase 프로젝트 + `apps/driver-rn/google-services.json` (private repo
        commit `560876f`이므로 다른 컴퓨터로 별도 secret 이동 불필요)
-  - ✅ Vercel env: `FIREBASE_PROJECT_ID`/`CLIENT_EMAIL`/`PRIVATE_KEY` 등록 완료
-  - ✅ Vercel env: `DRIVER_APP_LATEST_VERSION = 1.0.0` (W23-A에서 등록)
-  - ✅ Supabase Storage `driver-apks` PUBLIC bucket (50MB)
-  - ⏳ EAS preview 빌드: 큐 진입 (Build `d79ca416-933d-4929-a2ae-af1593602a95`)
-       → 빌드 완료 후 APK 다운로드 → Storage 업로드 → Vercel env
-       `DRIVER_APP_LATEST_APK_URL` 등록
+  - ✅ Vercel env 5/5: FIREBASE_PROJECT_ID/CLIENT_EMAIL/PRIVATE_KEY +
+       DRIVER_APP_LATEST_VERSION (`1.0.0`) + DRIVER_APP_LATEST_APK_URL
+       (`https://expo.dev/artifacts/eas/mq7XeiXxmqTAzsvzknxKea.apk`)
+  - ✅ Supabase Storage `driver-apks` PUBLIC bucket (Free plan 50MB 한계로
+       APK는 EAS artifact URL 직접 사용 — 30일 retention)
+  - ✅ EAS preview 빌드 success (`a554e87c-3411-4a14-a6fb-8f134ffd02cf`,
+       gitCommit `1bb8d29`, 12분) + Production redeploy 완료
+  - ⚠️ **EXPO_TOKEN 2개 회전 필수** — 베타 시작 전 expo.dev → Account →
+       Access Tokens에서 revoke + 새 토큰 발급 → 1Password 보관
+  - ⏰ **EAS artifact 30일 retention** (~2026-05-21 만료) — Supabase Pro
+       upgrade 또는 GitHub public Releases / Vercel Blob 검토 후 전환
   - ⚠️ EXPO_TOKEN 2개 회전 필수 — 채팅 transcript에 평문 노출. 베타 시작 전
        expo.dev → Account → Access Tokens에서 revoke + 재발급 → 1Password 보관
 
