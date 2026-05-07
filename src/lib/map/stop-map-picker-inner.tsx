@@ -74,23 +74,44 @@ export function StopMapPickerInner({
   const [address, setAddress] = useState<string | null>(null);
 
   // 좌표가 바뀔 때마다 reverse geocoding — 사용자 노출은 좌표 대신 이 주소.
+  // services가 미세하게 늦게 attach되는 케이스 — useKakaoLoader loading=false
+  // 이후에도 services undefined일 수 있어 polling. 이전엔 silent return해서
+  // address 누락된 채 form submit → DB null → "주소 미확인" 노출.
   useEffect(() => {
     if (loading || error) return;
-    const services = window.kakao?.maps?.services;
-    if (!services) return;
-    const geocoder = new services.Geocoder();
-    geocoder.coord2Address(position.lng, position.lat, (result, status) => {
-      if (status !== services.Status.OK) {
-        setAddress(null);
-        onAddressChange?.(null);
-        return;
+    let cancelled = false;
+
+    const run = async () => {
+      let services = window.kakao?.maps?.services;
+      if (!services) {
+        for (let i = 0; i < 30 && !services; i++) {
+          await new Promise((r) => setTimeout(r, 100));
+          if (cancelled) return;
+          services = window.kakao?.maps?.services;
+        }
       }
-      const r = result[0];
-      const addr =
-        r?.road_address?.address_name ?? r?.address?.address_name ?? null;
-      setAddress(addr);
-      onAddressChange?.(addr);
-    });
+      if (cancelled || !services) return;
+      const svc = services;
+      const geocoder = new svc.Geocoder();
+      geocoder.coord2Address(position.lng, position.lat, (result, status) => {
+        if (cancelled) return;
+        if (status !== svc.Status.OK) {
+          setAddress(null);
+          onAddressChange?.(null);
+          return;
+        }
+        const r = result[0];
+        const addr =
+          r?.road_address?.address_name ?? r?.address?.address_name ?? null;
+        setAddress(addr);
+        onAddressChange?.(addr);
+      });
+    };
+
+    void run();
+    return () => {
+      cancelled = true;
+    };
   }, [position.lat, position.lng, loading, error, onAddressChange]);
 
   async function handleSearch() {
