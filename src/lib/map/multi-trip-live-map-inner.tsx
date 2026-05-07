@@ -120,7 +120,7 @@ export function MultiTripLiveMapInner({
                     style={{ backgroundColor: polylineColor, opacity: 0.85 }}
                     title={`${trip.routeName} · ${s.name}`}
                   >
-                    {s.order + 1}
+                    {s.order}
                   </div>
                 </CustomOverlayMap>
               ))}
