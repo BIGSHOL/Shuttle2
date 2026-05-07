@@ -34,7 +34,7 @@ export function HomeActionsGrid({
           href="/my-absences"
           className="bg-card hover:bg-muted/40 flex h-12 items-center justify-between gap-2 rounded-md border px-3 text-sm shadow-sm transition-colors"
         >
-          <span className="inline-flex items-center gap-1.5 font-medium">
+          <span className="inline-flex items-center gap-1.5 font-medium whitespace-nowrap">
             <Calendar className="h-3.5 w-3.5" />
             내 결석 신청
           </span>
@@ -51,7 +51,7 @@ export function HomeActionsGrid({
           href="/my-stop-changes"
           className="bg-card hover:bg-muted/40 flex h-12 items-center justify-between gap-2 rounded-md border px-3 text-sm shadow-sm transition-colors"
         >
-          <span className="inline-flex items-center gap-1.5 font-medium">
+          <span className="inline-flex items-center gap-1.5 font-medium whitespace-nowrap">
             <MapPin className="h-3.5 w-3.5" />
             내 정류장 변경
           </span>
