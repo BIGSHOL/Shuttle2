@@ -26,16 +26,15 @@ import { translateError } from "@shuttlee/shared-contracts/auth-errors";
 import { Button } from "../components/Button";
 import { Card } from "../components/Card";
 import { Feather } from "../components/Icon";
-import { LivePulseDot } from "../components/LivePulseDot";
-import { ModeBadge } from "../components/ModeBadge";
-import { DirectionBadge } from "../components/DirectionBadge";
 import { apiFetch } from "../lib/api-client";
 import { startGps, stopGps, type GpsStop } from "../lib/gps";
 import { useTripKeepAwake } from "../lib/keep-awake";
 import { colors, radii, radiiExt, shadows } from "../lib/theme";
 import { useTripBroadcast } from "../lib/trip-realtime";
+import { useElapsed } from "../lib/use-elapsed";
 import { BoardingRow } from "./_trip/BoardingRow";
 import { SafetyCheckCard } from "./_trip/SafetyCheckCard";
+import { TripHeader } from "./_trip/TripHeader";
 
 type Props = {
   tripId: string;
@@ -185,46 +184,26 @@ export function TripScreen({ tripId, onEnd }: Props) {
 
   const displayPing = latestSelfPing ?? receivedPing;
   const isKids = detail.vehicle.mode === "KIDS";
+  const elapsed = useElapsed(detail.trip.startedAt);
+  const gpsState: "ok" | "error" | "idle" = gpsError
+    ? "error"
+    : gpsStarted
+      ? "ok"
+      : "idle";
 
   return (
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
-        <View style={styles.header}>
-          <View style={styles.badgeRow}>
-            <DirectionBadge direction={detail.route.direction} />
-            <ModeBadge mode={detail.vehicle.mode} />
-          </View>
-          <Text style={styles.title}>{detail.route.name}</Text>
-          <Text style={styles.subtitle}>
-            <Text style={styles.plate}>{detail.vehicle.plate}</Text>
-          </Text>
-        </View>
-
-        {/* GPS 상태 표시 */}
-        <Card style={styles.statusCard}>
-          <View style={styles.statusLeft}>
-            {gpsStarted && !gpsError ? (
-              <LivePulseDot size={10} />
-            ) : (
-              <View
-                style={[
-                  styles.statusDot,
-                  gpsError ? styles.statusDotError : styles.statusDotIdle,
-                ]}
-              />
-            )}
-            <Text style={styles.statusText} numberOfLines={1}>
-              {gpsError
-                ? "GPS 오류"
-                : gpsStarted
-                  ? "운행 중 · 위치 송신 중"
-                  : "위치 시작 중…"}
-            </Text>
-          </View>
-          <Text style={styles.statusMeta}>
-            채널 {status === "ok" ? "✓" : status === "error" ? "✗" : "…"}
-          </Text>
-        </Card>
+        <TripHeader
+          routeName={detail.route.name}
+          direction={detail.route.direction}
+          vehiclePlate={detail.vehicle.plate}
+          vehicleMode={detail.vehicle.mode}
+          driverName={detail.trip.driverName}
+          helperName={detail.trip.helperName}
+          elapsed={elapsed}
+          gpsState={gpsState}
+        />
 
         {gpsError ? (
           <View style={styles.errorBanner}>
@@ -232,6 +211,13 @@ export function TripScreen({ tripId, onEnd }: Props) {
             <Text style={styles.errorBannerText}>{gpsError}</Text>
           </View>
         ) : null}
+
+        <View style={styles.statusMetaRow}>
+          <Text style={styles.statusMetaText}>
+            정류장 통과 {passedStops.size}/{detail.stops.length} · 채널{" "}
+            {status === "ok" ? "정상" : status === "error" ? "오류" : "연결중"}
+          </Text>
+        </View>
 
         {displayPing ? (
           <View style={styles.pingCard}>
@@ -356,55 +342,10 @@ const styles = StyleSheet.create({
   },
   container: { flex: 1, backgroundColor: colors.muted },
   scrollContent: { padding: 16, gap: 12, paddingBottom: 24 },
-  header: { gap: 6, marginBottom: 4 },
-  badgeRow: {
-    flexDirection: "row",
-    gap: 4,
+  statusMetaRow: {
+    paddingHorizontal: 4,
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "900",
-    color: colors.foreground,
-    letterSpacing: -0.5,
-  },
-  subtitle: {
-    fontSize: 13,
-    color: colors.mutedForeground,
-    fontWeight: "600",
-  },
-  plate: {
-    fontFamily: "monospace",
-    fontWeight: "700",
-    color: colors.foreground,
-  },
-  statusCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-  },
-  statusLeft: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 10,
-    flex: 1,
-    minWidth: 0,
-  },
-  statusDot: {
-    width: 10,
-    height: 10,
-    borderRadius: radii.full,
-  },
-  statusDotIdle: { backgroundColor: colors.warning },
-  statusDotError: { backgroundColor: colors.destructive },
-  statusText: {
-    fontSize: 13,
-    color: colors.foreground,
-    fontWeight: "700",
-    flex: 1,
-  },
-  statusMeta: {
+  statusMetaText: {
     fontSize: 11,
     color: colors.mutedForeground,
     fontWeight: "600",

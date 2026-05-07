@@ -30,6 +30,8 @@ export async function getTripDetail(
       vehicle: {
         select: { id: true, plate: true, mode: true },
       },
+      driver: { select: { name: true } },
+      helper: { select: { name: true } },
       events: {
         select: {
           id: true,
@@ -77,6 +79,8 @@ export async function getTripDetail(
       helperId: trip.helperId,
       routeId: trip.routeId,
       vehicleId: trip.vehicleId,
+      driverName: trip.driver.name,
+      helperName: trip.helper?.name ?? null,
     },
     route: trip.route,
     vehicle: trip.vehicle,

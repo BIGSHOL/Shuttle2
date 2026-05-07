@@ -2,7 +2,7 @@
   "expo": {
     "name": "셔틀이 기사",
     "slug": "shuttlee-driver",
-    "version": "1.0.5",
+    "version": "1.0.6",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "shuttlee-driver",

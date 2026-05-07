@@ -14,6 +14,8 @@ export type TripDetailPayload = {
     helperId: string | null;
     routeId: string;
     vehicleId: string;
+    driverName: string;
+    helperName: string | null;
   };
   route: {
     id: string;
