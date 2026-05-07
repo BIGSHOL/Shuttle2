@@ -1625,6 +1625,104 @@ hierarchical lookup이 성공하면 무시됨 → 0 effect.
 - ⚠️ `eas.json`에 `EXPO_PUBLIC_SUPABASE_ANON_KEY` 평문 commit — anon key는
   RLS로 보호되지만 일반적으로 `.env`로 분리 권장. 베타 안정화 후 정리 후보.
 
+## W23-H (2026-05-08 새벽) — 디자인 풀세트 + 1.0.5/1.0.6 통합 빌드 핸드오프
+
+### 배경
+
+사용자가 별도로 작성한 `data/` 디자인 병합 패치(`design_merge_patches`) 도착.
+1.0.4(베타 진입 baseline) 이후 후속 정리 두 갈래를 한 번에 진행:
+1. RN driver-rn 영문 한글화 + 디자인 풀세트 (PWA 동기화)
+2. PWA 학부모 home + trip-live + driver `/run` + dashboard + landing hi-fi 마감
+
+### 적용 결과 (origin/main 기준 5 commit)
+
+| commit | 영역 | 내용 |
+|---|---|---|
+| `1b50e03` | RN driver-rn | 1.0.5 — 영문 한글화 + theme + 9 컴포넌트 + 4 화면 + /api/driver/me 신설 |
+| `5c96d9c` | PWA 학부모 home | Phase 0(shadow 토큰) + Phase 1·2 6 컴포넌트 마감 |
+| `28334f3` | PWA trip-live·dashboard·landing | Phase 1 trip-live 3 컴포넌트 + page 종료 카드 + Phase 2 owner KPI/QuickLink + Phase 2 marketing hero/pain/features/pricing |
+| `b38d424` | RN driver-rn | 1.0.6 — TripScreen dark gradient header + 경과 시간 + 상태 칩 + tsconfig data exclude |
+| `9ee91ea` | PWA driver `/run` + RN | Phase 2 driver PWA 풀세트 + RunListScreen Promise.allSettled resilience |
+
+### 1.0.5 → 1.0.6 통합 빌드 결정
+
+1.0.5는 EAS 빌드 1번 진행했지만 **운영 검증 안 함**. RunListScreen이
+`/api/driver/me`를 fetch하는데 push 안 한 상태에서 production에 endpoint
+없어 전체 화면 깨졌음 (Promise.all 한쪽 실패가 전체 reject).
+
+→ **1.0.6에 모든 변경 통합 + Promise.allSettled fix**. 1.0.5 row는
+/admin/apk에 등록 안 함. 1.0.6 한 번으로 통합 검증.
+
+### 다른 컴퓨터에서 picking up — 다음 액션
+
+```powershell
+# 0) 코드 동기화
+git pull origin main
+# → origin/main HEAD = 9ee91ea
+
+# 1) (사용자 진행 중) EAS 1.0.6 빌드 결과 확인
+$env:EXPO_TOKEN = "<1Password에서 복원>"
+Set-Location <repo>\apps\driver-rn
+eas build:view --json | ConvertFrom-Json | Select-Object -ExpandProperty artifacts
+# → buildUrl 복사
+
+# 2) production /admin/apk 에 1.0.6 등록 (1.0.5는 skip)
+#    version 1.0.6 / apkUrl <buildUrl> / makeActive ✓
+#    releaseNotes: 영문 한글화 + RN 디자인 PWA 풀세트 + TripScreen dark gradient + me endpoint resilience
+
+# 3) BlueStacks 검증
+Invoke-WebRequest -Uri "<buildUrl>" -OutFile "<repo>\driver-1.0.6.apk"
+adb -s 127.0.0.1:5555 install -r <repo>\driver-1.0.6.apk
+adb -s 127.0.0.1:5555 shell am force-stop com.shuttlee.driver
+# 앱 실행 → 검증 시나리오
+```
+
+### 검증 시나리오 (1.0.6 통합)
+
+- ☐ **로그인 한글 알림** — 잘못된 비번 → "아이디 또는 비밀번호가 올바르지 않습니다"
+- ☐ **헤더 me endpoint** — "데모 학원·어린이집 (시드)" + "기사 · 데모 기사"
+- ☐ **RunListScreen 풀세트** — "기사 화면" 캡스 + "오늘 운행" 28px black + 알림 받는 중 카드 + 운행 환경 collapsible + 운행 전 확인사항 + RouteCard (16px round + 12px 방향 box + plate 칩 + 노란 glow 운행 시작)
+- ☐ **TripScreen dark gradient** — 운행 시작 → 검정 그라디언트(155° #1a1c22→#0f1014) + 노란 stripe(top 3px) + 노선명 18px + 차량번호 + 우측 경과 시간(mono 26px, 1초 update) + 상태 칩 줄(화면잠금/위치/기사/동승)
+
+### 결과별 분기
+
+- 🟢 **모두 OK** → 베타 진입 풀 baseline. /admin/apk에 1.0.6 활성. progress.md에 W23-I 마일스톤 + EXPO_TOKEN revoke 마지막 처리.
+- 🔴 **다른 에러** (ErrorBoundary·새 stack trace) → logcat 추출 → 진단 → 1.0.7 fix.
+- ⚪ **헤더만 빈 칸** (me endpoint 404) → Vercel deploy 아직 안 끝남 → 잠시 후 swipe-to-refresh. allSettled fix가 routes는 표시되게 해서 전체 깨지지는 않음.
+
+### data/ 폴더 정리
+
+design_merge_patches 6 phase + 적용본 모두 `data/done/`으로 이동 완료.
+다음 phase 가이드 도착 시 `data/`에 새로 추가 후 같은 흐름으로 적용.
+
+```
+data/
+└── done/
+    ├── 00 README.md
+    ├── 01 phase-0 tokens.md     ✅
+    ├── 02 phase-1 parent-home.md ✅
+    ├── 03 phase-1 trip-live.md   ✅
+    ├── 04 phase-2 driver.md      ✅
+    ├── 05 phase-2 owner.md       ✅
+    ├── 06 phase-2 marketing.md   ✅
+    ├── README.md                 (Phase 1·2 driver 적용본 가이드)
+    └── src/                      (적용본 backup)
+```
+
+### 베타 진입 backlog (1.0.7+ 또는 운영 정책)
+
+1. **RN /api/auth/login-id-lookup endpoint** — driver가 recoveryEmail 등록한
+   계정이면 RN 로그인 깨짐 (현재는 placeholder 이메일만 시도). web actions와
+   같은 lookup 흐름 필요. 또는 운영 정책: driver는 recoveryEmail 미입력 권고.
+2. **Pretendard 폰트 RN 명시 로드** — 현재 system 기본 sans-serif. expo-font +
+   Pretendard-Bold.ttf 등록 필요.
+3. **RN 권한 카드 실제 status** — 현재 "운행 환경 이상 없음" 고정 표시.
+   expo-location, FCM messaging의 실제 권한 status로 동적 update 필요.
+4. **EXPO_TOKEN 운영 정책** — 1Password에 보관. PowerShell history·채팅에 평문
+   노출 절대 금지 (`$env:EXPO_TOKEN = "<1Password>"` placeholder만).
+5. **EAS APK 30일 retention 대비** — Vercel Blob, GitHub public Releases,
+   또는 Supabase Pro upgrade 검토.
+
 ## 다음 우선순위 (W25+)
 
 W24까지 베타 운영 도구 풀세트 완비. W25부터는 베타 졸업·정식 런칭 준비.
