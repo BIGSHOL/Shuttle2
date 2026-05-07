@@ -7,6 +7,7 @@ import { requireDriver, requireDriverOrHelper } from "@/lib/auth/session";
 import { assignHelper } from "@/server/driver/assign-helper";
 import { endTrip } from "@/server/driver/end-trip";
 import { markBoardingIssue } from "@/server/driver/mark-boarding-issue";
+import { markStopPassed } from "@/server/driver/mark-stop-passed";
 import { recordPing } from "@/server/driver/record-ping";
 import { startTrip } from "@/server/driver/start-trip";
 import { toggleBoardingEvent } from "@/server/driver/toggle-boarding-event";
@@ -124,5 +125,17 @@ export async function assignHelperAction(
   const parsed = AssignHelperInputSchema.parse({ tripId, helperId });
   await assignHelper(me, parsed);
   revalidatePath(`/trip/${tripId}`);
+  revalidatePath("/dashboard");
+}
+
+// W23+: 정류장 수기 "도착" 마킹 — GPS 자동 감지 안 됐을 때 driver가 직접 누름.
+export async function markStopPassedAction(
+  tripId: string,
+  stopId: string,
+): Promise<void> {
+  const me = await requireDriver();
+  await markStopPassed(me, tripId, stopId);
+  revalidatePath(`/trip/${tripId}`);
+  revalidatePath(`/dashboard/trip/${tripId}`);
   revalidatePath("/dashboard");
 }

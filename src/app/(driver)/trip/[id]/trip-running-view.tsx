@@ -10,6 +10,7 @@ import {
   Square,
   X,
 } from "lucide-react";
+import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -25,6 +26,7 @@ import {
   assignHelperAction,
   endTripAction,
   markBoardingIssueAction,
+  markStopPassedAction,
   toggleBoardingEventAction,
   unmarkBoardingIssueAction,
   upsertSafetyCheckAction,
@@ -108,6 +110,11 @@ export function TripRunningView({
   // 학생을 노란 강조로 알림. 기사가 학생 처리를 잊은 케이스 시각 보강.
   // S1(종료 모달 강제)과 함께 NO_SHOW 누락 위험을 다층으로 차단.
   const [stopExpired, setStopExpired] = useState<Set<string>>(new Set());
+  // W23+: 정류장 수기 "도착" 마킹 — GPS 자동 감지 안 됐을 때.
+  const [manualPassed, setManualPassed] = useState<Set<string>>(new Set());
+  const [stopPassPending, setStopPassPending] = useState<Set<string>>(
+    new Set(),
+  );
   const expireTimeoutsRef = useRef<Map<string, number>>(new Map());
 
   const handleStopPassed = useCallback((stopId: string) => {
@@ -421,7 +428,8 @@ export function TripRunningView({
         </div>
         <ol className="space-y-3">
           {stops.map((s) => {
-            const isPassed = gps.passed.has(s.id);
+            const isPassed = gps.passed.has(s.id) || manualPassed.has(s.id);
+            const isStopPending = stopPassPending.has(s.id);
             return (
               <li key={s.id}>
                 <div className="flex items-center gap-3 text-sm">
@@ -443,6 +451,45 @@ export function TripRunningView({
                   >
                     {s.name}
                   </span>
+                  {!isPassed && isDriver ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-7 px-2 text-[11px] font-bold"
+                      disabled={isStopPending}
+                      onClick={() => {
+                        setStopPassPending((p) => new Set(p).add(s.id));
+                        setManualPassed((p) => new Set(p).add(s.id));
+                        void markStopPassedAction(tripId, s.id)
+                          .then(() => {
+                            toast.success(`${s.name} 도착으로 기록했어요`);
+                          })
+                          .catch((err) => {
+                            setManualPassed((p) => {
+                              const n = new Set(p);
+                              n.delete(s.id);
+                              return n;
+                            });
+                            toast.error(
+                              err instanceof Error
+                                ? err.message
+                                : "도착 마킹에 실패했어요",
+                            );
+                          })
+                          .finally(() => {
+                            setStopPassPending((p) => {
+                              const n = new Set(p);
+                              n.delete(s.id);
+                              return n;
+                            });
+                          });
+                      }}
+                    >
+                      <MapPin className="mr-0.5 h-3 w-3" />
+                      {isStopPending ? "처리 중" : "도착"}
+                    </Button>
+                  ) : null}
                   <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium font-mono">
                     <Clock className="h-3 w-3" />
                     {s.scheduledAt}

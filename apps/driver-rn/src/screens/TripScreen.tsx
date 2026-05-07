@@ -43,7 +43,45 @@ export function TripScreen({ tripId, onEnd }: Props) {
     null,
   );
   const [passedStops, setPassedStops] = useState<Set<string>>(new Set());
+  const [stopPassPending, setStopPassPending] = useState<Set<string>>(
+    new Set(),
+  );
   const [gpsError, setGpsError] = useState<string | null>(null);
+
+  // W23+: 정류장 수기 "도착" 마킹 — GPS 자동 감지 안 됐을 때.
+  const handleMarkStopPassed = useCallback(
+    async (routeStopId: string) => {
+      setStopPassPending((p) => new Set(p).add(routeStopId));
+      setPassedStops((p) => new Set(p).add(routeStopId));
+      try {
+        // routeStopId는 RouteStop.id이지만 server는 stopId(Stop.id)를 받음.
+        // detail에서 매핑.
+        const stop = detail?.stops.find((s) => s.routeStopId === routeStopId);
+        if (!stop) throw new Error("정류장을 찾을 수 없습니다");
+        await apiFetch(`/api/driver/trip/${tripId}/manual-stop-pass`, {
+          method: "POST",
+          body: { stopId: stop.stopId },
+        });
+      } catch (e) {
+        setPassedStops((p) => {
+          const n = new Set(p);
+          n.delete(routeStopId);
+          return n;
+        });
+        Alert.alert(
+          "도착 마킹 실패",
+          e instanceof Error ? e.message : "",
+        );
+      } finally {
+        setStopPassPending((p) => {
+          const n = new Set(p);
+          n.delete(routeStopId);
+          return n;
+        });
+      }
+    },
+    [detail, tripId],
+  );
 
   const { latestPing: receivedPing, lastUpdate, status } =
     useTripBroadcast(tripId);
@@ -205,6 +243,8 @@ export function TripScreen({ tripId, onEnd }: Props) {
         {/* 정류장별 학생 list */}
         {detail.stops.map((stop) => {
           const passed = passedStops.has(stop.routeStopId);
+          const stopPending = stopPassPending.has(stop.routeStopId);
+          const canMark = !passed && !detail.trip.endedAt;
           return (
             <View key={stop.routeStopId} style={styles.stopBlock}>
               <View style={styles.stopHeader}>
@@ -219,6 +259,20 @@ export function TripScreen({ tripId, onEnd }: Props) {
                     {stop.radiusM}m
                   </Text>
                 </View>
+                {canMark ? (
+                  <Pressable
+                    style={[
+                      styles.markPassedButton,
+                      stopPending && styles.markPassedDisabled,
+                    ]}
+                    onPress={() => void handleMarkStopPassed(stop.routeStopId)}
+                    disabled={stopPending}
+                  >
+                    <Text style={styles.markPassedText}>
+                      {stopPending ? "처리 중" : "도착"}
+                    </Text>
+                  </Pressable>
+                ) : null}
               </View>
               {stop.students.length === 0 ? (
                 <Text style={styles.emptyStudents}>
@@ -328,6 +382,16 @@ const styles = StyleSheet.create({
   },
   stopName: { fontSize: 14, fontWeight: "800", color: "#111" },
   stopMeta: { fontSize: 11, color: "#666", marginTop: 2 },
+  markPassedButton: {
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: "#facc15",
+    backgroundColor: "#fff",
+  },
+  markPassedDisabled: { opacity: 0.5 },
+  markPassedText: { fontSize: 12, fontWeight: "800", color: "#92400e" },
   emptyStudents: {
     padding: 12,
     fontSize: 12,
