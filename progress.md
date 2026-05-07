@@ -1472,6 +1472,108 @@ curl https://shuttle2-nine.vercel.app/api/driver-app/version
 - ⚠️ **EXPO_TOKEN 평문이 PowerShell 세션·history에 남음** — 베타 시작 전 revoke + 재발급 후 1Password.
 - ⚠️ **logcat 파일에 민감 정보 가능** — `D:/shuttle2/rn-crash.log` 처리 결정 필요.
 
+## W23-F (2026-05-07 밤, 집) — 1.0.3 fix 무효 → 1.0.4 결정적 해결
+
+### 1.0.3 BlueStacks 검증 결과
+
+폰 USB 데이터 케이블 미보유 + 무선 디버깅 제어 실패 → BlueStacks Android 11
+인스턴스에서 1.0.3 APK 설치·실행. logcat (`F:\Shuttle2\rn-crash-1.0.3-bluestacks.log`)
+에 1.0.2와 **완전히 동일한** trace:
+
+```
+ReactNativeJS: TypeError: Cannot read property 'useState' of null
+  at App (address at index.android.bundle:1:853047)
+js engine: hermes
+FATAL EXCEPTION: mqt_native_modules
+```
+
+→ 1.0.3 metro `extraNodeModules` fix는 **효과 없음**.
+
+### 1.0.3 metro fix가 무효였던 이유
+
+`pnpm why react`로 확인:
+- `apps/driver-rn/node_modules/react = 19.0.0` (RN 0.79.6 peer)
+- monorepo root `node_modules/react = 19.2.4` (Next.js 16용)
+
+R23-E 가설(React duplication) 자체는 맞았지만 metro fix가 잘못됨:
+
+1. `extraNodeModules`는 **fallback resolver** — metro가 hierarchical lookup으로
+   모듈을 찾으면 무시됨. trigger 자체가 안 됨.
+2. `nodeModulesPaths`에 `monorepoRoot` 포함시켰기 때문에 metro가 root의
+   `react@19.2.4`도 hierarchical lookup으로 정상 resolve → 두 인스턴스가
+   번들에 같이 들어감. RN reconciler가 19.2.4의 useState를 호출하면 dispatcher
+   null.
+
+부수 신호 (logcat):
+- `expo-updates DownloadError "No launchable update was found"` — App component
+  mount 자체가 깨져서 OTA launch base 없음. 별개 문제 아님.
+- `libreact_newarchdefaults_so` 등록 — `newArchEnabled: false`인데도 native lib
+  로드. New Arch 강제 disable이 완전치 않을 가능성. 1.0.4 검증 후 재평가.
+
+### 1.0.4 fix (commit 예정)
+
+`apps/driver-rn/metro.config.js`:
+
+1. **`resolver.resolveRequest` hook** — metro의 first-class API. 모든 import
+   전에 호출되고 hierarchical lookup보다 우선. react·react-native·jsx-runtime을
+   `require.resolve("...", { paths: [projectModules] })`로 driver-rn local entry
+   파일을 정확히 계산해 `{ type: "sourceFile", filePath }`로 반환.
+2. `nodeModulesPaths`에서 `monorepoRoot` 제거 — root react로 가는 lookup 경로 차단.
+   `watchFolders`는 유지(packages/* 변경 감지).
+3. `extraNodeModules`는 backup으로 유지 (resolveRequest 못 잡는 edge case 대비).
+
+`apps/driver-rn/app.json`: version 1.0.3 → 1.0.4. versionCode는 EAS remote
+auto-increment(eas.json `appVersionSource: "remote"`).
+
+### 부산물 — admin/apk edit 기능 (commit 예정)
+
+1.0.3 등록 시 apkUrl에 입력 오염(공백 + "이건가?" 텍스트)이 들어갔는데
+`/admin/apk`에 수정 기능이 없어서 발견. zod url 검증이 trailing 공백 텍스트를
+허용한 것도 의외.
+
+추가:
+- `editReleaseAction` server action — apkUrl·releaseNotes 수정 + audit log
+  (`DRIVER_APP_RELEASE_EDITED`).
+- `EditReleaseForm` 컴포넌트 — 토글 button → inline form. version은 unique·history
+  보존이라 잠금.
+- `/admin/apk` page에 각 row 아래 wire.
+
+### 1.0.4 검증 절차 (집에서 이어가기)
+
+```powershell
+# 1) EAS 빌드 (사용자 시작)
+$env:EXPO_TOKEN = "<1Password에서 복원>"
+Set-Location F:\Shuttle2\apps\driver-rn
+eas build --profile preview --platform android --non-interactive
+
+# 2) 빌드 끝나면 expo.dev에서 .apk artifact URL 복사
+#    https://expo.dev/accounts/bigshol/projects/shuttlee-driver/builds
+
+# 3) /admin/apk에서 1.0.4 row 등록 (makeActive 자동)
+
+# 4) BlueStacks에 1.0.4 APK 설치 + logcat (1.0.3과 동일)
+adb -s 127.0.0.1:5555 install -r F:\Shuttle2\driver-1.0.4.apk
+adb -s 127.0.0.1:5555 shell am force-stop com.shuttlee.driver
+adb -s 127.0.0.1:5555 logcat -c
+# 앱 실행
+adb -s 127.0.0.1:5555 logcat -d > F:\Shuttle2\rn-crash-1.0.4-bluestacks.log
+```
+
+### 결과별 분기
+
+- 🟢 **로그인 화면** → React duplication 결정 해결. 베타 진입 OK.
+- 🔴 **다른 에러** → resolveRequest는 동작했지만 다른 module 깨짐. logcat 새 trace
+  분석.
+- ⚪ **여전히 useState of null** → resolveRequest도 무효? metro 캐시 잔존 의심.
+  `pnpm exec expo start --clear` 또는 `--clear-cache` 옵션으로 EAS 재빌드.
+
+### 보안 후속 (계속 보류)
+
+- ⚠️ EXPO_TOKEN revoke + 재발급 — 1.0.4 빌드 시작 후 즉시
+- ⚠️ `rn-crash-1.0.3-bluestacks.log` 처리 결정 (W23-E logcat과 함께)
+- ⚠️ `eas.json`에 `EXPO_PUBLIC_SUPABASE_ANON_KEY` 평문 commit — anon key는
+  RLS로 보호되지만 일반적으로 .env 분리 권장. 베타 안정화 후 정리 후보.
+
 ## 다음 우선순위 (W25+)
 
 W24까지 베타 운영 도구 풀세트 완비. W25부터는 베타 졸업·정식 런칭 준비.
