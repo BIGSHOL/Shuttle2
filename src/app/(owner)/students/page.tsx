@@ -19,6 +19,7 @@ import {
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { studentTerm } from "@/lib/i18n/org-terms";
+import { gradeFromBirthYear } from "@/lib/student/grade";
 
 import { DeleteStudentButton } from "./_components/delete-student-button";
 
@@ -76,6 +77,7 @@ export default async function StudentsPage() {
               const ageCls = isKids
                 ? "bg-bus text-bus-foreground"
                 : "bg-muted text-muted-foreground";
+              const grade = gradeFromBirthYear(s.birthYear);
               return (
                 <li key={s.id}>
                   <div className="bg-card rounded-lg border shadow-sm">
@@ -86,6 +88,9 @@ export default async function StudentsPage() {
                         className="hover:bg-muted/40 min-w-0 flex-1 rounded-lg p-3.5 transition-colors"
                       >
                         <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="bg-info-soft text-info rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide">
+                            {grade}
+                          </span>
                           <span
                             className={`${ageCls} rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide`}
                           >
@@ -96,8 +101,9 @@ export default async function StudentsPage() {
                           </h3>
                         </div>
                         <p className="text-muted-foreground mt-1.5 text-xs font-medium">
-                          출생 {s.birthYear} · 노선 {s._count.routes}개 ·
-                          보호자 {s._count.guardians}명
+                          {s.school ? `${s.school} · ` : ""}출생 {s.birthYear}{" "}
+                          · 노선 {s._count.routes}개 · 보호자{" "}
+                          {s._count.guardians}명
                         </p>
                       </Link>
                       <div className="flex shrink-0 flex-col items-end gap-1.5 p-3.5">
@@ -124,6 +130,8 @@ export default async function StudentsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>이름</TableHead>
+                    <TableHead className="w-20">학년</TableHead>
+                    <TableHead className="w-44">학교</TableHead>
                     <TableHead className="w-24">출생연도</TableHead>
                     <TableHead className="w-20">만</TableHead>
                     <TableHead className="w-24">노선</TableHead>
@@ -135,6 +143,7 @@ export default async function StudentsPage() {
                   {students.map((s) => {
                     const age = CURRENT_YEAR - s.birthYear;
                     const isKids = age < 13;
+                    const grade = gradeFromBirthYear(s.birthYear);
                     return (
                       <TableRow key={s.id}>
                         <TableCell className="font-medium">
@@ -144,6 +153,16 @@ export default async function StudentsPage() {
                           >
                             {s.name}
                           </Link>
+                        </TableCell>
+                        <TableCell>
+                          <span className="bg-info-soft text-info rounded-md px-2 py-0.5 text-xs font-bold">
+                            {grade}
+                          </span>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground truncate text-sm">
+                          {s.school ?? (
+                            <span className="text-muted-foreground/60">—</span>
+                          )}
                         </TableCell>
                         <TableCell className="font-mono text-sm">
                           {s.birthYear}
