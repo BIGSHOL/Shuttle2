@@ -12,6 +12,8 @@ export function AddReleaseForm() {
   const [version, setVersion] = useState("");
   const [apkUrl, setApkUrl] = useState("");
   const [releaseNotes, setReleaseNotes] = useState("");
+  const [sha256, setSha256] = useState("");
+  const [fileSizeBytes, setFileSizeBytes] = useState("");
   const [makeActive, setMakeActive] = useState(true);
 
   function handleSubmit(e: React.FormEvent) {
@@ -23,12 +25,16 @@ export function AddReleaseForm() {
         fd.set("version", version);
         fd.set("apkUrl", apkUrl);
         fd.set("releaseNotes", releaseNotes);
+        fd.set("sha256", sha256.trim());
+        fd.set("fileSizeBytes", fileSizeBytes.trim());
         fd.set("makeActive", makeActive ? "1" : "0");
         const r = await addReleaseAction(fd);
         if (r.ok) {
           setVersion("");
           setApkUrl("");
           setReleaseNotes("");
+          setSha256("");
+          setFileSizeBytes("");
           setMakeActive(true);
         } else {
           setError(r.error);
@@ -44,7 +50,7 @@ export function AddReleaseForm() {
     <form onSubmit={handleSubmit} className="space-y-3">
       <div className="grid gap-2 lg:grid-cols-2">
         <Field
-          label="version"
+          label="버전"
           placeholder="1.0.1"
           value={version}
           onChange={setVersion}
@@ -58,15 +64,43 @@ export function AddReleaseForm() {
       </div>
       <div>
         <label className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
-          release notes (선택)
+          릴리스 노트 (선택)
         </label>
         <textarea
           value={releaseNotes}
           onChange={(e) => setReleaseNotes(e.target.value)}
           rows={3}
           className="bg-card border-input mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-          placeholder="GPS 안정성 개선, FCM 토큰 자동 갱신 등"
+          placeholder="위치 안정성 개선, 푸시 토큰 자동 갱신 등"
         />
+      </div>
+      <div className="grid gap-2 lg:grid-cols-2">
+        <div>
+          <label className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
+            SHA256 (선택, 64자 16진수)
+          </label>
+          <input
+            type="text"
+            value={sha256}
+            onChange={(e) => setSha256(e.target.value)}
+            placeholder="예: 3a1f0c8e..."
+            className="bg-card border-input mt-1 w-full rounded-md border px-3 py-2 font-mono text-xs shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
+        <div>
+          <label className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
+            파일 크기 (선택, 바이트)
+          </label>
+          <input
+            type="number"
+            min={0}
+            step={1}
+            value={fileSizeBytes}
+            onChange={(e) => setFileSizeBytes(e.target.value)}
+            placeholder="예: 41943040 (40MB)"
+            className="bg-card border-input mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+          />
+        </div>
       </div>
       <label className="flex items-center gap-2 text-sm">
         <input
@@ -76,7 +110,7 @@ export function AddReleaseForm() {
           className="h-4 w-4"
         />
         <span className="text-foreground font-medium">
-          이 버전을 활성(active)으로 설정 (기존 활성 버전은 자동 비활성)
+          이 버전을 ‘활성’으로 설정 (기존 활성 버전은 자동 해제)
         </span>
       </label>
       {error ? (
@@ -86,7 +120,7 @@ export function AddReleaseForm() {
       ) : null}
       <div>
         <Button type="submit" disabled={pending}>
-          {pending ? "등록 중..." : "신 버전 등록"}
+          {pending ? "등록 중..." : "새 버전 등록"}
         </Button>
       </div>
     </form>
