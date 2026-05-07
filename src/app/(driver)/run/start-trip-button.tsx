@@ -55,12 +55,22 @@ export function StartTripButton({
     setError(null);
     startTransition(async () => {
       try {
-        await startTripAction(routeId, vehicleId, helperId);
+        const result = await startTripAction(routeId, vehicleId, helperId);
+        if (result && "error" in result) {
+          setError(result.error);
+        }
       } catch (err) {
-        // redirect()는 NEXT_REDIRECT throw — 정상 흐름이라 무시
-        const msg = err instanceof Error ? err.message : "";
-        if (msg.includes("NEXT_REDIRECT")) return;
-        setError(msg || "운행 시작에 실패했어요");
+        // Next.js redirect는 internal signal — re-throw해서 navigation 처리.
+        if (
+          typeof err === "object" &&
+          err !== null &&
+          typeof (err as { digest?: unknown }).digest === "string" &&
+          (err as { digest: string }).digest.startsWith("NEXT_")
+        ) {
+          throw err;
+        }
+        console.error("[start-trip-button] failed", err);
+        setError("운행 시작에 실패했어요. 잠시 후 다시 시도해 주세요.");
       }
     });
   }

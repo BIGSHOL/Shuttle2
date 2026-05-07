@@ -244,7 +244,7 @@ export default function PricingPage() {
             {FAQS.map((f) => (
               <details
                 key={f.q}
-                className="bg-card group rounded-lg border p-5 shadow-sm"
+                className="bg-card group block w-full rounded-lg border p-5 shadow-sm"
               >
                 <summary className="flex cursor-pointer items-center justify-between gap-3 text-base font-extrabold tracking-tight">
                   {f.q}

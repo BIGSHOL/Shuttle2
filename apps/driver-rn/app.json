@@ -10,6 +10,7 @@
     "android": {
       "package": "com.shuttlee.driver",
       "versionCode": 1,
+      "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION",
@@ -44,6 +45,12 @@
         "projectId": "05ae9ebf-edc7-4aa9-8d85-5ff9dec655c7"
       }
     },
-    "owner": "bigshol"
+    "owner": "bigshol",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/05ae9ebf-edc7-4aa9-8d85-5ff9dec655c7"
+    }
   }
 }

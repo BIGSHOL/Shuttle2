@@ -235,6 +235,17 @@ async function runOwner(browser: Browser) {
     scrollTo: 600,
   });
 
+  // 운행 상세 — 운행 중 trip이 있으면 dashboard/trip/[id]로 이동해 캡처
+  const runningTripHref = await page
+    .locator('a[href^="/dashboard/trip/"]')
+    .first()
+    .getAttribute("href")
+    .catch(() => null);
+  if (runningTripHref) {
+    await navigate(page, runningTripHref, { wait: 3000 });
+    await shoot(page, "owner", "26-trip-detail-running");
+  }
+
   await navigate(page, "/dashboard/analytics");
   await shoot(page, "owner", "28-analytics");
 
@@ -316,8 +327,33 @@ async function runDriver(browser: Browser) {
       fullPage: true,
     });
 
-    // 8. 학생 토글 (전체 페이지 fullPage)
+    // 8. 학생 토글 + 결석 학생 표시 (학생 4가 NOTIFIED_DRIVER 결석)
+    // 운행 화면 펼친 채로 학생 명단 영역 캡처. 학생 4 행에 "결석 (전달됨)" 뱃지가 보임.
     await shoot(page, "driver", "10-student-toggle", {
+      fullPage: true,
+    });
+
+    // 결석 학생만 자세히 — 학생 4가 보이는 정류장으로 스크롤. seed에서 학생 4는 stop[3] = 4번째 정류장.
+    const absentLabel = page.getByText(/결석/).first();
+    if (await absentLabel.isVisible()) {
+      await absentLabel.scrollIntoViewIfNeeded();
+      await page.waitForTimeout(500);
+      const absentStop = page
+        .locator('li:has-text("데모 학생 4")')
+        .first();
+      if (await absentStop.count()) {
+        await absentStop.screenshot({
+          path: "docs/manual/screenshots/driver/12-absent-student.png",
+        });
+        console.log("  📸 docs/manual/screenshots/driver/12-absent-student.png");
+      }
+    }
+
+    // 9. 60초 미처리 강조 (13-stop-expired) — 정류장 통과 후 60초가 지나면 노란 깜빡임
+    // trip-running-view.tsx의 setTimeout 60_000ms 하드코딩이라 60초 wait 필수.
+    console.log("  ⏳ 60초 대기 (정류장 통과 후 미처리 학생 강조 트리거)...");
+    await page.waitForTimeout(62_000);
+    await shoot(page, "driver", "13-stop-expired", {
       fullPage: true,
     });
 

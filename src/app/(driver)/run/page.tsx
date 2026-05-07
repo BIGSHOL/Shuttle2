@@ -9,6 +9,7 @@ import { env } from "@/lib/env";
 
 import { DriverNotificationToggle } from "../notifications/driver-notification-toggle";
 import { DriverPermissionsCard } from "./_components/driver-permissions-card";
+import { RunChecklistCard } from "./_components/run-checklist-card";
 import { StartTripButton } from "./start-trip-button";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
@@ -96,42 +97,7 @@ export default async function RunPage() {
       {/* W20-C1: 운행 시작 전 브라우저 권한·기능 사전 체크 (활성 trip 없을 때만) */}
       {activeTrip ? null : <DriverPermissionsCard />}
 
-      <details className="bg-card rounded-lg border px-4 py-3 text-sm shadow-sm">
-        <summary className="text-foreground cursor-pointer text-xs font-bold tracking-wide uppercase">
-          운행 전 확인사항
-        </summary>
-        <ul className="text-muted-foreground mt-3 list-disc space-y-1.5 pl-4 text-xs font-medium">
-          <li>
-            <strong className="text-foreground">거치대 + 충전기</strong>를
-            차량에 고정하세요. 운행 중 폰을 만지면 위험합니다.
-          </li>
-          <li>
-            폰은{" "}
-            <strong className="text-foreground">안드로이드 권장</strong> — iOS
-            Safari는 백그라운드 GPS·화면 잠금 방지가 약해 셔틀 위치가 끊길 수
-            있습니다.
-          </li>
-          <li>
-            iOS를 쓴다면{" "}
-            <strong className="text-foreground">
-              운행 화면을 항상 켠 상태
-            </strong>
-            로 두세요 (자동 화면 잠금이 GPS를 멈춥니다).
-          </li>
-          <li>
-            처음 진입 시 브라우저가 묻는{" "}
-            <strong className="text-foreground">
-              위치 권한·알림 권한을 허용
-            </strong>
-            해 주세요.
-          </li>
-          <li>
-            어린이용 모드 차량은{" "}
-            <strong className="text-foreground">동승보호자</strong>가 함께 타야
-            합니다 (어린이통학버스 법령 의무).
-          </li>
-        </ul>
-      </details>
+      <RunChecklistCard />
 
       {todaysRoutes.length === 0 ? (
         <div className="bg-card rounded-lg border p-6 text-center shadow-sm">

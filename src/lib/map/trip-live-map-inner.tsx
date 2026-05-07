@@ -93,8 +93,15 @@ export function TripLiveMapInner({
   const polylineColor = direction === "PICKUP" ? "#10b981" : "#0ea5e9";
 
   return (
-    <div className="relative w-full overflow-hidden">
-      <Map center={center} level={4} style={{ width: "100%", height }}>
+    // outer div에도 height 명시. 이전엔 inner Map만 height={prop}이라
+    // height="100%" 경우 Map의 100%가 outer(height auto = 0) 기준이라
+    // 0px → 지도 안 보임. outer에 inline height + inner Map은 100%로
+    // cascade하면 "60vh"·"100%" 둘 다 정상 동작.
+    <div
+      className="relative w-full overflow-hidden"
+      style={{ height }}
+    >
+      <Map center={center} level={4} style={{ width: "100%", height: "100%" }}>
         {polylinePath.length >= 2 ? (
           <Polyline
             path={polylinePath}

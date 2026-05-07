@@ -155,13 +155,38 @@ async function main() {
   });
   console.log(`  ✓ Staff: ${owner.name}, ${driver.name}, ${helper.name}`);
 
-  // 정류장 4개 — 서울 강남역 부근 (lat=37.4979, lng=127.0276 베이스)
+  // 정류장 4개 — 대구 북구 산격동 → 침산동 (PARK 데모 동선)
+  // 좌표는 도로명주소 기반 근사값 (오차 ~100~300m). 정밀 보정은 학원장
+  // 화면 → 정류장 편집 카카오 지도 picker로 드래그.
+  // radiusM=150으로 GPS 흔들림에도 STOP_PASS 자동 판정이 잡히게.
+  // address는 W18-도입 컬럼. 운영 시 stop-map-picker가 카카오 reverse
+  // geocoding으로 자동 채우는데 시드는 직접 명시 (실제 도로명/지번).
   const stops = await Promise.all(
     [
-      { name: "강남역 4번 출구 (데모)", lat: 37.4979, lng: 127.0276 },
-      { name: "역삼역 1번 출구 (데모)", lat: 37.5006, lng: 127.0367 },
-      { name: "신논현역 2번 출구 (데모)", lat: 37.5046, lng: 127.025 },
-      { name: "양재역 8번 출구 (데모)", lat: 37.4854, lng: 127.0341 },
+      {
+        name: "산격대우아파트 (데모·출발)",
+        lat: 35.8927,
+        lng: 128.6088,
+        address: "대구 북구 동북로 163",
+      },
+      {
+        name: "산격네거리 (데모)",
+        lat: 35.89,
+        lng: 128.601,
+        address: "대구 북구 산격동 산격네거리 부근",
+      },
+      {
+        name: "침산네거리 (데모)",
+        lat: 35.887,
+        lng: 128.594,
+        address: "대구 북구 침산동 침산네거리 부근",
+      },
+      {
+        name: "침산남로 140 학원 (데모·도착)",
+        lat: 35.8825,
+        lng: 128.588,
+        address: "대구 북구 침산남로 140",
+      },
     ].map((s) =>
       db.stop.create({
         data: {
@@ -169,7 +194,8 @@ async function main() {
           name: s.name,
           lat: s.lat,
           lng: s.lng,
-          radiusM: 50,
+          address: s.address,
+          radiusM: 150,
         },
       }),
     ),
@@ -177,21 +203,21 @@ async function main() {
   console.log(`  ✓ Stops: ${stops.length}`);
 
   // 노선 2개 (등원/하원) — 둘 다 KIDS 차량에 (안전점검 데모를 위해)
-  // 월·수·금 (1+4+16 = 21)
+  // 매일 (월~일 = 1+2+4+8+16+32+64 = 127): 어떤 요일에 데모해도 운행 노출
   const pickupRoute = await db.route.create({
     data: {
       vehicleId: kidsVehicle.id,
-      name: "월수금 등원 (데모)",
+      name: "매일 등원 (데모)",
       direction: "PICKUP",
-      weekdays: 21,
+      weekdays: 127,
     },
   });
   const dropoffRoute = await db.route.create({
     data: {
       vehicleId: kidsVehicle.id,
-      name: "월수금 하원 (데모)",
+      name: "매일 하원 (데모)",
       direction: "DROPOFF",
-      weekdays: 21,
+      weekdays: 127,
     },
   });
   console.log(`  ✓ Routes: ${pickupRoute.name}, ${dropoffRoute.name}`);
@@ -289,6 +315,23 @@ async function main() {
     ]),
   );
   console.log(`  ✓ RouteStudents: ${students.length * 2}`);
+
+  // 결석 신청 1건 — 학원장이 "기사에 전달" 처리한 상태 (NOTIFIED_DRIVER).
+  // driver 운행 화면에 학생이 "결석 (전달됨)" 뱃지로 표시되어 메뉴얼 캡처용.
+  // 학생 4 (= 데모 학생 4)가 오늘 등하원 모두 결석.
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  await db.absenceRequest.create({
+    data: {
+      studentId: students[3]!.id,
+      createdBy: guardians[3]!.id,
+      date: today,
+      type: "ABSENT_BOTH",
+      reason: "병원 진료",
+      status: "NOTIFIED_DRIVER",
+    },
+  });
+  console.log(`  ✓ AbsenceRequest: 1 (학생 4, NOTIFIED_DRIVER)`);
 
   console.log("\n✅ Seed complete.\n");
   console.log("📋 Demo accounts (모두 비번 demo1234!):");

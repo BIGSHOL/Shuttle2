@@ -32,36 +32,53 @@ import { upsertSafetyCheck } from "@/server/driver/upsert-safety-check";
 // 검증(requireDriver/Helper) → zod parse → 비즈니스 함수 호출 → revalidatePath/redirect.
 // Route Handler(Day 2)도 동일 비즈니스 함수를 호출.
 
-// 외부 PWA UI 호환을 위한 type alias re-export.
-// (trip-running-view.tsx 등이 기존 이름으로 import 중)
-export type RecordPingInput = PingInput;
-export type BoardingInputType = BoardingInput;
-export type MarkIssueInputType = MarkIssueInput;
-export type { SafetyFieldsInput };
+// "use server" 파일은 모든 export가 async function — type re-export 금지
+// (turbopack module evaluation에서 ReferenceError → driver SA 전체 fail).
+// underlying type은 @/server/driver/types에서 직접 import.
+
+// NextJS production은 server action throw의 message를 redact (영문 generic으로
+// 변환). 비즈니스 한국어 message가 사용자에게 도달하려면 throw 대신 discriminated
+// union return — try/catch로 wrap하고 redirect는 catch 밖에 둠.
 
 export async function startTripAction(
   routeId: string,
   vehicleId: string,
   helperId: string | null,
-): Promise<void> {
+): Promise<{ error: string } | undefined> {
   const me = await requireDriver();
   const parsed = StartTripInputSchema.parse({ routeId, vehicleId, helperId });
-  const { tripId } = await startTrip(me, parsed);
+  let tripId: string;
+  try {
+    const result = await startTrip(me, parsed);
+    tripId = result.tripId;
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "운행 시작에 실패했어요",
+    };
+  }
   revalidatePath("/run");
   revalidatePath("/dashboard");
   redirect(`/trip/${tripId}`);
 }
 
-export async function endTripAction(tripId: string): Promise<void> {
+export async function endTripAction(
+  tripId: string,
+): Promise<{ error: string } | undefined> {
   const me = await requireDriver();
-  await endTrip(me, tripId);
+  try {
+    await endTrip(me, tripId);
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : "운행 종료에 실패했어요",
+    };
+  }
   revalidatePath("/run");
   revalidatePath(`/trip/${tripId}`);
   revalidatePath("/dashboard");
   redirect("/run");
 }
 
-export async function recordPingAction(input: RecordPingInput): Promise<void> {
+export async function recordPingAction(input: PingInput): Promise<void> {
   const me = await requireDriver();
   const parsed = PingInputSchema.safeParse(input);
   if (!parsed.success) throw new Error("잘못된 좌표 데이터");
@@ -81,7 +98,7 @@ export async function upsertSafetyCheckAction(
 }
 
 export async function toggleBoardingEventAction(
-  input: BoardingInputType,
+  input: BoardingInput,
 ): Promise<void> {
   const me = await requireDriverOrHelper();
   const parsed = BoardingInputSchema.safeParse(input);
@@ -93,7 +110,7 @@ export async function toggleBoardingEventAction(
 }
 
 export async function markBoardingIssueAction(
-  input: MarkIssueInputType,
+  input: MarkIssueInput,
 ): Promise<void> {
   const me = await requireDriverOrHelper();
   const parsed = MarkIssueInputSchema.safeParse(input);
