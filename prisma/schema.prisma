@@ -12,11 +12,18 @@ datasource db {
 
 // === 테넌트 ===
 model Organization {
-  id        String   @id @default(cuid())
-  name      String
-  type      OrgType  @default(ACADEMY)
-  plan      Plan     @default(TRIAL)
-  createdAt DateTime @default(now())
+  id            String    @id @default(cuid())
+  name          String
+  type          OrgType   @default(ACADEMY)
+  plan          Plan      @default(TRIAL)
+  // W24: 운영 상태. 셔틀이 매니저(어드민)가 일시정지·트라이얼 만료 표시 가능.
+  // SUSPENDED·TRIAL_EXPIRED 시 학원장·기사·동승자 로그인 차단 (학부모는 자녀의
+  // 다른 학원이 ACTIVE면 통과). 진행 중 trip은 안전상 강제 종료 안 함.
+  status        OrgStatus @default(ACTIVE)
+  activatedAt   DateTime?
+  suspendedAt   DateTime?
+  suspendReason String?
+  createdAt     DateTime  @default(now())
 
   vehicles           Vehicle[]
   students           Student[]
@@ -53,16 +60,16 @@ model StaffInvite {
 // 받은 사람이 /parent-invite/<token>로 들어가 본인 이메일·비밀번호를 정해 가입한다.
 // 가입 시 phone unique로 Guardian upsert + GuardianLink N건 생성.
 model GuardianInvite {
-  id                   String         @id @default(cuid())
+  id                   String       @id @default(cuid())
   orgId                String
-  org                  Organization   @relation(fields: [orgId], references: [id])
+  org                  Organization @relation(fields: [orgId], references: [id])
   name                 String
   phone                String
   relation             String // "모", "부", "조부" 등
-  isPrimary            Boolean        @default(false)
+  isPrimary            Boolean      @default(false)
   loginId              String? // 발급 시 학원장이 정한 로그인 아이디. 본인이 그대로 사용.
-  token                String         @unique
-  createdAt            DateTime       @default(now())
+  token                String       @unique
+  createdAt            DateTime     @default(now())
   expiresAt            DateTime
   acceptedAt           DateTime?
   acceptedByGuardianId String?
@@ -95,6 +102,13 @@ enum Plan {
   PRO
 }
 
+// W24: 학원 운영 상태. SUSPENDED/TRIAL_EXPIRED는 매니저가 일시정지 시킨 학원.
+enum OrgStatus {
+  ACTIVE
+  SUSPENDED
+  TRIAL_EXPIRED
+}
+
 // === 차량·운영자 ===
 model Vehicle {
   id             String       @id @default(cuid())
@@ -122,7 +136,7 @@ model Staff {
   orgId         String
   org           Organization @relation(fields: [orgId], references: [id])
   userId        String? // Supabase auth.users 연결
-  loginId       String? @unique // 영문·숫자·_ 4~20자. 학원장 발급 또는 본인 선택. 이메일 대신 사용.
+  loginId       String?      @unique // 영문·숫자·_ 4~20자. 학원장 발급 또는 본인 선택. 이메일 대신 사용.
   recoveryEmail String? // 비밀번호 찾기용 이메일. 입력 시 Auth user.email = 이 값. 미입력 시 placeholder.
   name          String
   phone         String
@@ -195,9 +209,9 @@ model Stop {
   address String?
   radiusM Int          @default(50) // 도착 판정 반경 (미터)
 
-  routes              RouteStop[]
-  students            RouteStudent[]
-  changeRequestsFrom  StopChangeRequest[] @relation("StopChangeFrom")
+  routes               RouteStop[]
+  students             RouteStudent[]
+  changeRequestsFrom   StopChangeRequest[] @relation("StopChangeFrom")
   changeRequestsResult StopChangeRequest[] @relation("StopChangeResult")
 
   @@index([orgId])
@@ -450,11 +464,11 @@ model StaffFcmSubscription {
 // W8: 마케팅 랜딩 사전등록. 베타 런칭 전에 관심 학원·기관 모음.
 // orgType은 ACADEMY/DAYCARE/KINDERGARTEN. 한 이메일·전화 1회만.
 model PreRegistration {
-  id        String  @id @default(cuid())
+  id        String   @id @default(cuid())
   orgName   String
   orgType   OrgType
   contact   String // 담당자 이름
-  email     String  @unique
+  email     String   @unique
   phone     String
   region    String? // "서울 강남구" 등 자유 입력
   notes     String? // 자유 메모
@@ -467,15 +481,15 @@ model PreRegistration {
 // (푸시 권한 없거나 발송 실패해도 인앱 list에서 확인 가능).
 // userId는 Supabase auth.users id. Guardian/Staff 누구나 수신 가능.
 model Notification {
-  id          String               @id @default(cuid())
-  userId      String // auth.users.id
-  category    NotificationCategory
-  title       String
-  body        String
-  payload     Json?
-  url         String? // 클릭 시 이동 경로
-  readAt      DateTime?
-  createdAt   DateTime             @default(now())
+  id        String               @id @default(cuid())
+  userId    String // auth.users.id
+  category  NotificationCategory
+  title     String
+  body      String
+  payload   Json?
+  url       String? // 클릭 시 이동 경로
+  readAt    DateTime?
+  createdAt DateTime             @default(now())
 
   @@index([userId, createdAt])
   @@index([userId, readAt])
@@ -527,7 +541,7 @@ model StopChangeRequest {
   decidedAt    DateTime?
   rejectReason String?
   resultStopId String? // 승인 시 매핑·생성된 새 Stop.id
-  resultStop   Stop?   @relation("StopChangeResult", fields: [resultStopId], references: [id])
+  resultStop   Stop?     @relation("StopChangeResult", fields: [resultStopId], references: [id])
 
   @@index([orgId, status])
   @@index([studentId])
@@ -538,4 +552,36 @@ enum RequestStatus {
   PENDING
   APPROVED
   REJECTED
+}
+
+// === W24: 셔틀이 플랫폼 매니저(어드민) ===
+
+// 매니저가 수행한 민감 작업 추적. impersonation 시작/종료, 비번 reset 대행,
+// 학원 일시정지·plan 변경 등 모두 한 row씩. 베타 단계는 service_role로
+// 매니저 본인이 삭제 가능하지만 수용 (베타 후 immutable storage 검토).
+model AdminAuditLog {
+  id           String   @id @default(cuid())
+  actorEmail   String // ENV 화이트리스트의 이메일
+  action       String // "ORG_PLAN_CHANGED" / "IMPERSONATE_START" 등
+  targetOrgId  String?
+  targetUserId String? // auth.users.id
+  payload      Json?
+  createdAt    DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([actorEmail, createdAt])
+  @@index([targetOrgId, createdAt])
+}
+
+// 기사 RN 앱 APK 버전 관리. 한 row만 isActive=true 유지하고 나머지는 history.
+// /api/driver-app/version GET이 isActive row를 반환 → ENV fallback.
+model DriverAppRelease {
+  id           String   @id @default(cuid())
+  version      String   @unique // semver, e.g. "1.0.1"
+  apkUrl       String // EAS artifact URL 또는 GitHub Releases URL
+  releaseNotes String?
+  isActive     Boolean  @default(false)
+  createdAt    DateTime @default(now())
+
+  @@index([isActive, createdAt])
 }

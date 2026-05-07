@@ -93,13 +93,46 @@ export async function loginAction(
     const [staff, guardian] = await Promise.all([
       db.staff.findFirst({
         where: { userId },
-        select: { role: true },
+        include: { org: { select: { status: true, name: true } } },
       }),
       db.guardian.findFirst({
         where: { userId },
-        select: { id: true },
+        include: {
+          links: {
+            include: {
+              student: {
+                select: {
+                  org: { select: { status: true, name: true } },
+                },
+              },
+            },
+          },
+        },
       }),
     ]);
+
+    // W24: Staff는 본인 학원이 ACTIVE 아니면 차단 (사인아웃 + 한국어 안내).
+    if (staff && staff.org.status !== "ACTIVE") {
+      await supabase.auth.signOut();
+      const reason =
+        staff.org.status === "SUSPENDED"
+          ? "현재 일시정지된 학원입니다. 셔틀이 운영팀에 문의해 주세요."
+          : "체험판 기간이 종료되었습니다. 운영팀에 문의해 주세요.";
+      return { error: reason };
+    }
+    // W24: 학부모는 자녀의 모든 학원이 비-ACTIVE이면 차단. 1곳이라도 활성이면 통과.
+    if (guardian) {
+      const orgStatuses = guardian.links.map((l) => l.student.org.status);
+      const anyActive = orgStatuses.some((s) => s === "ACTIVE");
+      if (orgStatuses.length > 0 && !anyActive) {
+        await supabase.auth.signOut();
+        return {
+          error:
+            "자녀의 학원이 모두 운영 정지 상태입니다. 학원·기관에 문의해 주세요.",
+        };
+      }
+    }
+
     if (staff) redirect(homePathForRole(staff.role));
     if (guardian) redirect("/home");
   }

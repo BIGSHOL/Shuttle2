@@ -33,6 +33,9 @@
 - `HELPER` 동승보호자 — 모바일 PWA, KIDS 모드만
 - `GUARDIAN` 학부모 — 모바일 PWA + 푸시 + 카카오맵 실시간 위치
 - 성인·중고생 본인 — `GUARDIAN`과 같은 화면, 권한만 다름
+- `SHUTTLEE_ADMIN` 셔틀이 플랫폼 매니저 (W24) — `SHUTTLEE_ADMIN_EMAILS` ENV
+  화이트리스트로만 식별 (Staff role 아님). `/admin/*`에서 학원·정류장·차량·
+  운행·사용자·APK 총괄 관리, 학원장 시점 impersonation으로 고객 지원.
 
 ## 기술 스택
 
@@ -91,6 +94,9 @@ src/
     (parent)/           # 학부모 PWA + 카카오맵 + 푸시
       home/, trip-live/[tripId]/, notifications/, my-absences/, my-stop-changes/
     api/                # Route Handlers (push subscribe, safety-report PDF)
+    admin/              # W24: 셔틀이 플랫폼 매니저 (route group 없음, layout 가드)
+                        # orgs/, stops/, vehicles/, trips/, users/, apk/, notifications/
+                        # kpi/, pre-registrations/
     invite/[token]/     # 직원 초대 토큰 가입
     parent-invite/[token]/  # 학부모 초대 토큰 가입
   lib/
@@ -130,6 +136,8 @@ route group 다른 그룹이 같은 path를 만들면 빌드 실패. 우리 패�
 - `/absences` (owner) ↔ `/my-absences` (parent)
 - `/stop-change-requests` (owner) ↔ `/my-stop-changes` (parent)
 - `/trip/[id]` (driver·helper) ↔ `/trip-live/[tripId]` (parent) ↔ `/dashboard/trip/[tripId]` (owner)
+- `/admin/*` (shuttlee admin, route group 없음 — `app/admin/layout.tsx`이 가드)
+  vs `/dashboard/*` (owner). 매니저는 SHUTTLEE_ADMIN_EMAILS ENV 화이트리스트.
 
 ## 코딩 규약
 
@@ -314,6 +322,41 @@ vercel deploy --prod --yes  # 프로덕션 배포
     `<DriverAppShareCard>` 학원장 dashboard 카드(다운로드+가이드 링크 클립보드 복사).
   - 베타 운영 약속: 안드로이드 기사만 RN 앱, iOS 기사는 PWA 화면 켠 채. 베타
     APK는 Supabase Storage `driver-apks` public bucket에서 서빙.
+- **W24: 셔틀이 플랫폼 매니저(어드민) 시스템** — 학원·정류장·차량을 총괄
+  관리하는 `/admin/*` 풀세트. 베타 학원이 5곳 넘어가도 prisma studio·Supabase
+  Studio 안 들어가고 UI에서 운영 가능.
+  - Auth: `SHUTTLEE_ADMIN_EMAILS` ENV 화이트리스트(콤마 분리) — 베타 1~3명
+    운영자 적합. `requireShuttleAdmin()` 헬퍼는 `requireOwner` 패턴 mirror.
+    Staff role이 아닌 ENV 기반이라 베타 후 DB role(`PlatformAdmin`) 마이그
+    가능. `/admin/layout.tsx`가 통합 가드 + 사이드 nav.
+  - Schema: `Organization.status` enum (ACTIVE/SUSPENDED/TRIAL_EXPIRED) +
+    `activatedAt`/`suspendedAt`/`suspendReason`. SUSPENDED·TRIAL_EXPIRED 학원
+    staff·driver·helper 로그인 전부 차단(login 흐름 + 4개 layout 재진입 차단)
+    학부모는 자녀의 모든 학원이 비-ACTIVE면 차단. `AdminAuditLog` 모델 +
+    `DriverAppRelease` 모델 추가 (RLS enable 동봉).
+  - 페이지 9종:
+    - `/admin` landing — platform 합계 KPI + 4 quick link + 최근 7일 신규 학원
+    - `/admin/orgs` list + `/admin/orgs/[id]` 360° (W21 템플릿). 액션 카드:
+      plan(TRIAL/BASIC/PRO) 변경 + 일시정지/활성화 + 학원장 시점 임시 진입
+    - `/admin/stops` cross-org 정류장 list + 카카오맵 cluster (`MarkerClusterer`)
+    - `/admin/vehicles` cross-org 차량 list (보험 만료 임박 빨간 정렬)
+    - `/admin/trips` 오늘 cross-org 운행 + multi-org 라이브 지도 wrapper
+    - `/admin/users` Staff·Guardian 통합 검색 + detail 4 액션 (비번 reset
+      메일·recoveryEmail 변경·강제 sign-out)
+    - `/admin/apk` `DriverAppRelease` 신 버전 등록 + isActive flip. `/api/driver-app/version`은 DB 우선·ENV fallback (점진 이행)
+    - `/admin/notifications` 단일 user 푸시·인앱 알림 테스트 발송
+    - `/admin/kpi`, `/admin/pre-registrations` (기존 — hardcoded ADMIN_EMAILS
+      제거, layout이 통합 가드)
+  - **Impersonation** (학원장 시점 임시 진입): `IMPERSONATE_COOKIE_SECRET` ENV로
+    HMAC-signed cookie `shuttlee_impersonate_org={orgId,adminEmail,ts}` set.
+    `getOrgId()` 헬퍼가 admin 세션 + cookie 검증 시 그 orgId 반환 → 모든
+    OWNER 페이지가 그 학원으로 보임. `(owner)/layout.tsx`이 cookie 감지 시
+    상단 빨간 띠 + 종료 버튼 + impersonate 학원의 정보로 헤더·nav 표시.
+    audit log 시작·종료 양쪽 기록. cookie maxAge 4시간.
+  - 사용자 작업 (베타 머지 후):
+    - `pnpm db:migrate deploy` (admin_system 마이그레이션)
+    - Vercel production env에 `SHUTTLEE_ADMIN_EMAILS` + `IMPERSONATE_COOKIE_SECRET` 등록
+      (`openssl rand -hex 32`로 secret 생성)
 
 ### 알려진 미해결 (다음 세션)
 

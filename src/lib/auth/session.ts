@@ -3,7 +3,7 @@ import { cache } from "react";
 
 import { db } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
-import type { OrgType, StaffRole } from "@/generated/prisma/enums";
+import type { OrgStatus, OrgType, StaffRole } from "@/generated/prisma/enums";
 
 export type CurrentUser = {
   authUserId: string;
@@ -17,6 +17,7 @@ export type CurrentUser = {
     id: string;
     name: string;
     type: OrgType;
+    status: OrgStatus; // W24: 일시정지·트라이얼 만료 차단용
   };
 };
 
@@ -83,6 +84,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       id: staff.org.id,
       name: staff.org.name,
       type: staff.org.type,
+      status: staff.org.status,
     },
   };
 });
@@ -137,10 +139,20 @@ export function homePathForRole(role: StaffRole): string {
 }
 
 // 멀티테넌시 가드: 모든 도메인 쿼리 시 orgId 필터에 사용. 세션 없으면 throw.
+// W24: 매니저 impersonation 통합 — 매니저가 임시 진입 cookie 가지고 있으면
+// 그 orgId 반환 (학원장 시점으로 화면 보임). 비-매니저는 cookie 무시.
 export async function getOrgId(): Promise<string> {
   const user = await getCurrentUser();
   if (!user) {
     throw new Error("UNAUTHENTICATED");
+  }
+  // 매니저인지 확인 후 impersonation cookie lookup. (admin.ts·impersonate.ts는
+  // 동적 import로 순환 의존 회피 + 매니저가 아니면 cookie 연산 비용 0)
+  const { isShuttleAdmin } = await import("@/lib/auth/admin");
+  if (isShuttleAdmin(user.email)) {
+    const { readImpersonateCookie } = await import("@/lib/auth/impersonate");
+    const cookie = await readImpersonateCookie();
+    if (cookie) return cookie.orgId;
   }
   return user.org.id;
 }
@@ -154,7 +166,8 @@ export type CurrentGuardian = {
   authUserId: string;
   email: string;
   guardian: { id: string; name: string; phone: string };
-  students: { id: string; name: string; orgId: string }[];
+  // W24: orgStatus 포함 — 자녀 학원이 모두 비-ACTIVE면 layout이 차단 처리.
+  students: { id: string; name: string; orgId: string; orgStatus: OrgStatus }[];
 };
 
 export const getCurrentGuardian = cache(
@@ -167,7 +180,14 @@ export const getCurrentGuardian = cache(
       include: {
         links: {
           include: {
-            student: { select: { id: true, name: true, orgId: true } },
+            student: {
+              select: {
+                id: true,
+                name: true,
+                orgId: true,
+                org: { select: { status: true } },
+              },
+            },
           },
         },
       },
@@ -182,7 +202,12 @@ export const getCurrentGuardian = cache(
         name: guardian.name,
         phone: guardian.phone,
       },
-      students: guardian.links.map((l) => l.student),
+      students: guardian.links.map((l) => ({
+        id: l.student.id,
+        name: l.student.name,
+        orgId: l.student.orgId,
+        orgStatus: l.student.org.status,
+      })),
     };
   },
 );

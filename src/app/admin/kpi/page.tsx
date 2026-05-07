@@ -1,16 +1,9 @@
-import { notFound } from "next/navigation";
-
 import { db } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/session";
 
-// 운영자(셔틀이 본인) SaaS KPI 대시보드. 화이트리스트 이메일만 접근.
-// 학원·학생·차량·운행량·NO_SHOW 비율 등 베타 운영 의사결정용.
-const ADMIN_EMAILS = new Set(["st2000423@gmail.com"]);
+// W24: 가드는 src/app/admin/layout.tsx의 requireShuttleAdmin이 일괄 처리.
+// 학원·학생·차량·운행량·NO_SHOW 비율 등 베타 운영 의사결정용 KPI.
 
 export default async function AdminKpiPage() {
-  const me = await getCurrentUser();
-  if (!me || !ADMIN_EMAILS.has(me.email)) notFound();
-
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   const sevenDaysAgo = new Date(today);
@@ -82,7 +75,7 @@ export default async function AdminKpiPage() {
       : "0";
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
+    <main className="space-y-6">
       <div>
         <h2 className="text-2xl font-extrabold tracking-tight">
           셔틀이 운영 KPI

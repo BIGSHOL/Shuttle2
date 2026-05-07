@@ -1262,10 +1262,112 @@ cd apps\driver-rn
 npx -y eas-cli@latest update --channel preview --message "fix: ..."
 ```
 
-## 다음 우선순위 (W24+)
+## W24 셔틀이 플랫폼 매니저(어드민) 시스템 (2026-05-07)
 
-W22까지 체감 속도(A·B·C안) + 학원장 운영 도구(W19~W21)는 베타 운영 가능 수준에 도달.
-다음은 베타 졸업·정식 런칭 준비를 위한 항목 위주.
+베타 학원이 5곳 넘어가도 prisma studio·Supabase Studio 안 들어가고 UI에서 운영
+가능한 매니저 시스템 풀세트.
+
+**스코프**: Auth(ENV 화이트리스트) · Org 360 + plan·status · Stops/Vehicles/Trips
+cross-org · Users 비번 reset 대행 · APK release · Push 테스트 · Impersonation
+(HMAC cookie + 빨간 띠).
+
+**Day 1 — Schema + Auth + 가드**
+- Prisma: `Organization.status` enum (ACTIVE/SUSPENDED/TRIAL_EXPIRED) +
+  `activatedAt`/`suspendedAt`/`suspendReason`. 새 모델 `AdminAuditLog`,
+  `DriverAppRelease`. 마이그레이션 RLS enable 동봉.
+- ENV: `SHUTTLEE_ADMIN_EMAILS` (콤마 분리) + `IMPERSONATE_COOKIE_SECRET`
+  (HMAC, 32자+).
+- `src/lib/auth/admin.ts`: `requireShuttleAdmin()`/`isShuttleAdmin()` —
+  `requireOwner` 패턴 mirror.
+- `src/app/admin/layout.tsx`: 통합 가드 + 사이드 nav (홈·학원·정류장·차량·
+  운행·사용자·APK·푸시·KPI·사전등록). 기존 `/admin/pre-registrations`,
+  `/admin/kpi`의 hardcoded `ADMIN_EMAILS = "st2000423@gmail.com"` 1줄 가드 제거.
+- SUSPENDED 차단:
+  - `(auth)/login/actions.ts`: 로그인 후 staff.org.status !== ACTIVE면 사인아웃 +
+    한국어 메시지. Guardian은 자녀 모든 학원이 비-ACTIVE면 차단.
+  - 4개 layout (owner/driver/helper/parent): 재진입 차단 + `/login?suspended=1`.
+  - login page: `?suspended=1` alert 배너.
+- `CurrentUser.org.status`, `CurrentGuardian.students[].orgStatus` 노출.
+
+**Day 2 — Org 360**
+- `/admin` landing: platform KPI 4 grid (총 학원·차량·오늘 운행·신규 7일) +
+  4 quick link card + 최근 신규 학원 list.
+- `/admin/orgs`: 전체 학원 행 클릭 → /admin/orgs/[id].
+- `/admin/orgs/[id]`: W21 360° 템플릿. 헤더(name·status·plan) + 액션 카드
+  (plan 버튼 3개 + 일시정지/활성화 + 학원장 시점 임시 진입) + 30일 KPI grid
+  (운행 수·진행 중/종료·누적 거리·미탑승·FCM 등록 기사 수) + 5 sub-card
+  (차량·정류장·학생·직원·학부모 count + 최근 5개 list) + 30일 audit log section.
+- `actions.ts`: `updateOrgPlanAction` / `suspendOrgAction` / `activateOrgAction` /
+  `startImpersonationAction`. 모두 `writeAuditLog` + `revalidatePath`.
+- `src/lib/auth/audit.ts`: `writeAuditLog(input)` — Prisma `InputJsonValue`
+  payload, log 실패 시 throw 안 함.
+- `src/lib/auth/impersonate.ts`: `setImpersonateCookie`/`readImpersonateCookie`/
+  `clearImpersonateCookie`. payload `{orgId, adminEmail, ts}` base64url + sha256
+  HMAC. cookie maxAge 4시간.
+- `getOrgId()` 매니저 통합 — admin 세션 + impersonate cookie 있으면 그 orgId
+  반환 (비-매니저는 cookie 무시 — 보안).
+
+**Day 3 — Stops/Vehicles/Trips cross-org overview**
+- `/admin/stops`: 전체 학원 정류장 list (orgName 컬럼·학생 수·RouteStop 사용
+  수) + 카카오맵 cluster 지도 (`MarkerClusterer`로 300+ 마커 대비, 마커 클릭
+  시 학원·정류장 이름 정보창). dynamic import wrapper SSR-safe.
+- `/admin/vehicles`: cross-org 차량 list. 4 KPI(전체·운행 중·만료·30일 내
+  임박) + 보험 만료 1순위 정렬 + 운행 중 노란 배지.
+- `/admin/trips`: 오늘 cross-org 운행 list (학원명·차량·기사·status·시각) +
+  `AdminMultiTripLive` 실시간 지도 (owner/dashboard MultiTripLiveSection 미러,
+  마커 클릭 시 `/admin/orgs/[orgId]` 이동).
+
+**Day 4 — Users + APK + Push + Impersonation 빨간 배너**
+- `(owner)/_components/impersonation-banner.tsx`: 학원장 시점 임시 진입 시 상단
+  빨간 띠 (`sticky top-0 z-50`) + 종료 버튼.
+- `(owner)/layout.tsx`: 매니저 + impersonate cookie면 OWNER role 우회 통과 +
+  impersonate 학원의 정보로 헤더·nav 표시. status 무관 진입(운영팀 의도적 점검).
+- `/admin/users`: Staff·Guardian 통합 검색 (loginId·name·phone·email,
+  `mode: "insensitive"`). 학원명 배지 + role 배지 + recoveryEmail 마스킹.
+- `/admin/users/[kind]/[id]`: 디테일 + 4 액션 (비번 reset 메일·recoveryEmail
+  수정·강제 로그아웃·org 360° link).
+- `users/actions.ts`: `sendPasswordResetLinkAction` (Supabase admin client
+  `resetPasswordForEmail` → recoveryEmail 발송) + `updateRecoveryEmailAction`
+  (`admin.auth.admin.updateUserById` + Staff/Guardian DB sync) +
+  `forceSignOutAction` (`user_metadata.force_signout_at` flag, 다음 토큰 갱신
+  최대 1시간 후 적용).
+- `/admin/apk`: 활성 버전 카드 + 신 버전 등록 폼 + 과거 release list.
+  `addReleaseAction` (transaction으로 기존 active 비활성화 + 신규 row insert) +
+  `setActiveReleaseAction` (atomic flip).
+- `/api/driver-app/version` route: DB DriverAppRelease.isActive 우선 + ENV
+  fallback (점진 이행). DB 조회 실패해도 ENV로 fallback.
+- `/admin/notifications`: 단일 user 푸시 테스트 (`sendToStaff` / `sendToGuardian`,
+  카테고리 ANNOUNCEMENT, 인앱 알림 미러도 자동 생성). 사용 팁 카드.
+
+**Day 5 — 문서 + 머지**
+- CLAUDE.md: 사용자 역할에 `SHUTTLEE_ADMIN` 추가 (Staff role 아님 명시),
+  디렉토리 구조 `app/admin/` 명시, 라우트 충돌 회피 패턴에 `/admin/*` 추가,
+  마일스톤 W24 entry 추가.
+- progress.md: 이 항목.
+
+**사용자 작업 (베타 머지 후)**
+- `pnpm db:migrate deploy` — admin_system 마이그레이션 production DB 적용.
+- Vercel production env 등록:
+  - `SHUTTLEE_ADMIN_EMAILS` — 매니저 이메일 콤마 분리 (예: `st2000423@gmail.com`)
+  - `IMPERSONATE_COOKIE_SECRET` — `openssl rand -hex 32` 결과 (32자 이상)
+
+**Critical 파일**
+- 신규: `src/app/admin/{layout,page}.tsx` + `orgs/{page,[id]/page,[id]/actions,
+  _components/*}` + `stops/{page,_components/*}` + `vehicles/page` +
+  `trips/{page,_components/admin-multi-trip-live}` + `users/{page,actions,
+  [kind]/[id]/page,_components/*}` + `apk/{page,actions,_components/*}` +
+  `notifications/{page,actions,_components/*}` + `src/lib/auth/{admin,
+  audit,impersonate}.ts` + `(owner)/_components/{impersonation-banner,
+  impersonation-actions}` + `prisma/migrations/20260507180000_admin_system/`.
+- 수정: `prisma/schema.prisma` (Organization·AdminAuditLog·DriverAppRelease) +
+  `src/lib/env.ts` + `src/lib/auth/session.ts` (orgStatus + getOrgId
+  impersonate) + `(auth)/login/{actions,page}` + 4개 layout SUSPENDED 차단 +
+  `(owner)/layout.tsx` impersonate 통합 + `api/driver-app/version/route.ts`
+  DB fallback + 기존 admin 두 페이지 hardcoded 가드 제거 + `.env.example`.
+
+## 다음 우선순위 (W25+)
+
+W24까지 베타 운영 도구 풀세트 완비. W25부터는 베타 졸업·정식 런칭 준비.
 
 ### P1 — 베타 졸업 필수
 
