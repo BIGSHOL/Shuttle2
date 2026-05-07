@@ -2,14 +2,14 @@
   "expo": {
     "name": "셔틀이 기사",
     "slug": "shuttlee-driver",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "scheme": "shuttlee-driver",
     "newArchEnabled": false,
     "android": {
       "package": "com.shuttlee.driver",
-      "versionCode": 3,
+      "versionCode": 4,
       "googleServicesFile": "./google-services.json",
       "permissions": [
         "ACCESS_FINE_LOCATION",
