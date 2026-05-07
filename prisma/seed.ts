@@ -159,16 +159,34 @@ async function main() {
   // 좌표는 도로명주소 기반 근사값 (오차 ~100~300m). 정밀 보정은 학원장
   // 화면 → 정류장 편집 카카오 지도 picker로 드래그.
   // radiusM=150으로 GPS 흔들림에도 STOP_PASS 자동 판정이 잡히게.
+  // address는 W18-도입 컬럼. 운영 시 stop-map-picker가 카카오 reverse
+  // geocoding으로 자동 채우는데 시드는 직접 명시 (실제 도로명/지번).
   const stops = await Promise.all(
     [
-      // 출발: 대구 북구 동북로 163 (산격동, 산격대우아파트)
-      { name: "산격대우아파트 (데모·출발)", lat: 35.8927, lng: 128.6088 },
-      // 중간: 산격동 서쪽 산격네거리 부근
-      { name: "산격네거리 (데모)", lat: 35.89, lng: 128.601 },
-      // 중간: 침산동 동쪽 침산네거리 부근
-      { name: "침산네거리 (데모)", lat: 35.887, lng: 128.594 },
-      // 도착: 대구 북구 침산남로 140 (침산동)
-      { name: "침산남로 140 학원 (데모·도착)", lat: 35.8825, lng: 128.588 },
+      {
+        name: "산격대우아파트 (데모·출발)",
+        lat: 35.8927,
+        lng: 128.6088,
+        address: "대구 북구 동북로 163",
+      },
+      {
+        name: "산격네거리 (데모)",
+        lat: 35.89,
+        lng: 128.601,
+        address: "대구 북구 산격동 산격네거리 부근",
+      },
+      {
+        name: "침산네거리 (데모)",
+        lat: 35.887,
+        lng: 128.594,
+        address: "대구 북구 침산동 침산네거리 부근",
+      },
+      {
+        name: "침산남로 140 학원 (데모·도착)",
+        lat: 35.8825,
+        lng: 128.588,
+        address: "대구 북구 침산남로 140",
+      },
     ].map((s) =>
       db.stop.create({
         data: {
@@ -176,6 +194,7 @@ async function main() {
           name: s.name,
           lat: s.lat,
           lng: s.lng,
+          address: s.address,
           radiusM: 150,
         },
       }),
