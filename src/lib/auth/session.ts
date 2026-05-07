@@ -3,7 +3,7 @@ import { cache } from "react";
 
 import { db } from "@/lib/db";
 import { createClient } from "@/lib/supabase/server";
-import type { OrgType, StaffRole } from "@/generated/prisma/enums";
+import type { OrgStatus, OrgType, StaffRole } from "@/generated/prisma/enums";
 
 export type CurrentUser = {
   authUserId: string;
@@ -17,6 +17,7 @@ export type CurrentUser = {
     id: string;
     name: string;
     type: OrgType;
+    status: OrgStatus; // W24: 일시정지·트라이얼 만료 차단용
   };
 };
 
@@ -83,6 +84,7 @@ export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
       id: staff.org.id,
       name: staff.org.name,
       type: staff.org.type,
+      status: staff.org.status,
     },
   };
 });
@@ -154,7 +156,8 @@ export type CurrentGuardian = {
   authUserId: string;
   email: string;
   guardian: { id: string; name: string; phone: string };
-  students: { id: string; name: string; orgId: string }[];
+  // W24: orgStatus 포함 — 자녀 학원이 모두 비-ACTIVE면 layout이 차단 처리.
+  students: { id: string; name: string; orgId: string; orgStatus: OrgStatus }[];
 };
 
 export const getCurrentGuardian = cache(
@@ -167,7 +170,14 @@ export const getCurrentGuardian = cache(
       include: {
         links: {
           include: {
-            student: { select: { id: true, name: true, orgId: true } },
+            student: {
+              select: {
+                id: true,
+                name: true,
+                orgId: true,
+                org: { select: { status: true } },
+              },
+            },
           },
         },
       },
@@ -182,7 +192,12 @@ export const getCurrentGuardian = cache(
         name: guardian.name,
         phone: guardian.phone,
       },
-      students: guardian.links.map((l) => l.student),
+      students: guardian.links.map((l) => ({
+        id: l.student.id,
+        name: l.student.name,
+        orgId: l.student.orgId,
+        orgStatus: l.student.org.status,
+      })),
     };
   },
 );

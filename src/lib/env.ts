@@ -22,6 +22,11 @@ const envSchema = z.object({
   NEXT_PUBLIC_VAPID_PUBLIC_KEY: z.string().optional(),
   VAPID_PRIVATE_KEY: z.string().optional(),
   VAPID_SUBJECT: z.string().optional(),
+  // W24: 셔틀이 플랫폼 매니저 — ENV 화이트리스트(콤마 분리). 베타 1~3명 운영자.
+  // 비어있어도 빌드 통과 (베타 후 DB role 마이그레이션 가능).
+  SHUTTLEE_ADMIN_EMAILS: z.string().optional(),
+  // W24: impersonation cookie HMAC 서명 키. 32자 이상.
+  IMPERSONATE_COOKIE_SECRET: z.string().min(32).optional(),
 });
 
 type Env = z.infer<typeof envSchema>;

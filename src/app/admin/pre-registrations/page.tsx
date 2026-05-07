@@ -1,5 +1,3 @@
-import { notFound } from "next/navigation";
-
 import {
   Card,
   CardContent,
@@ -8,11 +6,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { db } from "@/lib/db";
-import { getCurrentUser } from "@/lib/auth/session";
 
-// 운영자 sales lead 확인용 단순 페이지. 화이트리스트 이메일만 접근.
-// 다른 사용자가 URL로 진입하면 notFound (404).
-const ADMIN_EMAILS = new Set(["st2000423@gmail.com"]);
+// W24: 가드는 src/app/admin/layout.tsx의 requireShuttleAdmin이 일괄 처리.
+// 페이지 자체는 단순 데이터 조회만 — sales lead 신청 list (최근 100건).
 
 const ORG_TYPE_LABEL = {
   ACADEMY: "학원·교습소",
@@ -21,16 +17,13 @@ const ORG_TYPE_LABEL = {
 } as const;
 
 export default async function AdminPreRegistrationsPage() {
-  const me = await getCurrentUser();
-  if (!me || !ADMIN_EMAILS.has(me.email)) notFound();
-
   const items = await db.preRegistration.findMany({
     orderBy: { createdAt: "desc" },
     take: 100,
   });
 
   return (
-    <main className="mx-auto max-w-5xl space-y-4 p-6">
+    <main className="space-y-4">
       <div>
         <h2 className="text-2xl font-semibold">사전등록 ({items.length})</h2>
         <p className="text-muted-foreground text-sm">

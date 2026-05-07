@@ -28,6 +28,11 @@ export default async function ParentLayout({
     if (staff) redirect(homePathForRole(staff.staff.role));
     redirect("/login?redirectTo=/home");
   }
+  // W24: 자녀 학원이 모두 비-ACTIVE이면 차단. 1곳이라도 ACTIVE면 통과.
+  if (me.students.length > 0) {
+    const anyActive = me.students.some((s) => s.orgStatus === "ACTIVE");
+    if (!anyActive) redirect("/login?suspended=1");
+  }
 
   // 안 읽은 알림 카운트 (헤더 벨 뱃지)
   const unreadCount = await db.notification.count({

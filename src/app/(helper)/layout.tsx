@@ -26,6 +26,10 @@ export default async function HelperLayout({
   if (user.staff.role !== "HELPER") {
     redirect(homePathForRole(user.staff.role));
   }
+  // W24: 학원이 SUSPENDED·TRIAL_EXPIRED면 진입 차단 (재진입 차단).
+  if (user.org.status !== "ACTIVE") {
+    redirect("/login?suspended=1");
+  }
 
   // 안 읽은 알림 카운트 (헤더 벨 뱃지)
   const unreadCount = await db.notification.count({
