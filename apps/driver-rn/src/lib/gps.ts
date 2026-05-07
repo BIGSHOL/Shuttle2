@@ -148,22 +148,29 @@ async function handleLocation(loc: Location.LocationObject): Promise<void> {
   }
 }
 
-// TaskManager.defineTask는 module-level (앱 entry 첫 import 시점).
-// background에서도 location 업데이트마다 callback 실행.
+// TaskManager.defineTask는 *지연 등록* (W23-E 1.0.2 수술 — 흰 화면 회피).
+// 원래 module-level이었지만 expo-task-manager native 모듈 init 실패 시
+// 앱 entry 첫 import 단계에서 throw → JS 번들 로드 실패 → 흰 화면이 됐을 가능성.
+// startGps 첫 호출 시점으로 이동해 root mount 영향 제거.
 type LocationTaskData = { locations?: Location.LocationObject[] };
-TaskManager.defineTask<LocationTaskData>(LOCATION_TASK, async (body) => {
-  if (body.error) {
-    console.warn("location task error:", body.error);
-    active?.onError?.("위치 추적 오류가 발생했어요");
-    return;
-  }
-  const locations = body.data?.locations ?? [];
-  for (const loc of locations) {
-    await handleLocation(loc).catch((e) =>
-      console.warn("handleLocation:", e),
-    );
-  }
-});
+let _taskRegistered = false;
+function ensureLocationTaskRegistered(): void {
+  if (_taskRegistered) return;
+  _taskRegistered = true;
+  TaskManager.defineTask<LocationTaskData>(LOCATION_TASK, async (body) => {
+    if (body.error) {
+      console.warn("location task error:", body.error);
+      active?.onError?.("위치 추적 오류가 발생했어요");
+      return;
+    }
+    const locations = body.data?.locations ?? [];
+    for (const loc of locations) {
+      await handleLocation(loc).catch((e) =>
+        console.warn("handleLocation:", e),
+      );
+    }
+  });
+}
 
 async function ensureChannel(tripId: string): Promise<RealtimeChannel> {
   const ch = supabase.channel(tripChannelName(tripId), {
@@ -185,6 +192,9 @@ export async function startGps(opts: {
   onError?: (msg: string) => void;
 }): Promise<void> {
   if (active) return;
+
+  // module-level에서 옮겨온 lazy 등록 — 첫 startGps 호출에만 실제 native 호출.
+  ensureLocationTaskRegistered();
 
   // 권한 확인 — foreground 먼저, 그 다음 background
   const fg = await Location.requestForegroundPermissionsAsync();

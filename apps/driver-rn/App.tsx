@@ -5,10 +5,21 @@
 // 화면 흐름:
 //   loading → login (미인증) → run-list → trip → run-list (종료 후)
 //   run-list ↔ notifications
+//
+// W23-E 1.0.2 수술:
+// - <ErrorBoundary>로 모든 render·setState throw를 잡아 흰 화면 대신 한국어 에러 메시지로.
+// - FCM useEffect 본문도 try/catch — onTokenRefresh/onMessage가 native 미초기화 상태에서 throw 가능.
 
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef, useState } from "react";
-import { ActivityIndicator, Alert, StyleSheet, Text, View } from "react-native";
+import { Component, useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  ActivityIndicator,
+  Alert,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+} from "react-native";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import {
@@ -23,6 +34,42 @@ import { LoginScreen } from "./src/screens/LoginScreen";
 import { NotificationsScreen } from "./src/screens/NotificationsScreen";
 import { RunListScreen } from "./src/screens/RunListScreen";
 import { TripScreen } from "./src/screens/TripScreen";
+
+// React Error Boundary — render·setState 단계의 어떤 throw든 잡아서
+// 흰 화면 대신 명확한 한국어 에러 메시지(스택 포함)를 노출.
+// JS 모듈 로드 시점 throw는 못 잡지만, 그 이후 발생 에러는 모두 캡처.
+class AppErrorBoundary extends Component<
+  { children: ReactNode },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) {
+    return { error };
+  }
+  componentDidCatch(error: Error) {
+    console.error("[AppErrorBoundary]", error);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <View style={styles.boundary}>
+          <Text style={styles.boundaryTitle}>앱 오류</Text>
+          <Text style={styles.boundaryMessage}>
+            {this.state.error.message ?? String(this.state.error)}
+          </Text>
+          {this.state.error.stack ? (
+            <ScrollView style={styles.boundaryStackBox}>
+              <Text style={styles.boundaryStack} selectable>
+                {this.state.error.stack}
+              </Text>
+            </ScrollView>
+          ) : null}
+        </View>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 type Screen =
   | { kind: "loading" }
@@ -73,7 +120,8 @@ export default function App() {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  // FCM 토큰 등록 — 로그인 후 1회 (앱이 살아있는 동안)
+  // FCM 토큰 등록 — 로그인 후 1회 (앱이 살아있는 동안).
+  // native messaging() 호출이 동기 throw할 가능성 있어 try/catch로 보호.
   useEffect(() => {
     const isAuthed =
       screen.kind === "run-list" ||
@@ -83,18 +131,32 @@ export default function App() {
     fcmRegistered.current = true;
     void registerFcmToken().catch(() => {});
 
-    const unsubRefresh = onFcmTokenRefresh(() => {
-      void registerFcmToken().catch(() => {});
-    });
-    const unsubMsg = onFcmForegroundMessage((msg) => {
-      if (msg.title) {
-        Alert.alert(msg.title, msg.body);
-      }
-    });
+    let unsubRefresh: (() => void) | null = null;
+    let unsubMsg: (() => void) | null = null;
+    try {
+      unsubRefresh = onFcmTokenRefresh(() => {
+        void registerFcmToken().catch(() => {});
+      });
+      unsubMsg = onFcmForegroundMessage((msg) => {
+        if (msg.title) {
+          Alert.alert(msg.title, msg.body);
+        }
+      });
+    } catch (e) {
+      console.warn("FCM listeners failed:", e);
+    }
 
     return () => {
-      unsubRefresh();
-      unsubMsg();
+      try {
+        unsubRefresh?.();
+      } catch {
+        /* ignore */
+      }
+      try {
+        unsubMsg?.();
+      } catch {
+        /* ignore */
+      }
     };
   }, [screen.kind]);
 
@@ -105,9 +167,10 @@ export default function App() {
   }
 
   return (
-    <SafeAreaProvider>
-      <StatusBar style="auto" />
-      {screen.kind === "loading" ? (
+    <AppErrorBoundary>
+      <SafeAreaProvider>
+        <StatusBar style="auto" />
+        {screen.kind === "loading" ? (
         <View style={styles.loading}>
           <ActivityIndicator size="large" />
         </View>
@@ -129,10 +192,13 @@ export default function App() {
           tripId={screen.tripId}
           onEnd={() => setScreen({ kind: "run-list" })}
         />
-      ) : (
-        <NotificationsScreen onClose={() => setScreen({ kind: "run-list" })} />
-      )}
-    </SafeAreaProvider>
+        ) : (
+          <NotificationsScreen
+            onClose={() => setScreen({ kind: "run-list" })}
+          />
+        )}
+      </SafeAreaProvider>
+    </AppErrorBoundary>
   );
 }
 
@@ -162,5 +228,35 @@ const styles = StyleSheet.create({
     color: "#444",
     textAlign: "center",
     lineHeight: 20,
+  },
+  boundary: {
+    flex: 1,
+    backgroundColor: "#fff",
+    padding: 24,
+    paddingTop: 64,
+  },
+  boundaryTitle: {
+    fontSize: 20,
+    fontWeight: "800",
+    color: "#b91c1c",
+    marginBottom: 12,
+  },
+  boundaryMessage: {
+    fontSize: 14,
+    color: "#111",
+    marginBottom: 16,
+  },
+  boundaryStackBox: {
+    flex: 1,
+    borderColor: "#e5e7eb",
+    borderWidth: 1,
+    borderRadius: 8,
+    padding: 12,
+    backgroundColor: "#f9fafb",
+  },
+  boundaryStack: {
+    fontSize: 11,
+    color: "#374151",
+    fontFamily: "monospace",
   },
 });
