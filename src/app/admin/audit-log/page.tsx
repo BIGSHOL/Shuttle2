@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import type { Prisma } from "@/generated/prisma/client";
 
+import { requireShuttleAdmin } from "@/lib/auth/admin";
 import {
   AUDIT_ACTION_OPTIONS,
   auditActionLabel,
@@ -10,6 +11,9 @@ import { db } from "@/lib/db";
 
 // W24: 매니저 — 통합 작업 이력. 학원 detail의 "최근 30일 매니저 작업 이력"
 // 대비 cross-org·기간·작업자 필터 + 페이지네이션을 제공.
+// layout 가드 외에 페이지 레벨에서도 requireShuttleAdmin()을 재호출 —
+// 향후 layout 우회 경로(API Route, 미들웨어 변경 등)가 생겨도 cross-org
+// 민감 데이터가 노출되지 않도록 defense-in-depth.
 
 const PAGE_SIZE = 50;
 
@@ -25,6 +29,7 @@ export default async function AdminAuditLogPage({
     page?: string;
   }>;
 }) {
+  await requireShuttleAdmin();
   const sp = await searchParams;
   const actorFilter = (sp.actor ?? "").trim();
   const actionFilter = sp.action && sp.action !== "all" ? sp.action : null;
