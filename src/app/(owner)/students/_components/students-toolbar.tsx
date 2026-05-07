@@ -22,7 +22,7 @@ import {
   GRADE_LABELS,
   PAGE_SIZES,
   type ParsedParams,
-} from "../_lib/query";
+} from "../_lib/constants";
 
 const ALL = "__all__";
 
