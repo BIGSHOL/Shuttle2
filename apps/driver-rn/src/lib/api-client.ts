@@ -13,10 +13,12 @@ type Extras = {
 
 const extras = (Constants.expoConfig?.extra ?? {}) as Extras;
 
+// fallback은 Vercel 자동 도메인. shuttlee.kr 정식 도메인 발급되면 교체.
+// EAS preview·production 빌드는 eas.json env 블록의 EXPO_PUBLIC_API_BASE_URL이 우선.
 const API_BASE_URL =
   extras.EXPO_PUBLIC_API_BASE_URL ??
   process.env.EXPO_PUBLIC_API_BASE_URL ??
-  "https://shuttlee.kr";
+  "https://shuttle2-nine.vercel.app";
 
 export class ApiError extends Error {
   status: number;

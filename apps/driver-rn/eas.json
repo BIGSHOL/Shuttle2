@@ -14,12 +14,22 @@
     "preview": {
       "distribution": "internal",
       "channel": "preview",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://zlxmnenvkteybfgnsfdo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpseG1uZW52a3RleWJmZ25zZmRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MjQ5NTksImV4cCI6MjA5MzIwMDk1OX0.9FOeBrTW1sESAqI_HBbe7yobZpiuITuClc1vPU9t8ZM",
+        "EXPO_PUBLIC_API_BASE_URL": "https://shuttle2-nine.vercel.app"
+      },
       "android": {
         "buildType": "apk"
       }
     },
     "production": {
       "channel": "production",
+      "env": {
+        "EXPO_PUBLIC_SUPABASE_URL": "https://zlxmnenvkteybfgnsfdo.supabase.co",
+        "EXPO_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpseG1uZW52a3RleWJmZ25zZmRvIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzc2MjQ5NTksImV4cCI6MjA5MzIwMDk1OX0.9FOeBrTW1sESAqI_HBbe7yobZpiuITuClc1vPU9t8ZM",
+        "EXPO_PUBLIC_API_BASE_URL": "https://shuttle2-nine.vercel.app"
+      },
       "android": {
         "buildType": "apk"
       }
