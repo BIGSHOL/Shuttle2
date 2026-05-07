@@ -1,18 +1,53 @@
 import Link from "next/link";
 
+import type { Prisma } from "@/generated/prisma/client";
+
 import { db } from "@/lib/db";
 
-// W24: 매니저 — 전체 학원의 차량 cross-org list.
+// W24: 매니저 — 전체 학원의 차량 통합 목록.
 // 보험 만료 임박(30일 이내)을 빨간색으로 1순위 정렬, 운행 중 표시.
+// 검색(번호판)·학원·보험 상태 필터.
 
-export default async function AdminVehiclesPage() {
+type RiskFilter = "expired" | "expiring" | "ok" | "missing";
+const RISK_OPTIONS: { value: RiskFilter; label: string }[] = [
+  { value: "expired", label: "만료됨" },
+  { value: "expiring", label: "30일 내 임박" },
+  { value: "ok", label: "정상" },
+  { value: "missing", label: "미등록" },
+];
+
+export default async function AdminVehiclesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ q?: string; orgId?: string; risk?: string }>;
+}) {
+  const sp = await searchParams;
+  const q = (sp.q ?? "").trim();
+  const orgIdFilter = sp.orgId && sp.orgId !== "all" ? sp.orgId : null;
+  const riskFilter = isRisk(sp.risk) ? sp.risk : null;
+
   const today = new Date();
   today.setUTCHours(0, 0, 0, 0);
   const thirtyDaysAhead = new Date(today);
   thirtyDaysAhead.setUTCDate(thirtyDaysAhead.getUTCDate() + 30);
 
-  const [vehicles, runningTrips] = await Promise.all([
+  const where: Prisma.VehicleWhereInput = {
+    ...(q ? { plate: { contains: q, mode: "insensitive" as const } } : {}),
+    ...(orgIdFilter ? { orgId: orgIdFilter } : {}),
+    ...(riskFilter === "expired"
+      ? { insuranceUntil: { lt: today } }
+      : riskFilter === "expiring"
+        ? { insuranceUntil: { gte: today, lte: thirtyDaysAhead } }
+        : riskFilter === "ok"
+          ? { insuranceUntil: { gt: thirtyDaysAhead } }
+          : riskFilter === "missing"
+            ? { insuranceUntil: null }
+            : {}),
+  };
+
+  const [vehicles, runningTrips, allOrgs] = await Promise.all([
     db.vehicle.findMany({
+      where,
       orderBy: [{ org: { name: "asc" } }, { plate: "asc" }],
       select: {
         id: true,
@@ -26,6 +61,10 @@ export default async function AdminVehiclesPage() {
     db.trip.findMany({
       where: { startedAt: { not: null }, endedAt: null },
       select: { vehicleId: true },
+    }),
+    db.organization.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
     }),
   ]);
 
@@ -54,8 +93,8 @@ export default async function AdminVehiclesPage() {
       <div>
         <h2 className="text-2xl font-extrabold tracking-tight">차량</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          전체 학원·기관의 차량 ({vehicles.length}대). 보험 만료 임박이
-          상단으로. 운행 중인 차량은 노란 배지.
+          전체 학원·기관의 차량. 보험 만료 임박이 상단으로, 운행 중인 차량은
+          노란 배지.
         </p>
       </div>
 
@@ -75,12 +114,69 @@ export default async function AdminVehiclesPage() {
         />
       </section>
 
-      {/* List */}
+      {/* 검색·필터 */}
+      <form
+        action="/admin/vehicles"
+        className="bg-card flex flex-wrap gap-2 rounded-lg border p-3 shadow-sm"
+      >
+        <input
+          type="text"
+          name="q"
+          defaultValue={q}
+          placeholder="차량 번호판"
+          className="bg-card border-input min-w-40 flex-1 rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        />
+        <select
+          name="orgId"
+          defaultValue={orgIdFilter ?? "all"}
+          className="bg-card border-input rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="all">전체 학원</option>
+          {allOrgs.map((o) => (
+            <option key={o.id} value={o.id}>
+              {o.name}
+            </option>
+          ))}
+        </select>
+        <select
+          name="risk"
+          defaultValue={riskFilter ?? "all"}
+          className="bg-card border-input rounded-md border px-3 py-2 text-sm shadow-sm focus:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+        >
+          <option value="all">전체 보험 상태</option>
+          {RISK_OPTIONS.map((r) => (
+            <option key={r.value} value={r.value}>
+              {r.label}
+            </option>
+          ))}
+        </select>
+        <button
+          type="submit"
+          className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-md px-4 py-2 text-sm font-bold"
+        >
+          검색
+        </button>
+        {(q || orgIdFilter || riskFilter) && (
+          <Link
+            href="/admin/vehicles"
+            className="text-muted-foreground hover:text-foreground inline-flex items-center rounded-md border px-3 py-2 text-sm font-medium"
+          >
+            초기화
+          </Link>
+        )}
+      </form>
+
+      {/* 목록 */}
       <section className="bg-card rounded-lg border shadow-sm">
+        <div className="border-b px-4 py-2.5">
+          <p className="text-muted-foreground text-xs font-extrabold tracking-wide uppercase">
+            결과 ({sorted.length}대)
+          </p>
+        </div>
         <ul className="divide-y">
           {sorted.length === 0 ? (
             <li className="text-muted-foreground p-4 text-sm">
-              아직 등록된 차량이 없습니다.
+              조건에 맞는 차량이 없습니다.
             </li>
           ) : (
             sorted.map((v) => {
@@ -199,4 +295,8 @@ function riskOf(
   if (insuranceUntil < today) return 0;
   if (insuranceUntil <= thirtyDaysAhead) return 1;
   return 2;
+}
+
+function isRisk(v: string | undefined): v is RiskFilter {
+  return v === "expired" || v === "expiring" || v === "ok" || v === "missing";
 }

@@ -73,7 +73,7 @@ export default async function AdminHomePage() {
     {
       label: "최근 7일 신규 학원",
       value: recentOrgs.length.toLocaleString(),
-      sub: recentOrgs.length > 0 ? "아래 list 확인" : "신규 가입 없음",
+      sub: recentOrgs.length > 0 ? "아래 목록 확인" : "신규 가입 없음",
     },
   ];
 
@@ -121,25 +121,25 @@ export default async function AdminHomePage() {
           href="/admin/orgs"
           icon={<Building2 className="h-5 w-5" />}
           label="학원·기관"
-          desc="가입 학원 list + plan·status 변경 + 360°"
+          desc="가입 학원 목록 · 요금제·운영 상태 변경 · 상세 보기"
         />
         <QuickLink
           href="/admin/stops"
           icon={<MapIcon className="h-5 w-5" />}
           label="정류장"
-          desc="cross-org 전체 정류장 지도·list"
+          desc="전체 학원 정류장 지도·목록"
         />
         <QuickLink
           href="/admin/vehicles"
           icon={<Bus className="h-5 w-5" />}
           label="차량"
-          desc="cross-org 전체 차량 + 보험 만료 임박"
+          desc="전체 학원 차량 · 보험 만료 임박"
         />
         <QuickLink
           href="/admin/trips"
           icon={<Activity className="h-5 w-5" />}
           label="운행"
-          desc="오늘 운행 + 운행 중 multi-org 라이브 지도"
+          desc="오늘 운행 · 운행 중 실시간 지도"
         />
       </section>
 

@@ -7,8 +7,9 @@ import { useTripBroadcast } from "@/lib/geo/use-trip-broadcast";
 import { MultiTripLiveMap } from "@/lib/map/multi-trip-live-map";
 import type { MultiTripDescriptor } from "@/lib/map/multi-trip-live-map-inner";
 
-// W24: 매니저 cross-org multi-trip 라이브 지도. (owner) MultiTripLiveSection 미러,
-// 마커 클릭 시 admin 학원 360°로 이동.
+// W24: 매니저 — 전체 학원의 운행 중 차량을 한 지도에 모아 보는 컴포넌트.
+// 학원장 dashboard의 MultiTripLiveSection을 그대로 차용. 마커 클릭 시 해당
+// 학원 상세 페이지로 이동.
 
 type TripInput = Omit<MultiTripDescriptor, "ping"> & { orgId: string };
 
@@ -58,7 +59,7 @@ export function AdminMultiTripLive({
           </span>
         </div>
         <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-          기사 폰 위치 · 약 5초마다 갱신 · 마커 클릭 시 해당 학원 360°로 이동
+          기사 폰 위치 · 약 5초마다 갱신 · 마커 클릭 시 해당 학원 상세로 이동
         </p>
       </div>
 

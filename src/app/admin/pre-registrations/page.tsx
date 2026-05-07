@@ -8,7 +8,8 @@ import {
 import { db } from "@/lib/db";
 
 // W24: 가드는 src/app/admin/layout.tsx의 requireShuttleAdmin이 일괄 처리.
-// 페이지 자체는 단순 데이터 조회만 — sales lead 신청 list (최근 100건).
+// 페이지 자체는 단순 데이터 조회만 — 마케팅 랜딩에서 들어온 베타 신청 목록
+// (최근 100건).
 
 const ORG_TYPE_LABEL = {
   ACADEMY: "학원·교습소",

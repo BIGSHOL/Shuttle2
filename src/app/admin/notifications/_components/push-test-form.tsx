@@ -16,7 +16,7 @@ export function PushTestForm() {
   const [id, setId] = useState("");
   const [title, setTitle] = useState("셔틀이 매니저 — 푸시 테스트");
   const [body, setBody] = useState(
-    "이 알림이 보이면 푸시 등록이 정상 동작합니다.",
+    "이 알림이 보이면 푸시 등록이 정상 작동하는 것입니다.",
   );
   const [url, setUrl] = useState("/home");
 
@@ -35,7 +35,7 @@ export function PushTestForm() {
         if (r.ok) {
           setFeedback({
             tone: "success",
-            text: `발송 완료: ${r.sent}건${r.pruned > 0 ? ` (만료된 구독 ${r.pruned}건 정리)` : ""}`,
+            text: `발송 완료: ${r.sent}건${r.pruned > 0 ? ` (만료된 구독 ${r.pruned}건 자동 정리)` : ""}`,
           });
         } else {
           setFeedback({ tone: "destructive", text: r.error });
@@ -59,8 +59,8 @@ export function PushTestForm() {
             onChange={(e) => setKind(e.target.value as "STAFF" | "GUARDIAN")}
             className="bg-card border-input mt-1 w-full rounded-md border px-3 py-2 text-sm shadow-sm"
           >
-            <option value="STAFF">Staff (학원장·기사·동승자)</option>
-            <option value="GUARDIAN">학부모 (Guardian)</option>
+            <option value="STAFF">직원 (학원장·기사·동승자)</option>
+            <option value="GUARDIAN">학부모</option>
           </select>
         </div>
         <div>
@@ -71,11 +71,11 @@ export function PushTestForm() {
             type="text"
             value={id}
             onChange={(e) => setId(e.target.value)}
-            placeholder="staffId 또는 guardianId (cuid)"
+            placeholder="직원·학부모 ID (cuid 형식)"
             className="bg-card border-input mt-1 w-full rounded-md border px-3 py-2 font-mono text-xs shadow-sm"
           />
           <p className="text-muted-foreground mt-1 text-[10px]">
-            /admin/users에서 검색 후 디테일 url의 마지막 segment.
+            /admin/users에서 검색 후 상세 페이지 주소의 마지막 부분.
           </p>
         </div>
       </div>

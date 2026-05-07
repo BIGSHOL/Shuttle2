@@ -576,12 +576,14 @@ model AdminAuditLog {
 // 기사 RN 앱 APK 버전 관리. 한 row만 isActive=true 유지하고 나머지는 history.
 // /api/driver-app/version GET이 isActive row를 반환 → ENV fallback.
 model DriverAppRelease {
-  id           String   @id @default(cuid())
-  version      String   @unique // semver, e.g. "1.0.1"
-  apkUrl       String // EAS artifact URL 또는 GitHub Releases URL
-  releaseNotes String?
-  isActive     Boolean  @default(false)
-  createdAt    DateTime @default(now())
+  id            String   @id @default(cuid())
+  version       String   @unique // semver, e.g. "1.0.1"
+  apkUrl        String // EAS artifact URL 또는 GitHub Releases URL
+  releaseNotes  String?
+  sha256        String? // 64자 hex — 베타에서 무결성 확인용 (선택)
+  fileSizeBytes Int? // 다운로드 안내·잘못된 파일 감지용 (선택)
+  isActive      Boolean  @default(false)
+  createdAt     DateTime @default(now())
 
   @@index([isActive, createdAt])
 }

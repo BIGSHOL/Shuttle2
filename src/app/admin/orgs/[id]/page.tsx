@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 
 import { db } from "@/lib/db";
+import { auditActionLabel } from "@/lib/auth/audit-labels";
 import { computeTripStats } from "@/lib/geo/trip-stats";
 
 import { OrgActionsCard } from "../_components/org-actions-card";
@@ -27,7 +28,7 @@ const STAFF_ROLE_LABEL = {
   HELPER: "동승자",
 } as const;
 
-// W24: 매니저 — 학원 360°. W21 detail page 템플릿.
+// W24: 매니저 — 학원 상세. W21 detail page 템플릿.
 export default async function AdminOrgDetailPage({
   params,
 }: {
@@ -49,6 +50,7 @@ export default async function AdminOrgDetailPage({
     staffCount,
     guardianCount,
     fcmRegisteredCount,
+    owners,
     recentVehicles,
     recentStops,
     recentStudents,
@@ -100,6 +102,19 @@ export default async function AdminOrgDetailPage({
     // 이 학원의 driver staff 중 FCM 등록 수
     db.staffFcmSubscription.count({
       where: { staff: { orgId: id, role: "DRIVER" } },
+    }),
+    // 학원장(OWNER) — 매니저가 고객 응대 시 빠르게 연락처 확인.
+    db.staff.findMany({
+      where: { orgId: id, role: "OWNER" },
+      orderBy: [{ name: "asc" }],
+      select: {
+        id: true,
+        name: true,
+        loginId: true,
+        phone: true,
+        recoveryEmail: true,
+        userId: true,
+      },
     }),
     db.vehicle.findMany({
       where: { orgId: id },
@@ -157,7 +172,7 @@ export default async function AdminOrgDetailPage({
         className="text-muted-foreground hover:text-foreground inline-flex items-center gap-1.5 text-sm font-medium"
       >
         <ArrowLeft className="h-4 w-4" />
-        학원 list로
+        학원 목록으로
       </Link>
 
       {/* 헤더 */}
@@ -197,6 +212,52 @@ export default async function AdminOrgDetailPage({
         plan={org.plan}
       />
 
+      {/* 학원장(OWNER) 연락처 */}
+      <section className="bg-card rounded-lg border shadow-sm">
+        <div className="border-b px-4 py-2.5">
+          <p className="text-foreground text-sm font-extrabold tracking-tight">
+            학원장 연락처 ({owners.length}명)
+          </p>
+        </div>
+        {owners.length === 0 ? (
+          <p className="text-muted-foreground p-4 text-sm">
+            학원장 계정이 없습니다.
+          </p>
+        ) : (
+          <ul className="divide-y">
+            {owners.map((o) => (
+              <li key={o.id}>
+                <Link
+                  href={`/admin/users/STAFF/${o.id}`}
+                  className="hover:bg-muted/40 flex items-center justify-between gap-3 px-4 py-3 transition-colors"
+                >
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <h4 className="text-sm font-extrabold tracking-tight">
+                        {o.name}
+                      </h4>
+                      {!o.userId && (
+                        <span className="bg-warning-soft text-warning rounded-md px-2 py-0.5 text-[11px] font-extrabold tracking-wide">
+                          미가입
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-muted-foreground mt-1 text-xs font-medium">
+                      {o.loginId ? `@${o.loginId} · ` : ""}
+                      {o.phone || "전화 미등록"}
+                      {o.recoveryEmail ? ` · ${o.recoveryEmail}` : ""}
+                    </p>
+                  </div>
+                  <span className="text-muted-foreground text-xs font-medium">
+                    →
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
+
       {/* 30일 KPI */}
       <section>
         <h3 className="text-foreground mb-2 text-sm font-extrabold tracking-wide uppercase">
@@ -216,7 +277,7 @@ export default async function AdminOrgDetailPage({
           />
         </div>
         <p className="text-muted-foreground mt-1 text-[11px] font-medium">
-          기사 RN 앱 FCM 등록: {fcmRegisteredCount}대
+          기사 앱 푸시 등록: {fcmRegisteredCount}대
         </p>
       </section>
 
@@ -273,9 +334,17 @@ export default async function AdminOrgDetailPage({
 
       {/* Audit log */}
       <section>
-        <h3 className="text-foreground mb-2 text-sm font-extrabold tracking-wide uppercase">
-          최근 30일 매니저 작업 이력
-        </h3>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="text-foreground text-sm font-extrabold tracking-wide uppercase">
+            최근 30일 매니저 작업 이력
+          </h3>
+          <Link
+            href={`/admin/audit-log?orgId=${org.id}`}
+            className="text-info text-xs font-bold hover:underline"
+          >
+            전체 이력 보기 →
+          </Link>
+        </div>
         <div className="bg-card rounded-lg border shadow-sm">
           {auditLogs.length === 0 ? (
             <p className="text-muted-foreground p-4 text-sm">기록 없음.</p>
@@ -287,7 +356,7 @@ export default async function AdminOrgDetailPage({
                   className="flex items-center justify-between gap-3 px-4 py-2.5 text-sm"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="font-bold">{l.action}</p>
+                    <p className="font-bold">{auditActionLabel(l.action)}</p>
                     <p className="text-muted-foreground text-xs">
                       {l.actorEmail}
                     </p>

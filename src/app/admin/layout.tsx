@@ -54,6 +54,7 @@ export default async function AdminLayout({
             <AdminNavLink href="/admin/users">사용자</AdminNavLink>
             <AdminNavLink href="/admin/apk">APK 관리</AdminNavLink>
             <AdminNavLink href="/admin/notifications">푸시 테스트</AdminNavLink>
+            <AdminNavLink href="/admin/audit-log">작업 이력</AdminNavLink>
             <div className="my-1.5 border-t" />
             <AdminNavLink href="/admin/kpi">KPI</AdminNavLink>
             <AdminNavLink href="/admin/pre-registrations">사전등록</AdminNavLink>
