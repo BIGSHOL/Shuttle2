@@ -7,15 +7,21 @@ import { z } from "zod";
 import { db } from "@/lib/db";
 import { requireGuardian } from "@/lib/auth/session";
 import { todayUtcDateKst } from "@/lib/date/today";
-import { sendToOwnersOfOrg } from "@/lib/push/server";
+import { sendToOwnersOfOrg, sendToStaff } from "@/lib/push/server";
 
 // 학부모가 자녀의 결석을 신청. 마감 정책 (MVP):
 // - 오늘 또는 미래 날짜만 허용 (과거 X).
 // - 같은 (자녀, 날짜) 중복 신청은 PENDING이 이미 있으면 거절.
 // - 운행이 이미 시작된 자녀의 trip이면 거절.
 //
-// 알림: status는 PENDING. driver 푸시는 W6에서 NOTIFIED_DRIVER로 승격하면서
-// web-push 발송 — 지금은 OWNER 화면에서만 조회 가능.
+// 알림 흐름 (베타 변경): 학원장 confirm 단계를 거치지 않고 status를
+// NOTIFIED_DRIVER로 직접 set. 갑자기 결석하는 경우 학원장 응답 시간만큼
+// 기사 알림 지연되던 문제 해소. 푸시 fan-out:
+//   - 학원장(OWNER) — 정보성 알림 (현장 통제용)
+//   - 그날 trip이 이미 만들어진 경우 그 trip의 driver/helper에게 직접 푸시
+//   - trip 없는 경우(운행 시작 전)는 driver 식별 불가 → 학원장 푸시만.
+//     운행 시작 시 trip 화면이 결석 학생 자동 표시(W15-B 미탑승 안내)로
+//     커버.
 
 export type CreateAbsenceState = {
   error?: string;
@@ -92,11 +98,11 @@ export async function createAbsenceRequestAction(
       type,
       reason: reason ?? null,
       createdBy: me.guardian.id,
-      // status PENDING (default)
+      status: "NOTIFIED_DRIVER",
     },
   });
 
-  // 학부모의 자녀 → 그 자녀의 orgId → 그 org의 OWNER에게 push.
+  // 푸시 fan-out: OWNER + (가능하면) 그날 trip의 driver/helper에게 동시.
   // 발송 실패는 결석 신청 자체를 깨뜨리지 않음 (에러 swallow + 로그).
   const child = me.students.find((s) => s.id === studentId);
   if (child) {
@@ -107,12 +113,42 @@ export async function createAbsenceRequestAction(
         : type === "ABSENT_PICKUP"
           ? "등원"
           : "하원";
-    await sendToOwnersOfOrg(child.orgId, {
-      title: "새 결석 신청",
+
+    // 그날 trip이 이미 만들어진 경우 driver/helper 식별
+    const trip = await db.trip.findFirst({
+      where: {
+        date: targetDate,
+        route: { students: { some: { studentId } } },
+      },
+      select: { driverId: true, helperId: true },
+    });
+
+    const ownerPush = sendToOwnersOfOrg(child.orgId, {
+      title: "결석 신청 접수",
       body: `${child.name} · ${dateLabel} · ${typeLabel}`,
       url: "/absences",
       category: "ABSENCE_REQUESTED",
-    }).catch((e) => console.warn("absence push failed:", e));
+    }).catch((e) => console.warn("absence owner push failed:", e));
+
+    const driverPush = trip?.driverId
+      ? sendToStaff(trip.driverId, {
+          title: "결석 알림",
+          body: `${child.name} · ${dateLabel} · ${typeLabel} 결석`,
+          url: "/run",
+          category: "ABSENCE_REQUESTED",
+        }).catch((e) => console.warn("absence driver push failed:", e))
+      : Promise.resolve();
+
+    const helperPush = trip?.helperId
+      ? sendToStaff(trip.helperId, {
+          title: "결석 알림",
+          body: `${child.name} · ${dateLabel} · ${typeLabel} 결석`,
+          url: "/run",
+          category: "ABSENCE_REQUESTED",
+        }).catch((e) => console.warn("absence helper push failed:", e))
+      : Promise.resolve();
+
+    await Promise.all([ownerPush, driverPush, helperPush]);
   }
 
   revalidatePath("/my-absences");
