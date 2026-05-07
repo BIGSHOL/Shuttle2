@@ -1,4 +1,4 @@
-import { formatDuration, type StopArrival } from "@/lib/geo/trip-stats";
+import type { StopArrival } from "@/lib/geo/trip-stats";
 
 // W19-D: 정류장별 도착 시각·구간 소요시간 표.
 // LocationPing.source = STOP_PASS의 첫 ping을 도착 시각으로 사용.
@@ -6,6 +6,21 @@ import { formatDuration, type StopArrival } from "@/lib/geo/trip-stats";
 
 function fmtKstHHmm(d: Date): string {
   return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16);
+}
+
+// W23+: 구간 소요는 한국어 풀어쓰기 — "4분 55초". 콜론 형식(`04:55`)이
+// 도착 시각(`hh:mm`)과 헷갈려 사용자 혼동을 줘서 명시 단위로 변경.
+function fmtSegment(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return "—";
+  if (sec < 60) return `${Math.round(sec)}초`;
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    const rm = m % 60;
+    return rm > 0 ? `${h}시간 ${rm}분` : `${h}시간`;
+  }
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
 }
 
 export type StopArrivalRow = StopArrival & {
@@ -48,7 +63,7 @@ export function StopArrivalsTable({ rows }: { rows: StopArrivalRow[] }) {
                       <>
                         도착 {fmtKstHHmm(r.arrivedAt)}
                         {r.segmentSec !== null
-                          ? ` · 구간 ${formatDuration(r.segmentSec)}`
+                          ? ` · 구간 ${fmtSegment(r.segmentSec)}`
                           : ""}
                       </>
                     ) : (
@@ -114,7 +129,7 @@ export function StopArrivalsTable({ rows }: { rows: StopArrivalRow[] }) {
                 </td>
                 <td className="px-3 py-2 font-mono text-xs">
                   {r.segmentSec !== null ? (
-                    formatDuration(r.segmentSec)
+                    fmtSegment(r.segmentSec)
                   ) : (
                     <span className="text-muted-foreground/60">—</span>
                   )}
