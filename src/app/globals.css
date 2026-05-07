@@ -172,4 +172,10 @@
   html {
     @apply font-sans;
   }
+  /* native <details>의 default가 일부 브라우저에서 fit-content 비슷하게 측정 —
+     펼침/접힘 시 가로폭이 다르게 보이는 이슈. 카드형 details 일관성 강제. */
+  details {
+    display: block;
+    width: 100%;
+  }
 }
