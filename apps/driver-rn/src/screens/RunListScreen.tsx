@@ -70,16 +70,23 @@ export function RunListScreen({
   const [error, setError] = useState<string | null>(null);
 
   const fetchAll = useCallback(async () => {
-    try {
-      const [routesRes, meRes] = await Promise.all([
-        apiFetch<TodayRoutesResponse>("/api/driver/today-routes"),
-        apiFetch<Me>("/api/driver/me"),
-      ]);
-      setData(routesRes);
-      setMe(meRes);
+    // routes는 critical, me는 헤더 보조라 실패해도 화면 표시 유지.
+    // Promise.allSettled로 한쪽 실패가 다른 쪽 차단하지 않도록.
+    const [routesResult, meResult] = await Promise.allSettled([
+      apiFetch<TodayRoutesResponse>("/api/driver/today-routes"),
+      apiFetch<Me>("/api/driver/me"),
+    ]);
+
+    if (routesResult.status === "fulfilled") {
+      setData(routesResult.value);
       setError(null);
-    } catch (e) {
-      setError(translateError(e));
+    } else {
+      setError(translateError(routesResult.reason));
+    }
+
+    // me 실패는 silent — 헤더에 학원명·이름만 빠짐.
+    if (meResult.status === "fulfilled") {
+      setMe(meResult.value);
     }
   }, []);
 
