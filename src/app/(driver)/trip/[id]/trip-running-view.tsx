@@ -208,6 +208,16 @@ export function TripRunningView({
           setEndError(result.error);
         }
       } catch (err) {
+        // Next.js redirect/notFound는 internal signal — re-throw해서
+        // framework가 navigation 처리하게.
+        if (
+          typeof err === "object" &&
+          err !== null &&
+          typeof (err as { digest?: unknown }).digest === "string" &&
+          (err as { digest: string }).digest.startsWith("NEXT_")
+        ) {
+          throw err;
+        }
         console.error("[trip-running-view] end-trip failed", err);
         setEndError("운행 종료에 실패했어요. 잠시 후 다시 시도해 주세요.");
       }
