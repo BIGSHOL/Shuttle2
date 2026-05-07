@@ -114,14 +114,25 @@ export async function createAbsenceRequestAction(
           ? "등원"
           : "하원";
 
-    // 그날 trip이 이미 만들어진 경우 driver/helper 식별
-    const trip = await db.trip.findFirst({
+    // 그날 trip이 이미 만들어진 경우 driver/helper 식별. 운행 시작 전이면
+    // trip 없으므로 학생 routes에 묶인 가장 최근 trip의 driver/helper로
+    // fallback — 같은 차량 운행자가 연속성 가지므로 합리적 추정.
+    let trip = await db.trip.findFirst({
       where: {
         date: targetDate,
         route: { students: { some: { studentId } } },
       },
       select: { driverId: true, helperId: true },
     });
+    if (!trip) {
+      trip = await db.trip.findFirst({
+        where: {
+          route: { students: { some: { studentId } } },
+        },
+        orderBy: { date: "desc" },
+        select: { driverId: true, helperId: true },
+      });
+    }
 
     const ownerPush = sendToOwnersOfOrg(child.orgId, {
       title: "결석 신청 접수",
