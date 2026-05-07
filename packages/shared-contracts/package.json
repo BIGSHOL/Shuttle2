@@ -29,6 +29,10 @@
     "./driver-types": {
       "types": "./src/driver-types.ts",
       "default": "./src/driver-types.ts"
+    },
+    "./auth-errors": {
+      "types": "./src/auth-errors.ts",
+      "default": "./src/auth-errors.ts"
     }
   },
   "dependencies": {

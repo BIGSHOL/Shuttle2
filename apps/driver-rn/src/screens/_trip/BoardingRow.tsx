@@ -20,8 +20,11 @@ import type {
   RouteDirection,
   TripDetailPayload,
 } from "@shuttlee/shared-contracts";
+import { translateError } from "@shuttlee/shared-contracts/auth-errors";
 
+import { ChildAvatar } from "../../components/ChildAvatar";
 import { apiFetch } from "../../lib/api-client";
+import { colors, radii } from "../../lib/theme";
 import { IssueModal } from "./IssueModal";
 
 type Event = TripDetailPayload["events"][number];
@@ -62,7 +65,7 @@ export function BoardingRow({
       });
       onChange();
     } catch (e) {
-      Alert.alert("실패", e instanceof Error ? e.message : "");
+      Alert.alert("실패", translateError(e));
     } finally {
       setSubmitting(false);
     }
@@ -78,7 +81,7 @@ export function BoardingRow({
       });
       onChange();
     } catch (e) {
-      Alert.alert("실패", e instanceof Error ? e.message : "");
+      Alert.alert("실패", translateError(e));
     } finally {
       setSubmitting(false);
     }
@@ -93,12 +96,13 @@ export function BoardingRow({
       setModalOpen(false);
       onChange();
     } catch (e) {
-      Alert.alert("실패", e instanceof Error ? e.message : "");
+      Alert.alert("실패", translateError(e));
     }
   }
 
   return (
     <View style={styles.row}>
+      <ChildAvatar name={student.name} active={!!mainEvent} size={32} />
       <Text style={styles.name}>{student.name}</Text>
       {issueEvent ? (
         <View style={styles.issueGroup}>
@@ -169,46 +173,75 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     paddingVertical: 8,
-    gap: 8,
+    gap: 10,
   },
-  name: { flex: 1, fontSize: 15, fontWeight: "700", color: "#111" },
+  name: {
+    flex: 1,
+    fontSize: 14,
+    fontWeight: "700",
+    color: colors.foreground,
+  },
   actions: { flexDirection: "row", gap: 6 },
   mainButton: {
     minWidth: 64,
     height: 36,
     paddingHorizontal: 12,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#facc15",
-    backgroundColor: "#fff",
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.bus,
+    backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
   mainButtonActive: {
-    backgroundColor: "#facc15",
-    borderColor: "#facc15",
+    backgroundColor: colors.bus,
+    borderColor: colors.bus,
   },
   disabled: { opacity: 0.5 },
-  mainButtonText: { fontSize: 13, fontWeight: "800", color: "#92400e" },
-  mainButtonActiveText: { fontSize: 13, fontWeight: "800", color: "#000" },
+  mainButtonText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.busForeground,
+  },
+  mainButtonActiveText: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.busForeground,
+  },
   issueButton: {
     height: 36,
     paddingHorizontal: 10,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#fca5a5",
-    backgroundColor: "#fff",
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.destructive + "60",
+    backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
-  issueButtonText: { fontSize: 12, fontWeight: "700", color: "#dc2626" },
-  issueGroup: { flexDirection: "row", alignItems: "center", gap: 10 },
+  issueButtonText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: colors.destructive,
+  },
+  issueGroup: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
   issueBadge: {
     paddingHorizontal: 10,
     paddingVertical: 4,
-    borderRadius: 6,
-    backgroundColor: "#fee2e2",
+    borderRadius: radii.md,
+    backgroundColor: colors.destructive + "15",
   },
-  issueBadgeText: { fontSize: 12, fontWeight: "800", color: "#991b1b" },
-  unmarkText: { fontSize: 12, color: "#666", textDecorationLine: "underline" },
+  issueBadgeText: {
+    fontSize: 12,
+    fontWeight: "800",
+    color: colors.destructive,
+  },
+  unmarkText: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    textDecorationLine: "underline",
+  },
 });

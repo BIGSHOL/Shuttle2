@@ -1,175 +1,255 @@
-// 로그인 화면.
-// PWA 로그인 폼과 동일한 패턴: 입력 1개로 (이메일 또는 loginId) + 비밀번호.
-// `@` 포함이면 이메일, 아니면 loginId → loginIdToEmail()로 placeholder 이메일 변환.
+// 로그인 화면 — PWA `(auth)/login` 디자인 매칭.
+// PWA와 다른 점:
+// - driver app만 쓰니 "셔틀이 기사" 식별성 유지 (PWA login은 "셔틀이")
+// - 가입·비번찾기 링크는 외부 url로 (Linking.openURL)
+// - 알림 alert는 translateError로 한글화
 
 import { useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
   KeyboardAvoidingView,
+  Linking,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { translateError } from "@shuttlee/shared-contracts/auth-errors";
 import {
   isLikelyEmail,
   loginIdToEmail,
 } from "@shuttlee/shared-contracts/login-id";
 
+import { Button } from "../components/Button";
+import { Card } from "../components/Card";
+import { Ionicons } from "../components/Icon";
+import { colors, radii } from "../lib/theme";
 import { supabase } from "../lib/supabase";
+
+const HELP_URL = "https://shuttle2-nine.vercel.app/forgot-password";
 
 export function LoginScreen() {
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const insets = useSafeAreaInsets();
+  const [error, setError] = useState<string | null>(null);
 
   async function handleLogin() {
     const id = identifier.trim();
     if (!id || !password) {
-      Alert.alert("입력 필요", "아이디와 비밀번호를 모두 입력해 주세요.");
+      setError("아이디와 비밀번호를 모두 입력해 주세요");
       return;
     }
+    setError(null);
     setLoading(true);
     try {
       const email = isLikelyEmail(id) ? id : loginIdToEmail(id);
-      const { error } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-      if (error) {
-        Alert.alert("로그인 실패", error.message);
+      if (authError) {
+        setError(translateError(authError));
       }
     } catch (e) {
-      Alert.alert("오류", e instanceof Error ? e.message : "알 수 없는 오류");
+      setError(translateError(e));
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <View
-      style={[
-        styles.safe,
-        { paddingTop: insets.top, paddingBottom: insets.bottom },
-      ]}
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>셔틀이 기사</Text>
-          <Text style={styles.subtitle}>
-            로그인 아이디 또는 이메일로 로그인하세요
-          </Text>
+        <View style={styles.brand}>
+          <View style={styles.logo}>
+            <Ionicons name="bus" size={20} color={colors.busForeground} />
+          </View>
+          <Text style={styles.brandText}>셔틀이 기사</Text>
         </View>
 
-        <TextInput
-          style={styles.input}
-          placeholder="아이디 또는 이메일"
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={identifier}
-          onChangeText={setIdentifier}
-          editable={!loading}
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="비밀번호"
-          secureTextEntry
-          autoCapitalize="none"
-          autoCorrect={false}
-          value={password}
-          onChangeText={setPassword}
-          editable={!loading}
-        />
+        <Card style={styles.card}>
+          <Text style={styles.title}>로그인</Text>
+          <Text style={styles.subtitle}>
+            학원장·원장이 발급한 로그인 아이디 또는 이메일을 입력하세요.
+          </Text>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.button,
-            loading && styles.buttonDisabled,
-            pressed && !loading && styles.buttonPressed,
-          ]}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color="#000" />
-          ) : (
-            <Text style={styles.buttonText}>로그인</Text>
-          )}
-        </Pressable>
+          <View style={styles.field}>
+            <Text style={styles.label}>이메일 또는 로그인 아이디</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="kim_driver 또는 driver@example.com"
+              placeholderTextColor={colors.mutedForeground}
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="username"
+              value={identifier}
+              onChangeText={setIdentifier}
+              editable={!loading}
+            />
+          </View>
 
-        <Text style={styles.help}>
-          비밀번호를 잊으셨다면 학원장(원장)에게 초기화를 요청하세요.
-        </Text>
-      </KeyboardAvoidingView>
-    </View>
+          <View style={styles.field}>
+            <Text style={styles.label}>비밀번호</Text>
+            <TextInput
+              style={styles.input}
+              secureTextEntry
+              autoCapitalize="none"
+              autoCorrect={false}
+              autoComplete="current-password"
+              value={password}
+              onChangeText={setPassword}
+              editable={!loading}
+            />
+          </View>
+
+          {error ? (
+            <View style={styles.errorBox}>
+              <Text style={styles.errorText}>{error}</Text>
+            </View>
+          ) : null}
+
+          <View style={styles.submitWrap}>
+            <Button
+              size="lg"
+              onPress={handleLogin}
+              disabled={loading}
+              loading={loading}
+            >
+              {loading ? "로그인 중..." : "로그인"}
+            </Button>
+          </View>
+
+          <Pressable
+            onPress={() => {
+              void Linking.openURL(HELP_URL).catch(() => {});
+            }}
+            style={({ pressed }) => [
+              styles.helpLink,
+              pressed && { opacity: 0.7 },
+            ]}
+          >
+            <Text style={styles.helpText}>
+              비밀번호를 잊으셨다면 학원장(원장)에게 초기화를 요청하세요.
+            </Text>
+          </Pressable>
+        </Card>
+
+        <Text style={styles.footer}>© 셔틀이 · 셔틀버스 운영 서비스</Text>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: {
+  flex: {
     flex: 1,
-    backgroundColor: "#fff",
+    backgroundColor: colors.muted,
   },
-  container: {
-    flex: 1,
-    padding: 24,
-    paddingTop: 64,
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 16,
+    paddingVertical: 32,
+    gap: 16,
   },
-  header: {
-    marginBottom: 32,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "800",
-    color: "#111",
-    marginBottom: 4,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: "#666",
-  },
-  input: {
-    height: 48,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 6,
-    paddingHorizontal: 12,
-    marginBottom: 12,
-    fontSize: 16,
-    backgroundColor: "#fff",
-  },
-  button: {
-    height: 48,
-    backgroundColor: "#facc15",
-    borderRadius: 6,
+  brand: {
+    flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginTop: 8,
+    gap: 8,
   },
-  buttonDisabled: {
-    opacity: 0.5,
+  logo: {
+    width: 36,
+    height: 36,
+    borderRadius: radii.md,
+    backgroundColor: colors.bus,
+    alignItems: "center",
+    justifyContent: "center",
   },
-  buttonPressed: {
-    opacity: 0.85,
-  },
-  buttonText: {
-    color: "#000",
+  brandText: {
+    fontSize: 18,
     fontWeight: "800",
-    fontSize: 16,
+    color: colors.foreground,
+    letterSpacing: -0.5,
   },
-  help: {
-    marginTop: 24,
+  card: {
+    padding: 24,
+    gap: 16,
+    width: "100%",
+    maxWidth: 380,
+    alignSelf: "center",
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "800",
+    color: colors.foreground,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    fontWeight: "500",
+    marginTop: -8,
+  },
+  field: {
+    gap: 6,
+  },
+  label: {
     fontSize: 12,
-    color: "#666",
+    fontWeight: "700",
+    color: colors.foreground,
+  },
+  input: {
+    height: 44,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: 12,
+    fontSize: 15,
+    backgroundColor: colors.card,
+    color: colors.foreground,
+  },
+  errorBox: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.destructive + "60",
+    backgroundColor: colors.destructive + "10",
+    borderRadius: radii.md,
+    padding: 10,
+  },
+  errorText: {
+    color: colors.destructive,
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  submitWrap: {
+    marginTop: 4,
+  },
+  helpLink: {
+    paddingTop: 4,
+  },
+  helpText: {
+    fontSize: 11,
+    color: colors.mutedForeground,
     textAlign: "center",
+    fontWeight: "500",
+    lineHeight: 16,
+  },
+  footer: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    textAlign: "center",
+    fontWeight: "500",
+    marginTop: 8,
   },
 });

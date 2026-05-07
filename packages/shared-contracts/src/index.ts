@@ -7,3 +7,4 @@ export * from "./realtime";
 export * from "./driver-inputs";
 export * from "./distance";
 export * from "./driver-types";
+export * from "./auth-errors";

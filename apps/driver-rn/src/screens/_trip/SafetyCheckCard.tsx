@@ -13,8 +13,10 @@ import type {
   TripDetailPayload,
   VehicleMode,
 } from "@shuttlee/shared-contracts";
+import { translateError } from "@shuttlee/shared-contracts/auth-errors";
 
 import { apiFetch } from "../../lib/api-client";
+import { colors, radii, shadows } from "../../lib/theme";
 
 type SafetyField = "seatbeltAllOk" | "helperPresent" | "allAlightedOk";
 
@@ -55,7 +57,7 @@ export function SafetyCheckCard({
       });
       onChange();
     } catch (e) {
-      Alert.alert("실패", e instanceof Error ? e.message : "");
+      Alert.alert("실패", translateError(e));
     } finally {
       setSubmittingField(null);
     }
@@ -111,15 +113,18 @@ function CheckRow({ label, value, disabled, onChange }: CheckRowProps) {
 const styles = StyleSheet.create({
   card: {
     padding: 14,
-    backgroundColor: "#fef9c3",
-    borderRadius: 8,
+    backgroundColor: colors.busSoft,
+    borderRadius: radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.bus + "40",
     gap: 8,
+    ...shadows.xs,
   },
   label: {
     fontSize: 10,
     fontWeight: "800",
-    letterSpacing: 0.5,
-    color: "#92400e",
+    letterSpacing: 0.8,
+    color: colors.busForeground,
     textTransform: "uppercase",
     marginBottom: 4,
   },
@@ -135,12 +140,21 @@ const styles = StyleSheet.create({
     height: 22,
     borderRadius: 4,
     borderWidth: 2,
-    borderColor: "#92400e",
-    backgroundColor: "#fff",
+    borderColor: colors.busForeground,
+    backgroundColor: colors.card,
     alignItems: "center",
     justifyContent: "center",
   },
-  checkboxActive: { backgroundColor: "#92400e" },
-  checkmark: { color: "#fff", fontWeight: "800", fontSize: 14 },
-  checkLabel: { fontSize: 13, color: "#111", flex: 1, fontWeight: "600" },
+  checkboxActive: { backgroundColor: colors.busForeground },
+  checkmark: {
+    color: colors.bus,
+    fontWeight: "800",
+    fontSize: 14,
+  },
+  checkLabel: {
+    fontSize: 13,
+    color: colors.foreground,
+    flex: 1,
+    fontWeight: "600",
+  },
 });

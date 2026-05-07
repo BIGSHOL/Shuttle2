@@ -1,8 +1,9 @@
-// 운행 진행 화면 — Day 7 풀세트.
+// 운행 진행 화면 — 디자인 토큰 통일 (1.0.5).
+// PWA 풀 디자인 매칭(dark gradient header 등)은 1.0.6에 미루고, 색상·라운드·
+// LivePulseDot 적용으로 일관성 확보.
+//
 // useTripKeepAwake + Trip detail fetch + Background GPS tracker + 정류장별
 // BoardingRow + KIDS SafetyCheckCard.
-// 지도(TripMap)는 베타 후 polish 단계에서 추가 예정 — 정류장 리스트만으로
-// 운행 진행은 충분.
 
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -20,10 +21,18 @@ import type {
   TripDetailPayload,
   TripPingPayload,
 } from "@shuttlee/shared-contracts";
+import { translateError } from "@shuttlee/shared-contracts/auth-errors";
 
+import { Button } from "../components/Button";
+import { Card } from "../components/Card";
+import { Feather } from "../components/Icon";
+import { LivePulseDot } from "../components/LivePulseDot";
+import { ModeBadge } from "../components/ModeBadge";
+import { DirectionBadge } from "../components/DirectionBadge";
 import { apiFetch } from "../lib/api-client";
 import { startGps, stopGps, type GpsStop } from "../lib/gps";
 import { useTripKeepAwake } from "../lib/keep-awake";
+import { colors, radii, radiiExt, shadows } from "../lib/theme";
 import { useTripBroadcast } from "../lib/trip-realtime";
 import { BoardingRow } from "./_trip/BoardingRow";
 import { SafetyCheckCard } from "./_trip/SafetyCheckCard";
@@ -48,14 +57,11 @@ export function TripScreen({ tripId, onEnd }: Props) {
   );
   const [gpsError, setGpsError] = useState<string | null>(null);
 
-  // W23+: 정류장 수기 "도착" 마킹 — GPS 자동 감지 안 됐을 때.
   const handleMarkStopPassed = useCallback(
     async (routeStopId: string) => {
       setStopPassPending((p) => new Set(p).add(routeStopId));
       setPassedStops((p) => new Set(p).add(routeStopId));
       try {
-        // routeStopId는 RouteStop.id이지만 server는 stopId(Stop.id)를 받음.
-        // detail에서 매핑.
         const stop = detail?.stops.find((s) => s.routeStopId === routeStopId);
         if (!stop) throw new Error("정류장을 찾을 수 없습니다");
         await apiFetch(`/api/driver/trip/${tripId}/manual-stop-pass`, {
@@ -68,10 +74,7 @@ export function TripScreen({ tripId, onEnd }: Props) {
           n.delete(routeStopId);
           return n;
         });
-        Alert.alert(
-          "도착 마킹 실패",
-          e instanceof Error ? e.message : "",
-        );
+        Alert.alert("도착 마킹 실패", translateError(e));
       } finally {
         setStopPassPending((p) => {
           const n = new Set(p);
@@ -94,16 +97,14 @@ export function TripScreen({ tripId, onEnd }: Props) {
       );
       setDetail(data);
     } catch (e) {
-      Alert.alert("불러오기 실패", e instanceof Error ? e.message : "");
+      Alert.alert("불러오기 실패", translateError(e));
     }
   }, [tripId]);
 
-  // 첫 진입 시 detail fetch
   useEffect(() => {
     void refetchDetail();
   }, [refetchDetail]);
 
-  // GPS tracker 시작/종료 (detail 로드 후)
   useEffect(() => {
     if (!detail || detail.trip.endedAt) return;
 
@@ -135,7 +136,7 @@ export function TripScreen({ tripId, onEnd }: Props) {
       })
       .catch((e) => {
         if (!cancelled) {
-          setGpsError(e instanceof Error ? e.message : "GPS 시작 실패");
+          setGpsError(translateError(e));
         }
       });
 
@@ -145,7 +146,6 @@ export function TripScreen({ tripId, onEnd }: Props) {
     };
   }, [tripId, detail]);
 
-  // update 이벤트 수신 시 detail 다시 fetch (boarding/safety 변경 반영)
   useEffect(() => {
     if (!lastUpdate) return;
     void refetchDetail();
@@ -167,7 +167,7 @@ export function TripScreen({ tripId, onEnd }: Props) {
             });
             onEnd();
           } catch (e) {
-            Alert.alert("실패", e instanceof Error ? e.message : "");
+            Alert.alert("운행 종료 실패", translateError(e));
             setEnding(false);
           }
         },
@@ -178,7 +178,7 @@ export function TripScreen({ tripId, onEnd }: Props) {
   if (!detail) {
     return (
       <View style={styles.center}>
-        <ActivityIndicator size="large" />
+        <ActivityIndicator size="large" color={colors.bus} />
       </View>
     );
   }
@@ -190,32 +190,48 @@ export function TripScreen({ tripId, onEnd }: Props) {
     <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         <View style={styles.header}>
+          <View style={styles.badgeRow}>
+            <DirectionBadge direction={detail.route.direction} />
+            <ModeBadge mode={detail.vehicle.mode} />
+          </View>
           <Text style={styles.title}>{detail.route.name}</Text>
           <Text style={styles.subtitle}>
-            {detail.route.direction === "PICKUP" ? "등원" : "하원"} ·{" "}
-            {detail.vehicle.plate} · {isKids ? "어린이용" : "일반용"}
+            <Text style={styles.plate}>{detail.vehicle.plate}</Text>
           </Text>
         </View>
 
-        <View style={styles.statusBar}>
-          <View
-            style={[
-              styles.statusDot,
-              gpsStarted && styles.statusDotOk,
-              gpsError && styles.statusDotError,
-            ]}
-          />
-          <Text style={styles.statusText} numberOfLines={1}>
-            {gpsError
-              ? `GPS 오류: ${gpsError}`
-              : gpsStarted
-                ? "GPS 송신 중"
-                : "GPS 시작 중…"}
-          </Text>
+        {/* GPS 상태 표시 */}
+        <Card style={styles.statusCard}>
+          <View style={styles.statusLeft}>
+            {gpsStarted && !gpsError ? (
+              <LivePulseDot size={10} />
+            ) : (
+              <View
+                style={[
+                  styles.statusDot,
+                  gpsError ? styles.statusDotError : styles.statusDotIdle,
+                ]}
+              />
+            )}
+            <Text style={styles.statusText} numberOfLines={1}>
+              {gpsError
+                ? "GPS 오류"
+                : gpsStarted
+                  ? "운행 중 · 위치 송신 중"
+                  : "위치 시작 중…"}
+            </Text>
+          </View>
           <Text style={styles.statusMeta}>
             채널 {status === "ok" ? "✓" : status === "error" ? "✗" : "…"}
           </Text>
-        </View>
+        </Card>
+
+        {gpsError ? (
+          <View style={styles.errorBanner}>
+            <Feather name="alert-circle" size={14} color={colors.warning} />
+            <Text style={styles.errorBannerText}>{gpsError}</Text>
+          </View>
+        ) : null}
 
         {displayPing ? (
           <View style={styles.pingCard}>
@@ -246,14 +262,25 @@ export function TripScreen({ tripId, onEnd }: Props) {
           const stopPending = stopPassPending.has(stop.routeStopId);
           const canMark = !passed && !detail.trip.endedAt;
           return (
-            <View key={stop.routeStopId} style={styles.stopBlock}>
+            <Card key={stop.routeStopId} style={styles.stopBlock}>
               <View style={styles.stopHeader}>
-                <Text style={styles.stopOrder}>{stop.order}</Text>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.stopName}>
-                    {passed ? "✓ " : ""}
-                    {stop.name}
+                <View
+                  style={[
+                    styles.stopOrderBox,
+                    passed && styles.stopOrderBoxPassed,
+                  ]}
+                >
+                  <Text
+                    style={[
+                      styles.stopOrderText,
+                      passed && styles.stopOrderTextPassed,
+                    ]}
+                  >
+                    {passed ? "✓" : stop.order}
                   </Text>
+                </View>
+                <View style={styles.stopMain}>
+                  <Text style={styles.stopName}>{stop.name}</Text>
                   <Text style={styles.stopMeta}>
                     {stop.scheduledAt} · 학생 {stop.students.length}명 · 반경{" "}
                     {stop.radiusM}m
@@ -261,9 +288,10 @@ export function TripScreen({ tripId, onEnd }: Props) {
                 </View>
                 {canMark ? (
                   <Pressable
-                    style={[
+                    style={({ pressed }) => [
                       styles.markPassedButton,
-                      stopPending && styles.markPassedDisabled,
+                      stopPending && styles.disabled,
+                      pressed && { opacity: 0.85 },
                     ]}
                     onPress={() => void handleMarkStopPassed(stop.routeStopId)}
                     disabled={stopPending}
@@ -292,23 +320,28 @@ export function TripScreen({ tripId, onEnd }: Props) {
                   ))}
                 </View>
               )}
-            </View>
+            </Card>
           );
         })}
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 12 }]}>
-        <Pressable
-          style={[styles.endButton, ending && styles.endButtonDisabled]}
+        <Button
+          variant="destructive"
+          size="lg"
           onPress={handleEnd}
           disabled={ending}
+          loading={ending}
+          leadingIcon={
+            <Feather
+              name="square"
+              size={14}
+              color={colors.destructiveForeground}
+            />
+          }
         >
-          {ending ? (
-            <ActivityIndicator color="#fff" />
-          ) : (
-            <Text style={styles.endButtonText}>운행 종료</Text>
-          )}
-        </Pressable>
+          {ending ? "종료 중..." : "운행 종료"}
+        </Button>
       </View>
     </View>
   );
@@ -319,83 +352,161 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
   },
-  container: { flex: 1, backgroundColor: "#fff" },
+  container: { flex: 1, backgroundColor: colors.muted },
   scrollContent: { padding: 16, gap: 12, paddingBottom: 24 },
-  header: { gap: 4, marginBottom: 4 },
-  title: { fontSize: 22, fontWeight: "800", color: "#111" },
-  subtitle: { fontSize: 13, color: "#666" },
-  statusBar: {
+  header: { gap: 6, marginBottom: 4 },
+  badgeRow: {
+    flexDirection: "row",
+    gap: 4,
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: "900",
+    color: colors.foreground,
+    letterSpacing: -0.5,
+  },
+  subtitle: {
+    fontSize: 13,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+  },
+  plate: {
+    fontFamily: "monospace",
+    fontWeight: "700",
+    color: colors.foreground,
+  },
+  statusCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  statusLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    flex: 1,
+    minWidth: 0,
+  },
+  statusDot: {
+    width: 10,
+    height: 10,
+    borderRadius: radii.full,
+  },
+  statusDotIdle: { backgroundColor: colors.warning },
+  statusDotError: { backgroundColor: colors.destructive },
+  statusText: {
+    fontSize: 13,
+    color: colors.foreground,
+    fontWeight: "700",
+    flex: 1,
+  },
+  statusMeta: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+  },
+  errorBanner: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
-    backgroundColor: "#f9fafb",
+    backgroundColor: colors.warningSoft,
+    borderColor: colors.warning + "60",
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: radii.md,
     paddingHorizontal: 12,
     paddingVertical: 10,
-    borderRadius: 6,
   },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#facc15",
+  errorBannerText: {
+    fontSize: 12,
+    color: colors.warning,
+    fontWeight: "600",
+    flex: 1,
   },
-  statusDotOk: { backgroundColor: "#22c55e" },
-  statusDotError: { backgroundColor: "#ef4444" },
-  statusText: { fontSize: 12, color: "#374151", flex: 1 },
-  statusMeta: { fontSize: 11, color: "#9ca3af" },
   pingCard: {
-    paddingHorizontal: 14,
+    paddingHorizontal: 12,
     paddingVertical: 8,
-    backgroundColor: "#f3f4f6",
-    borderRadius: 6,
+    backgroundColor: colors.muted,
+    borderRadius: radii.md,
   },
-  pingValue: { fontSize: 12, fontFamily: "monospace", color: "#111" },
-  pingMeta: { fontSize: 10, color: "#666", marginTop: 2 },
+  pingValue: {
+    fontSize: 12,
+    fontFamily: "monospace",
+    color: colors.foreground,
+  },
+  pingMeta: {
+    fontSize: 10,
+    color: colors.mutedForeground,
+    marginTop: 2,
+  },
   stopBlock: {
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 8,
     overflow: "hidden",
+    padding: 0,
   },
   stopHeader: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
     padding: 12,
-    backgroundColor: "#f9fafb",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eee",
+    backgroundColor: colors.muted,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: colors.border,
   },
-  stopOrder: {
-    width: 24,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: "#facc15",
-    textAlign: "center",
-    lineHeight: 24,
+  stopOrderBox: {
+    width: 28,
+    height: 28,
+    borderRadius: radiiExt.xl,
+    backgroundColor: colors.bus,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  stopOrderBoxPassed: {
+    backgroundColor: colors.success,
+  },
+  stopOrderText: {
+    fontSize: 13,
+    fontWeight: "900",
+    color: colors.busForeground,
+  },
+  stopOrderTextPassed: {
+    color: colors.successForeground,
+  },
+  stopMain: {
+    flex: 1,
+    minWidth: 0,
+  },
+  stopName: {
+    fontSize: 14,
+    fontWeight: "800",
+    color: colors.foreground,
+  },
+  stopMeta: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    marginTop: 2,
+    fontWeight: "500",
+  },
+  markPassedButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radii.md,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.bus,
+    backgroundColor: colors.busSoft,
+  },
+  disabled: { opacity: 0.5 },
+  markPassedText: {
     fontSize: 12,
     fontWeight: "800",
-    color: "#000",
+    color: colors.busForeground,
   },
-  stopName: { fontSize: 14, fontWeight: "800", color: "#111" },
-  stopMeta: { fontSize: 11, color: "#666", marginTop: 2 },
-  markPassedButton: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: "#facc15",
-    backgroundColor: "#fff",
-  },
-  markPassedDisabled: { opacity: 0.5 },
-  markPassedText: { fontSize: 12, fontWeight: "800", color: "#92400e" },
   emptyStudents: {
-    padding: 12,
+    padding: 14,
     fontSize: 12,
-    color: "#9ca3af",
+    color: colors.mutedForeground,
     fontStyle: "italic",
   },
   studentList: {
@@ -404,16 +515,9 @@ const styles = StyleSheet.create({
   },
   footer: {
     padding: 16,
-    borderTopWidth: 1,
-    borderTopColor: "#eee",
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: colors.border,
+    backgroundColor: colors.background,
+    ...shadows.sm,
   },
-  endButton: {
-    height: 48,
-    backgroundColor: "#dc2626",
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  endButtonDisabled: { opacity: 0.5 },
-  endButtonText: { fontSize: 16, fontWeight: "800", color: "#fff" },
 });

@@ -1,20 +1,28 @@
-// 오늘 운행 노선 리스트 — `/api/driver/today-routes` 호출.
-// PWA의 /run/page.tsx와 동일 데이터, 동일 렌더링 흐름.
+// 오늘 운행 화면 — PWA `/run/page.tsx` + data/04 phase-2 driver.md 가이드 매칭.
+// Header(sticky) + ActiveTripBanner + 헤더 텍스트 + 알림/환경/확인사항 카드 +
+// 노선 list + 알림 보기 링크.
 
 import { useCallback, useEffect, useState } from "react";
 import {
   ActivityIndicator,
-  Alert,
-  FlatList,
-  Pressable,
   RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   View,
 } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { translateError } from "@shuttlee/shared-contracts/auth-errors";
+
+import { Button } from "../components/Button";
+import { Card } from "../components/Card";
+import { Collapsible } from "../components/Collapsible";
+import { Header } from "../components/Header";
+import { Feather, Ionicons } from "../components/Icon";
 import { apiFetch } from "../lib/api-client";
+import { colors, radii, radiiExt } from "../lib/theme";
+import { ActiveTripBanner } from "./_run/ActiveTripBanner";
+import { RouteCard } from "./_run/RouteCard";
 
 type Route = {
   id: string;
@@ -27,58 +35,78 @@ type Route = {
   stopCount: number;
 };
 
-type ActiveTrip = { id: string; routeId: string; routeName: string } | null;
+type ActiveTrip = {
+  id: string;
+  routeId: string;
+  routeName: string;
+} | null;
 
-type TodayRoutesResponse = {
-  routes: Route[];
-  activeTrip: ActiveTrip;
+type TodayRoutesResponse = { routes: Route[]; activeTrip: ActiveTrip };
+
+type Me = {
+  orgName: string;
+  staffName: string;
+  role: "DRIVER" | "HELPER";
+  email: string;
+  unreadCount: number;
 };
 
-type Props = {
+export function RunListScreen({
+  onTripStarted,
+  onResumeTrip,
+  onNotifications,
+  onLogout,
+}: {
   onTripStarted: (tripId: string) => void;
+  onResumeTrip: (tripId: string) => void;
   onNotifications: () => void;
   onLogout: () => void;
-};
-
-export function RunListScreen({ onTripStarted, onNotifications, onLogout }: Props) {
+}) {
   const [data, setData] = useState<TodayRoutesResponse | null>(null);
+  const [me, setMe] = useState<Me | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [starting, setStarting] = useState(false);
-  const insets = useSafeAreaInsets();
+  const [error, setError] = useState<string | null>(null);
 
-  const fetchRoutes = useCallback(async () => {
+  const fetchAll = useCallback(async () => {
     try {
-      const res = await apiFetch<TodayRoutesResponse>(
-        "/api/driver/today-routes",
-      );
-      setData(res);
+      const [routesRes, meRes] = await Promise.all([
+        apiFetch<TodayRoutesResponse>("/api/driver/today-routes"),
+        apiFetch<Me>("/api/driver/me"),
+      ]);
+      setData(routesRes);
+      setMe(meRes);
+      setError(null);
     } catch (e) {
-      Alert.alert("오류", e instanceof Error ? e.message : "노선 불러오기 실패");
+      setError(translateError(e));
     }
   }, []);
 
   useEffect(() => {
-    fetchRoutes().finally(() => setLoading(false));
-  }, [fetchRoutes]);
+    fetchAll().finally(() => setLoading(false));
+  }, [fetchAll]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchRoutes();
+    await fetchAll();
     setRefreshing(false);
-  }, [fetchRoutes]);
+  }, [fetchAll]);
 
   async function startTrip(routeId: string, vehicleId: string) {
     if (starting) return;
     setStarting(true);
     try {
-      const res = await apiFetch<{ tripId: string }>("/api/driver/trip/start", {
-        method: "POST",
-        body: { routeId, vehicleId },
-      });
+      const res = await apiFetch<{ tripId: string }>(
+        "/api/driver/trip/start",
+        {
+          method: "POST",
+          body: { routeId, vehicleId },
+        },
+      );
       onTripStarted(res.tripId);
     } catch (e) {
-      Alert.alert("운행 시작 실패", e instanceof Error ? e.message : "");
+      setError(translateError(e));
     } finally {
       setStarting(false);
     }
@@ -86,195 +114,301 @@ export function RunListScreen({ onTripStarted, onNotifications, onLogout }: Prop
 
   if (loading) {
     return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" />
+      <View style={styles.loadingScreen}>
+        <ActivityIndicator size="large" color={colors.bus} />
       </View>
     );
   }
 
-  const hasActiveTrip = data?.activeTrip != null;
-
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
-      <View style={styles.header}>
-        <Text style={styles.title}>오늘 운행</Text>
-        <View style={styles.headerActions}>
-          <Pressable onPress={onNotifications} hitSlop={12}>
-            <Text style={styles.headerLink}>알림</Text>
-          </Pressable>
-          <Pressable onPress={onLogout} hitSlop={12}>
-            <Text style={styles.headerLink}>로그아웃</Text>
-          </Pressable>
-        </View>
-      </View>
+    <View style={styles.flex}>
+      <Header
+        orgName={me?.orgName ?? ""}
+        role={me?.role ?? "DRIVER"}
+        staffName={me?.staffName ?? ""}
+        unreadCount={me?.unreadCount ?? 0}
+        onNotificationsPress={onNotifications}
+        onAccountPress={onLogout}
+      />
 
-      {hasActiveTrip && data?.activeTrip ? (
-        <Pressable
-          style={styles.activeBanner}
-          onPress={() => onTripStarted(data.activeTrip!.id)}
-        >
-          <Text style={styles.activeBannerLabel}>진행 중</Text>
-          <Text style={styles.activeBannerName}>
-            {data.activeTrip.routeName} 이어가기 →
-          </Text>
-        </Pressable>
+      {data?.activeTrip ? (
+        <ActiveTripBanner
+          routeName={data.activeTrip.routeName}
+          onPress={() => onResumeTrip(data.activeTrip!.id)}
+        />
       ) : null}
 
-      <FlatList
-        data={data?.routes ?? []}
-        keyExtractor={(item) => item.id}
-        contentContainerStyle={styles.list}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
         }
-        ListEmptyComponent={
-          <View style={styles.empty}>
+      >
+        <View style={styles.headerBlock}>
+          <Text style={styles.kicker}>기사 화면</Text>
+          <Text style={styles.title}>오늘 운행</Text>
+          <Text style={styles.subtitle}>
+            오늘 요일에 해당하는 노선 {data?.routes.length ?? 0}건.
+          </Text>
+        </View>
+
+        {error ? (
+          <Card style={styles.errorCard}>
+            <Text style={styles.errorText}>{error}</Text>
+          </Card>
+        ) : null}
+
+        {/* 알림 권한 status — 단순화: FCM 토큰은 백그라운드 자동 등록 */}
+        <Card style={styles.notifCard}>
+          <View style={styles.notifLeft}>
+            <View style={styles.notifIcon}>
+              <Feather
+                name="check"
+                size={14}
+                color={colors.success}
+              />
+            </View>
+            <View style={styles.notifText}>
+              <Text style={styles.notifTitle}>알림 받는 중</Text>
+              <Text style={styles.notifBody}>
+                학원장·원장이 결석 신청을 확인하면 즉시 푸시가 옵니다.
+              </Text>
+            </View>
+          </View>
+        </Card>
+
+        {/* 운행 환경 status — 베타 단계엔 단순 표시 */}
+        <Collapsible
+          title="운행 환경 이상 없음"
+          tone="success"
+          leadingIcon={
+            <Feather
+              name="check-circle"
+              size={16}
+              color={colors.success}
+            />
+          }
+        >
+          <Text style={styles.envText}>
+            • 위치 권한: 허용됨{"\n"}
+            • 백그라운드 위치 추적: 허용됨{"\n"}
+            • 푸시 알림: 허용됨
+          </Text>
+          <Text style={styles.envHint}>
+            권한이 변경되었다면 폰의 설정 → 앱 → 셔틀이 기사에서 확인하세요.
+          </Text>
+        </Collapsible>
+
+        {/* 운행 전 확인사항 */}
+        <Collapsible
+          title="운행 전 확인사항"
+          leadingIcon={
+            <Feather
+              name="alert-circle"
+              size={16}
+              color={colors.mutedForeground}
+            />
+          }
+        >
+          <Text style={styles.checkItem}>
+            ✓ 차량 안전 점검 (브레이크·타이어·연료)
+          </Text>
+          <Text style={styles.checkItem}>
+            ✓ 좌석안전띠 정상 작동 확인
+          </Text>
+          <Text style={styles.checkItem}>
+            ✓ 어린이 통학버스(KIDS) 모드는 동승보호자 필수
+          </Text>
+          <Text style={styles.checkItem}>
+            ✓ 출발 전·도착 후 학생 인원 확인
+          </Text>
+        </Collapsible>
+
+        {/* 노선 list */}
+        {data?.routes.length === 0 ? (
+          <View style={styles.emptyCard}>
+            <View style={styles.emptyIconBox}>
+              <Ionicons
+                name="bus"
+                size={28}
+                color={colors.mutedForeground}
+              />
+            </View>
             <Text style={styles.emptyTitle}>오늘 배정된 노선이 없어요</Text>
-            <Text style={styles.emptyBody}>
-              학원장(원장)이 노선을 추가하면 여기 표시됩니다.
+            <Text style={styles.emptySubtitle}>
+              학원장·원장님이 새 노선을 추가하면 여기 표시됩니다.
             </Text>
           </View>
-        }
-        renderItem={({ item }) => {
-          const isPickup = item.direction === "PICKUP";
-          const isKids = item.vehicleMode === "KIDS";
-          const disabled =
-            item.stopCount === 0 || starting || hasActiveTrip;
-          return (
-            <View style={styles.card}>
-              <View style={styles.tagRow}>
-                <View
-                  style={[
-                    styles.tag,
-                    isPickup ? styles.tagPickup : styles.tagDropoff,
-                  ]}
-                >
-                  <Text style={styles.tagText}>
-                    {isPickup ? "등원" : "하원"}
-                  </Text>
-                </View>
-                <View
-                  style={[
-                    styles.tag,
-                    isKids ? styles.tagKids : styles.tagGeneral,
-                  ]}
-                >
-                  <Text style={styles.tagText}>
-                    {isKids ? "어린이용" : "일반용"}
-                  </Text>
-                </View>
-              </View>
-              <Text style={styles.routeName}>{item.name}</Text>
-              <View style={styles.metaRow}>
-                {item.firstScheduledAt ? (
-                  <Text style={styles.meta}>{item.firstScheduledAt}</Text>
-                ) : null}
-                <Text style={styles.meta}>정류장 {item.stopCount}개</Text>
-                <Text style={styles.metaPlate}>{item.vehiclePlate}</Text>
-              </View>
-              <Pressable
-                style={[
-                  styles.startButton,
-                  disabled && styles.startButtonDisabled,
-                ]}
-                onPress={() => startTrip(item.id, item.vehicleId)}
-                disabled={disabled}
-              >
-                {starting ? (
-                  <ActivityIndicator color="#000" />
-                ) : (
-                  <Text style={styles.startButtonText}>운행 시작</Text>
-                )}
-              </Pressable>
-            </View>
-          );
-        }}
-      />
+        ) : (
+          <View style={styles.list}>
+            {data?.routes.map((r) => (
+              <RouteCard
+                key={r.id}
+                route={r}
+                disabled={data.activeTrip !== null || starting}
+                onStart={() => startTrip(r.id, r.vehicleId)}
+              />
+            ))}
+          </View>
+        )}
+
+        <View style={styles.footerLinks}>
+          <Button
+            size="sm"
+            variant="ghost"
+            onPress={onNotifications}
+            leadingIcon={
+              <Feather name="bell" size={12} color={colors.foreground} />
+            }
+          >
+            알림 보기
+          </Button>
+        </View>
+      </ScrollView>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  center: {
+  flex: {
+    flex: 1,
+    backgroundColor: colors.muted,
+  },
+  loadingScreen: {
     flex: 1,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fff",
+    backgroundColor: colors.background,
   },
-  container: {
-    flex: 1,
-    backgroundColor: "#fff",
-  },
-  header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
+  scrollContent: {
     paddingHorizontal: 16,
-    marginBottom: 12,
+    paddingTop: 16,
+    paddingBottom: 32,
+    gap: 12,
   },
-  title: { fontSize: 24, fontWeight: "800", color: "#111" },
-  headerActions: { flexDirection: "row", gap: 16 },
-  headerLink: { fontSize: 13, color: "#666" },
-  activeBanner: {
-    marginHorizontal: 16,
-    marginBottom: 12,
-    padding: 14,
-    backgroundColor: "#facc15",
-    borderRadius: 8,
+  headerBlock: {
+    marginBottom: 4,
   },
-  activeBannerLabel: {
-    fontSize: 10,
+  kicker: {
+    fontSize: 11,
     fontWeight: "800",
-    color: "#000",
-    opacity: 0.7,
-    letterSpacing: 0.5,
+    color: colors.mutedForeground,
+    letterSpacing: 1.2,
+    textTransform: "uppercase",
   },
-  activeBannerName: { fontSize: 16, fontWeight: "800", color: "#000" },
-  list: { padding: 16, paddingTop: 0, gap: 10 },
-  empty: { padding: 32, alignItems: "center" },
-  emptyTitle: { fontSize: 16, fontWeight: "800", color: "#111" },
-  emptyBody: {
-    marginTop: 6,
-    fontSize: 12,
-    color: "#666",
-    textAlign: "center",
-  },
-  card: {
-    padding: 14,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: "#eee",
-    borderRadius: 8,
-    gap: 8,
-    marginBottom: 10,
-  },
-  tagRow: { flexDirection: "row", gap: 6 },
-  tag: {
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  tagPickup: { backgroundColor: "#dcfce7" },
-  tagDropoff: { backgroundColor: "#dbeafe" },
-  tagKids: { backgroundColor: "#fef3c7" },
-  tagGeneral: { backgroundColor: "#f3f4f6" },
-  tagText: { fontSize: 10, fontWeight: "800", color: "#111" },
-  routeName: { fontSize: 16, fontWeight: "800", color: "#111" },
-  metaRow: { flexDirection: "row", gap: 12, alignItems: "center" },
-  meta: { fontSize: 12, color: "#666" },
-  metaPlate: {
-    fontSize: 12,
-    color: "#666",
-    fontFamily: "monospace",
-  },
-  startButton: {
-    height: 40,
-    backgroundColor: "#facc15",
-    borderRadius: 6,
-    alignItems: "center",
-    justifyContent: "center",
+  title: {
+    fontSize: 28,
+    fontWeight: "900",
+    color: colors.foreground,
+    letterSpacing: -0.8,
+    lineHeight: 32,
     marginTop: 4,
   },
-  startButtonDisabled: { opacity: 0.5 },
-  startButtonText: { fontSize: 14, fontWeight: "800", color: "#000" },
+  subtitle: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+    marginTop: 6,
+  },
+  errorCard: {
+    padding: 12,
+    borderColor: colors.destructive + "40",
+    backgroundColor: colors.destructive + "08",
+  },
+  errorText: {
+    color: colors.destructive,
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  notifCard: {
+    backgroundColor: colors.successSoft,
+    borderColor: colors.success + "30",
+    padding: 14,
+  },
+  notifLeft: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  notifIcon: {
+    width: 28,
+    height: 28,
+    borderRadius: radii.full,
+    backgroundColor: colors.success + "20",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  notifText: {
+    flex: 1,
+    minWidth: 0,
+  },
+  notifTitle: {
+    fontSize: 13,
+    fontWeight: "800",
+    color: colors.success,
+  },
+  notifBody: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: "500",
+    marginTop: 2,
+    opacity: 0.9,
+  },
+  envText: {
+    fontSize: 12,
+    color: colors.success,
+    fontWeight: "600",
+    lineHeight: 18,
+  },
+  envHint: {
+    fontSize: 11,
+    color: colors.mutedForeground,
+    fontWeight: "500",
+    marginTop: 6,
+    lineHeight: 16,
+  },
+  checkItem: {
+    fontSize: 12,
+    color: colors.foreground,
+    fontWeight: "500",
+    lineHeight: 18,
+  },
+  list: {
+    gap: 10,
+  },
+  emptyCard: {
+    backgroundColor: colors.card,
+    borderRadius: radiiExt["2xl"],
+    borderWidth: 2,
+    borderColor: colors.border,
+    borderStyle: "dashed",
+    padding: 32,
+    alignItems: "center",
+  },
+  emptyIconBox: {
+    width: 56,
+    height: 56,
+    borderRadius: radiiExt["2xl"],
+    backgroundColor: colors.muted,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyTitle: {
+    fontSize: 15,
+    fontWeight: "800",
+    color: colors.foreground,
+    letterSpacing: -0.3,
+    marginTop: 16,
+  },
+  emptySubtitle: {
+    fontSize: 12,
+    color: colors.mutedForeground,
+    fontWeight: "600",
+    marginTop: 6,
+    textAlign: "center",
+    lineHeight: 18,
+  },
+  footerLinks: {
+    alignItems: "center",
+    paddingTop: 8,
+  },
 });

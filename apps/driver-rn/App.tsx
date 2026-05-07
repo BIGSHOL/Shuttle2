@@ -184,6 +184,7 @@ export default function App() {
       ) : screen.kind === "run-list" ? (
         <RunListScreen
           onTripStarted={(tripId) => setScreen({ kind: "trip", tripId })}
+          onResumeTrip={(tripId) => setScreen({ kind: "trip", tripId })}
           onNotifications={() => setScreen({ kind: "notifications" })}
           onLogout={handleLogout}
         />
