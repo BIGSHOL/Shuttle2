@@ -208,7 +208,7 @@ export function TripScreen({ tripId, onEnd }: Props) {
           return (
             <View key={stop.routeStopId} style={styles.stopBlock}>
               <View style={styles.stopHeader}>
-                <Text style={styles.stopOrder}>{stop.order + 1}</Text>
+                <Text style={styles.stopOrder}>{stop.order}</Text>
                 <View style={{ flex: 1 }}>
                   <Text style={styles.stopName}>
                     {passed ? "✓ " : ""}

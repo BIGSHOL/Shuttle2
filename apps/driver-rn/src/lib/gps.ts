@@ -1,19 +1,19 @@
-// react-native-background-geolocation 기반 GPS tracker.
-// PWA의 src/app/(driver)/trip/[id]/gps-tracker.tsx 로직을 RN으로 1:1 포팅.
+// expo-location 기반 GPS tracker (W23+ — react-native-background-geolocation
+// license validation 회피를 위해 교체).
 //
-// 안드로이드 Foreground Service로 화면이 꺼져도 5초 broadcast 유지.
-// 영구 알림(notification)이 보여 사용자에게 송신 상태 인지.
+// 안드로이드 Foreground Service로 화면 꺼져도 5초 broadcast 유지.
+// expo-location의 startLocationUpdatesAsync가 자체 native Foreground Service를
+// 띄우고 영구 알림 표시. iOS는 background 사용 안 함 (베타는 안드로이드만).
 //
-// 핸들러 4가지:
+// 핸들러 4가지 (PWA gps-tracker.tsx 로직 1:1 포팅):
 //   1) START — 첫 GPS fix
 //   2) 5초 throttle Supabase channel.send (학부모 실시간 지도용)
 //   3) 30초 throttle POST /api/driver/trip/[id]/ping (LocationPing INTERVAL)
 //   4) STOP_PASS — 정류장 반경 진입 자동 판정 → 서버에 ping → 학부모 push
 //   5) END — 종료 시 마지막 좌표
 
-import BackgroundGeolocation, {
-  type Location,
-} from "react-native-background-geolocation";
+import * as Location from "expo-location";
+import * as TaskManager from "expo-task-manager";
 
 import {
   haversineMeters,
@@ -26,6 +26,7 @@ import type { RealtimeChannel } from "@supabase/supabase-js";
 import { apiFetch } from "./api-client";
 import { supabase } from "./supabase";
 
+const LOCATION_TASK = "shuttlee-trip-location";
 const BROADCAST_INTERVAL_MS = 5_000;
 const DB_INTERVAL_MS = 30_000;
 
@@ -36,36 +37,31 @@ export type GpsStop = {
   radiusM: number;
 };
 
-type StartOptions = {
+type ActiveState = {
   tripId: string;
   stops: GpsStop[];
-  onStopPassed?: (stopId: string) => void;
   onLocation?: (loc: TripPingPayload) => void;
-  onError?: (message: string) => void;
+  onStopPassed?: (stopId: string) => void;
+  onError?: (msg: string) => void;
+  startedSent: boolean;
+  passed: Set<string>;
+  lastBroadcast: number;
+  lastDb: number;
+  channel: RealtimeChannel | null;
+  channelReady: boolean;
 };
 
-// module-level singleton state — 운행은 한 번에 1개만.
-let active = false;
-let currentTripId: string | null = null;
-let currentStops: GpsStop[] = [];
-let onStopPassedHandler: ((stopId: string) => void) | undefined;
-let onLocationHandler: ((loc: TripPingPayload) => void) | undefined;
-let onErrorHandler: ((message: string) => void) | undefined;
-let startedSent = false;
-let passedSet = new Set<string>();
-let lastBroadcast = 0;
-let lastDb = 0;
-let channel: RealtimeChannel | null = null;
-let channelReady = false;
-let locationSub: { remove: () => void } | null = null;
+// 한 번에 active trip 1개만. module-level singleton.
+let active: ActiveState | null = null;
 
-function pingPayloadFromLocation(loc: Location): TripPingPayload {
+function pingPayloadFromLocation(loc: Location.LocationObject): TripPingPayload {
   return {
     lat: loc.coords.latitude,
     lng: loc.coords.longitude,
-    accuracy: Number.isFinite(loc.coords.accuracy)
-      ? loc.coords.accuracy
-      : null,
+    accuracy:
+      typeof loc.coords.accuracy === "number" && Number.isFinite(loc.coords.accuracy)
+        ? loc.coords.accuracy
+        : null,
     speed: loc.coords.speed ?? null,
     heading: loc.coords.heading ?? null,
     recordedAt: new Date(loc.timestamp).toISOString(),
@@ -74,7 +70,7 @@ function pingPayloadFromLocation(loc: Location): TripPingPayload {
 
 async function sendPing(
   tripId: string,
-  loc: Location,
+  loc: Location.LocationObject,
   source: "INTERVAL" | "STOP_PASS" | "START" | "END",
 ): Promise<void> {
   await apiFetch(`/api/driver/trip/${tripId}/ping`, {
@@ -82,9 +78,10 @@ async function sendPing(
     body: {
       lat: loc.coords.latitude,
       lng: loc.coords.longitude,
-      accuracy: Number.isFinite(loc.coords.accuracy)
-        ? loc.coords.accuracy
-        : undefined,
+      accuracy:
+        typeof loc.coords.accuracy === "number" && Number.isFinite(loc.coords.accuracy)
+          ? loc.coords.accuracy
+          : undefined,
       speed: loc.coords.speed ?? undefined,
       heading: loc.coords.heading ?? undefined,
       source,
@@ -92,10 +89,21 @@ async function sendPing(
   });
 }
 
-function checkStopPass(loc: Location): void {
-  if (!currentTripId) return;
-  for (const s of currentStops) {
-    if (passedSet.has(s.id)) continue;
+async function handleLocation(loc: Location.LocationObject): Promise<void> {
+  if (!active) return;
+  const a = active;
+
+  // 1) START ping 한 번만
+  if (!a.startedSent) {
+    a.startedSent = true;
+    void sendPing(a.tripId, loc, "START").catch((e) =>
+      console.warn("START ping failed:", e),
+    );
+  }
+
+  // 2) STOP_PASS 자동 판정
+  for (const s of a.stops) {
+    if (a.passed.has(s.id)) continue;
     const d = haversineMeters(
       loc.coords.latitude,
       loc.coords.longitude,
@@ -103,40 +111,26 @@ function checkStopPass(loc: Location): void {
       s.lng,
     );
     if (d <= s.radiusM) {
-      passedSet.add(s.id);
-      onStopPassedHandler?.(s.id);
-      void sendPing(currentTripId, loc, "STOP_PASS").catch((e) =>
+      a.passed.add(s.id);
+      a.onStopPassed?.(s.id);
+      void sendPing(a.tripId, loc, "STOP_PASS").catch((e) =>
         console.warn("STOP_PASS ping failed:", e),
       );
     }
   }
-}
-
-async function handleLocation(loc: Location): Promise<void> {
-  if (!active || !currentTripId) return;
-  const tripId = currentTripId;
-
-  // 1) START ping 한 번만
-  if (!startedSent) {
-    startedSent = true;
-    void sendPing(tripId, loc, "START").catch((e) =>
-      console.warn("START ping failed:", e),
-    );
-  }
-
-  // 2) 정류장 통과 자동 판정
-  checkStopPass(loc);
 
   const now = Date.now();
   const payload = pingPayloadFromLocation(loc);
+  a.onLocation?.(payload);
 
-  // 3) UI hook
-  onLocationHandler?.(payload);
-
-  // 4) 5초 throttle broadcast
-  if (channelReady && channel && now - lastBroadcast >= BROADCAST_INTERVAL_MS) {
-    lastBroadcast = now;
-    channel
+  // 3) 5초 throttle broadcast
+  if (
+    a.channelReady &&
+    a.channel &&
+    now - a.lastBroadcast >= BROADCAST_INTERVAL_MS
+  ) {
+    a.lastBroadcast = now;
+    a.channel
       .send({
         type: "broadcast",
         event: TRIP_PING_EVENT,
@@ -145,116 +139,142 @@ async function handleLocation(loc: Location): Promise<void> {
       .catch((e) => console.warn("broadcast failed:", e));
   }
 
-  // 5) 30초 INTERVAL DB ping
-  if (now - lastDb >= DB_INTERVAL_MS) {
-    lastDb = now;
-    void sendPing(tripId, loc, "INTERVAL").catch((e) =>
+  // 4) 30초 INTERVAL DB ping
+  if (now - a.lastDb >= DB_INTERVAL_MS) {
+    a.lastDb = now;
+    void sendPing(a.tripId, loc, "INTERVAL").catch((e) =>
       console.warn("INTERVAL ping failed:", e),
     );
   }
 }
 
-async function ensureChannel(tripId: string): Promise<void> {
-  if (channel) return;
-  channel = supabase.channel(tripChannelName(tripId), {
+// TaskManager.defineTask는 module-level (앱 entry 첫 import 시점).
+// background에서도 location 업데이트마다 callback 실행.
+type LocationTaskData = { locations?: Location.LocationObject[] };
+TaskManager.defineTask<LocationTaskData>(LOCATION_TASK, async (body) => {
+  if (body.error) {
+    console.warn("location task error:", body.error);
+    active?.onError?.("위치 추적 오류가 발생했어요");
+    return;
+  }
+  const locations = body.data?.locations ?? [];
+  for (const loc of locations) {
+    await handleLocation(loc).catch((e) =>
+      console.warn("handleLocation:", e),
+    );
+  }
+});
+
+async function ensureChannel(tripId: string): Promise<RealtimeChannel> {
+  const ch = supabase.channel(tripChannelName(tripId), {
     config: { broadcast: { self: true } },
   });
   await new Promise<void>((resolve) => {
-    channel?.subscribe((status) => {
-      if (status === "SUBSCRIBED") {
-        channelReady = true;
-        resolve();
-      }
+    ch.subscribe((status) => {
+      if (status === "SUBSCRIBED") resolve();
     });
   });
+  return ch;
 }
 
-export async function startGps(opts: StartOptions): Promise<void> {
+export async function startGps(opts: {
+  tripId: string;
+  stops: GpsStop[];
+  onStopPassed?: (stopId: string) => void;
+  onLocation?: (loc: TripPingPayload) => void;
+  onError?: (msg: string) => void;
+}): Promise<void> {
   if (active) return;
-  active = true;
-  currentTripId = opts.tripId;
-  currentStops = opts.stops;
-  onStopPassedHandler = opts.onStopPassed;
-  onLocationHandler = opts.onLocation;
-  onErrorHandler = opts.onError;
-  startedSent = false;
-  passedSet = new Set();
-  lastBroadcast = 0;
-  lastDb = 0;
 
-  await ensureChannel(opts.tripId);
+  // 권한 확인 — foreground 먼저, 그 다음 background
+  const fg = await Location.requestForegroundPermissionsAsync();
+  if (fg.status !== "granted") {
+    opts.onError?.(
+      "위치 권한이 거부됐어요. 시스템 설정에서 위치 사용을 허용해 주세요",
+    );
+    return;
+  }
+  const bg = await Location.requestBackgroundPermissionsAsync();
+  if (bg.status !== "granted") {
+    opts.onError?.(
+      "백그라운드 위치 권한이 필요합니다. 시스템 설정 → 권한 → 위치 → '항상 허용'을 선택해 주세요",
+    );
+    return;
+  }
 
-  await BackgroundGeolocation.ready({
-    desiredAccuracy: BackgroundGeolocation.DESIRED_ACCURACY_HIGH,
-    distanceFilter: 0,
-    locationUpdateInterval: 5_000,
-    fastestLocationUpdateInterval: 5_000,
-    foregroundService: true,
-    stopOnTerminate: true,
-    startOnBoot: false,
-    debug: false,
-    logLevel: BackgroundGeolocation.LOG_LEVEL_WARNING,
-    notification: {
-      title: "운행 중 — 위치 송신",
-      text: "셔틀이 기사 앱이 위치를 송신하고 있어요.",
-      priority: BackgroundGeolocation.NOTIFICATION_PRIORITY_MAX,
-      sticky: true,
+  active = {
+    tripId: opts.tripId,
+    stops: opts.stops,
+    onStopPassed: opts.onStopPassed,
+    onLocation: opts.onLocation,
+    onError: opts.onError,
+    startedSent: false,
+    passed: new Set(),
+    lastBroadcast: 0,
+    lastDb: 0,
+    channel: null,
+    channelReady: false,
+  };
+
+  // Supabase Realtime 채널 미리 구독 (broadcast publish 준비)
+  try {
+    const ch = await ensureChannel(opts.tripId);
+    if (active) {
+      active.channel = ch;
+      active.channelReady = true;
+    }
+  } catch (e) {
+    console.warn("channel subscribe failed:", e);
+    // 채널 실패해도 GPS 시작은 진행 — DB ping은 동작
+  }
+
+  // 이미 다른 task 돌고 있으면 정리
+  try {
+    const running = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK);
+    if (running) await Location.stopLocationUpdatesAsync(LOCATION_TASK);
+  } catch {
+    // ignore
+  }
+
+  await Location.startLocationUpdatesAsync(LOCATION_TASK, {
+    accuracy: Location.Accuracy.High,
+    timeInterval: 5_000,
+    distanceInterval: 0,
+    deferredUpdatesInterval: 5_000,
+    pausesUpdatesAutomatically: false,
+    showsBackgroundLocationIndicator: true,
+    foregroundService: {
+      notificationTitle: "운행 중 — 위치 송신",
+      notificationBody:
+        "셔틀이 기사 앱이 위치를 학부모에게 실시간 전달하고 있어요",
+      notificationColor: "#facc15",
     },
   });
-
-  locationSub = BackgroundGeolocation.onLocation(
-    (loc) => {
-      void handleLocation(loc).catch((e) => {
-        console.warn("handleLocation error:", e);
-        onErrorHandler?.(e instanceof Error ? e.message : "GPS 처리 실패");
-      });
-    },
-    (err) => {
-      // LocationError는 number 코드 (0, 1, 408 등). 메시지 형식으로 변환.
-      console.warn("BackgroundGeolocation error code:", err);
-      onErrorHandler?.(`GPS 오류 (코드 ${err})`);
-    },
-  );
-
-  await BackgroundGeolocation.start();
 }
 
 export async function stopGps(): Promise<void> {
   if (!active) return;
-  const tripId = currentTripId;
-  active = false;
+  const a = active;
+  active = null;
 
   // END ping — 마지막 좌표 있으면
-  if (tripId) {
-    try {
-      const last = await BackgroundGeolocation.getCurrentPosition({
-        timeout: 5,
-        maximumAge: 30_000,
-        samples: 1,
-      });
-      await sendPing(tripId, last, "END").catch(() => {});
-    } catch {
-      // 좌표 못 가져오면 그냥 종료
+  try {
+    const last = await Location.getLastKnownPositionAsync();
+    if (last) {
+      await sendPing(a.tripId, last, "END").catch(() => {});
     }
+  } catch {
+    // ignore
   }
 
   try {
-    await BackgroundGeolocation.stop();
+    const isRunning = await Location.hasStartedLocationUpdatesAsync(LOCATION_TASK);
+    if (isRunning) await Location.stopLocationUpdatesAsync(LOCATION_TASK);
   } catch (e) {
-    console.warn("BackgroundGeolocation.stop failed:", e);
+    console.warn("stopLocationUpdates failed:", e);
   }
 
-  locationSub?.remove();
-  locationSub = null;
-
-  if (channel) {
-    void supabase.removeChannel(channel);
-    channel = null;
-    channelReady = false;
+  if (a.channel) {
+    void supabase.removeChannel(a.channel);
   }
-  currentTripId = null;
-  currentStops = [];
-  onStopPassedHandler = undefined;
-  onLocationHandler = undefined;
-  onErrorHandler = undefined;
 }

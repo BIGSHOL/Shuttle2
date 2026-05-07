@@ -135,7 +135,7 @@ export function TripLiveMapInner({
                   style={{ backgroundColor: fill }}
                   title={s.name}
                 >
-                  {s.order + 1}
+                  {s.order}
                 </div>
                 {showStopLabels ? (
                   <div className="bg-background/95 mt-1 rounded px-1.5 py-0.5 text-[10px] font-bold shadow">

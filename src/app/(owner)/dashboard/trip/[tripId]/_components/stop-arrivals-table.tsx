@@ -37,7 +37,7 @@ export function StopArrivalsTable({ rows }: { rows: StopArrivalRow[] }) {
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-1.5">
                     <span className="bg-muted text-muted-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
-                      {r.stopOrder + 1}
+                      {r.stopOrder}
                     </span>
                     <h4 className="text-sm font-extrabold tracking-tight">
                       {r.stopName}
@@ -102,7 +102,7 @@ export function StopArrivalsTable({ rows }: { rows: StopArrivalRow[] }) {
             {rows.map((r) => (
               <tr key={r.stopId} className="border-b last:border-0">
                 <td className="text-muted-foreground px-3 py-2 text-center font-mono text-xs">
-                  {r.stopOrder + 1}
+                  {r.stopOrder}
                 </td>
                 <td className="px-3 py-2 font-medium">{r.stopName}</td>
                 <td className="px-3 py-2 font-mono text-xs">

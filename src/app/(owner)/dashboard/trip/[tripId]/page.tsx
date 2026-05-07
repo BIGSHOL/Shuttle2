@@ -41,6 +41,15 @@ function fmtKstHHmm(d: Date | null): string {
   return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16);
 }
 
+// W23+: 정류장 간 구간 소요 시간 — "1분 8초" / "45초" / "12분"
+function fmtSegment(sec: number | null): string | null {
+  if (sec == null || !Number.isFinite(sec) || sec < 0) return null;
+  if (sec < 60) return `${Math.round(sec)}초`;
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
+}
+
 function fmtElapsed(start: Date, end: Date | null): string {
   const ms = (end ?? new Date()).getTime() - start.getTime();
   const sec = Math.floor(ms / 1000);
@@ -202,6 +211,8 @@ export default async function OwnerTripDetailPage({
             stopId: rs.stop.id,
             stopName: rs.stop.name,
             stopOrder: rs.order,
+            lat: rs.stop.lat,
+            lng: rs.stop.lng,
           })),
         )
       : [];
@@ -228,6 +239,8 @@ export default async function OwnerTripDetailPage({
     boardCount: stopBoardCounts.get(a.stopId) ?? 0,
     noShowCount: stopNoShowCounts.get(a.stopId) ?? 0,
   }));
+  // W23+: list inline 통합 — 정류장 row에서 stopId로 lookup해 통과 시각 표시.
+  const stopArrivalMap = new Map(stopArrivals.map((a) => [a.stopId, a]));
 
   const eventType: "BOARD" | "ALIGHT" =
     trip.route.direction === "PICKUP" ? "BOARD" : "ALIGHT";
@@ -601,19 +614,44 @@ export default async function OwnerTripDetailPage({
         <ol className="mt-3 space-y-3">
           {trip.route.stops.map((rs) => {
             const stopStudents = studentsByStop.get(rs.stop.id) ?? [];
+            // W23+: STOP_PASS ping 기반 통과 여부·시각·구간 소요 inline 표시
+            const arrival = stopArrivalMap.get(rs.stop.id);
+            const passed = arrival?.arrivedAt != null;
+            const segmentLabel = fmtSegment(arrival?.segmentSec ?? null);
             return (
-              <li key={rs.id} className="border-l-muted border-l-2 pl-4">
+              <li
+                key={rs.id}
+                className={`${passed ? "border-l-success" : "border-l-muted"} border-l-2 pl-4`}
+              >
                 <div className="flex items-center gap-2">
-                  <span className="bg-muted text-muted-foreground flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-extrabold">
+                  <span
+                    className={`flex h-6 w-6 items-center justify-center rounded-full font-mono text-[11px] font-extrabold ${
+                      passed
+                        ? "bg-success text-success-foreground"
+                        : "bg-muted text-muted-foreground"
+                    }`}
+                  >
                     {rs.order}
                   </span>
                   <p className="flex-1 truncate text-sm font-extrabold">
                     {rs.stop.name}
                   </p>
-                  <span className="text-muted-foreground inline-flex items-center gap-1 font-mono text-xs font-medium">
-                    <Clock className="h-3 w-3" />
-                    {rs.scheduledAt}
-                  </span>
+                  <div className="flex flex-col items-end gap-0.5">
+                    <span className="text-muted-foreground inline-flex items-center gap-1 font-mono text-xs font-medium">
+                      <Clock className="h-3 w-3" />
+                      {rs.scheduledAt}
+                    </span>
+                    {arrival?.arrivedAt ? (
+                      <span className="text-success inline-flex items-center gap-1 font-mono text-[11px] font-bold whitespace-nowrap">
+                        통과 {fmtKstHHmm(arrival.arrivedAt)}
+                        {segmentLabel ? (
+                          <span className="text-muted-foreground font-medium">
+                            · {segmentLabel}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
                 {stopStudents.length > 0 ? (
                   <ul className="mt-2 space-y-1">

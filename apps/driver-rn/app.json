@@ -27,9 +27,13 @@
     },
     "plugins": [
       [
-        "react-native-background-geolocation",
+        "expo-location",
         {
-          "license": ""
+          "locationAlwaysAndWhenInUsePermission": "운행 중 셔틀 위치를 학부모에게 실시간 전달하기 위해 사용합니다",
+          "locationWhenInUsePermission": "운행 중 셔틀 위치를 학부모에게 실시간 전달하기 위해 사용합니다",
+          "isIosBackgroundLocationEnabled": false,
+          "isAndroidBackgroundLocationEnabled": true,
+          "isAndroidForegroundServiceEnabled": true
         }
       ],
       "@react-native-firebase/app",

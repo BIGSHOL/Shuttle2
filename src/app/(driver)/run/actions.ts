@@ -41,9 +41,10 @@ export type { SafetyFieldsInput };
 export async function startTripAction(
   routeId: string,
   vehicleId: string,
+  helperId: string | null,
 ): Promise<void> {
   const me = await requireDriver();
-  const parsed = StartTripInputSchema.parse({ routeId, vehicleId });
+  const parsed = StartTripInputSchema.parse({ routeId, vehicleId, helperId });
   const { tripId } = await startTrip(me, parsed);
   revalidatePath("/run");
   revalidatePath("/dashboard");

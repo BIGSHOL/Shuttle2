@@ -1,4 +1,4 @@
-import { haversineMeters } from "@/lib/geo/distance";
+import { haversineMeters } from "@shuttlee/shared-contracts";
 
 // Trip 단위 운행 통계 계산. 안전운행기록 PDF (분기 단위 distanceKm)와
 // 학원장 trip 상세 카드·분석 페이지가 같은 utility를 공유하도록 분리.
@@ -29,8 +29,8 @@ export type StopArrivalInput = {
   stopId: string;
   stopName: string;
   stopOrder: number;
-  // 해당 정류장 lat/lng — STOP_PASS 매칭은 source 기반이지만 fallback으로 가까운
-  // ping 찾을 때 사용 가능 (현재는 안 씀, 추후 확장).
+  lat: number;
+  lng: number;
 };
 
 export type StopArrival = {
@@ -96,33 +96,56 @@ export function computeTripStats(
 }
 
 /**
- * 정류장별 도착 시각·구간 소요시간. STOP_PASS source 첫 ping을 도착 시각으로 사용.
- * 노선의 stops는 stopOrder 오름차순. 매칭은 lat/lng가 가장 가까운 STOP_PASS ping
- * 으로 해야 정확하지만, 현재는 stopOrder 순서대로 STOP_PASS ping을 1:1 매핑
- * (기사가 노선 따라 정상 진행한다는 가정).
+ * 정류장별 도착 시각·구간 소요시간. STOP_PASS source ping을 lat/lng 기반으로
+ * 가장 가까운 stop과 매칭 (각 stop은 가장 이른 매칭 ping의 시각만 사용).
+ *
+ * W23+ 수정: 이전엔 stopOrder 순 1:1 index 매칭이었으나, 출발지 STOP_PASS
+ * 누락(첫 fix가 이미 출발지 떠난 후)되면 모든 stop이 한 칸씩 밀리는 버그 발생.
+ * 이제 거리 기반 nearest-stop 매칭으로 안정화 — ping 위치가 가장 가까운
+ * stop에 도착 시각 부여.
  */
 export function computeStopArrivals(
   pings: PingPoint[],
   stops: StopArrivalInput[],
 ): StopArrival[] {
-  const stopPasses = pings
-    .filter((p) => p.source === "STOP_PASS")
-    .slice(0, stops.length); // 정류장 수만큼만
+  const stopPasses = pings.filter((p) => p.source === "STOP_PASS");
+
+  // ping을 시간순(이미 input 가정)으로 보면서 가장 가까운 stop에 매칭.
+  // 한 stop은 여러 ping 중 가장 이른 것만 도착 시각으로 사용.
+  const arrivedMap = new Map<string, Date>();
+  for (const ping of stopPasses) {
+    let bestStopId: string | null = null;
+    let bestDist = Infinity;
+    for (const stop of stops) {
+      const d = haversineMeters(ping.lat, ping.lng, stop.lat, stop.lng);
+      if (d < bestDist) {
+        bestDist = d;
+        bestStopId = stop.stopId;
+      }
+    }
+    if (!bestStopId) continue;
+    if (!arrivedMap.has(bestStopId)) {
+      arrivedMap.set(bestStopId, ping.recordedAt);
+    }
+  }
 
   return stops.map((stop, idx) => {
-    const passPing = stopPasses[idx] ?? null;
-    const arrivedAt = passPing?.recordedAt ?? null;
+    const arrivedAt = arrivedMap.get(stop.stopId) ?? null;
 
     let segmentSec: number | null = null;
     if (idx > 0 && arrivedAt) {
-      const prevPass = stopPasses[idx - 1];
-      if (prevPass) {
-        segmentSec = Math.max(
-          0,
-          Math.floor(
-            (arrivedAt.getTime() - prevPass.recordedAt.getTime()) / 1000,
-          ),
-        );
+      // 직전 통과한 stop을 거꾸로 찾음 (직전 stop이 아직 통과 안 됐을 수도 있음)
+      for (let i = idx - 1; i >= 0; i--) {
+        const prevAt = arrivedMap.get(stops[i].stopId);
+        if (prevAt) {
+          segmentSec = Math.max(
+            0,
+            Math.floor(
+              (arrivedAt.getTime() - prevAt.getTime()) / 1000,
+            ),
+          );
+          break;
+        }
       }
     }
 
