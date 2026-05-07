@@ -155,13 +155,20 @@ async function main() {
   });
   console.log(`  ✓ Staff: ${owner.name}, ${driver.name}, ${helper.name}`);
 
-  // 정류장 4개 — 서울 강남역 부근 (lat=37.4979, lng=127.0276 베이스)
+  // 정류장 4개 — 대구 북구 산격동 → 침산동 (PARK 데모 동선)
+  // 좌표는 도로명주소 기반 근사값 (오차 ~100~300m). 정밀 보정은 학원장
+  // 화면 → 정류장 편집 카카오 지도 picker로 드래그.
+  // radiusM=150으로 GPS 흔들림에도 STOP_PASS 자동 판정이 잡히게.
   const stops = await Promise.all(
     [
-      { name: "강남역 4번 출구 (데모)", lat: 37.4979, lng: 127.0276 },
-      { name: "역삼역 1번 출구 (데모)", lat: 37.5006, lng: 127.0367 },
-      { name: "신논현역 2번 출구 (데모)", lat: 37.5046, lng: 127.025 },
-      { name: "양재역 8번 출구 (데모)", lat: 37.4854, lng: 127.0341 },
+      // 출발: 대구 북구 동북로 163 (산격동, 산격대우아파트)
+      { name: "산격대우아파트 (데모·출발)", lat: 35.8927, lng: 128.6088 },
+      // 중간: 산격동 서쪽 산격네거리 부근
+      { name: "산격네거리 (데모)", lat: 35.89, lng: 128.601 },
+      // 중간: 침산동 동쪽 침산네거리 부근
+      { name: "침산네거리 (데모)", lat: 35.887, lng: 128.594 },
+      // 도착: 대구 북구 침산남로 140 (침산동)
+      { name: "침산남로 140 학원 (데모·도착)", lat: 35.8825, lng: 128.588 },
     ].map((s) =>
       db.stop.create({
         data: {
@@ -169,7 +176,7 @@ async function main() {
           name: s.name,
           lat: s.lat,
           lng: s.lng,
-          radiusM: 50,
+          radiusM: 150,
         },
       }),
     ),
@@ -177,21 +184,21 @@ async function main() {
   console.log(`  ✓ Stops: ${stops.length}`);
 
   // 노선 2개 (등원/하원) — 둘 다 KIDS 차량에 (안전점검 데모를 위해)
-  // 월·수·금 (1+4+16 = 21)
+  // 매일 (월~일 = 1+2+4+8+16+32+64 = 127): 어떤 요일에 데모해도 운행 노출
   const pickupRoute = await db.route.create({
     data: {
       vehicleId: kidsVehicle.id,
-      name: "월수금 등원 (데모)",
+      name: "매일 등원 (데모)",
       direction: "PICKUP",
-      weekdays: 21,
+      weekdays: 127,
     },
   });
   const dropoffRoute = await db.route.create({
     data: {
       vehicleId: kidsVehicle.id,
-      name: "월수금 하원 (데모)",
+      name: "매일 하원 (데모)",
       direction: "DROPOFF",
-      weekdays: 21,
+      weekdays: 127,
     },
   });
   console.log(`  ✓ Routes: ${pickupRoute.name}, ${dropoffRoute.name}`);
