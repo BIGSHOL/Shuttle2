@@ -11,12 +11,10 @@ import { sendToGuardian, sendToStaff } from "@/lib/push/server";
 // 승인: 새 Stop 생성 + RouteStudent.stopId 갱신 + 학부모·기사 push.
 // 반려: rejectReason 필수 + 학부모 push.
 
+// newStopName은 legacy 자유 좌표 신청(requestedStopId 없음) 승인 시에만 요구.
+// picker 신청(requestedStopId 있음)은 무시 — reqRow.requestedStop.name 사용.
 const ApproveInput = z.object({
-  newStopName: z
-    .string()
-    .trim()
-    .min(1, "새 정류장 이름을 입력해 주세요")
-    .max(60),
+  newStopName: z.string().trim().max(60).optional(),
 });
 
 export async function approveStopChangeAction(
@@ -34,6 +32,7 @@ export async function approveStopChangeAction(
         "정류장 이름이 올바르지 않습니다",
     };
   }
+  const inputName = parsed.data.newStopName?.trim() ?? "";
 
   const reqRow = await db.stopChangeRequest.findUnique({
     where: { id: requestId },
@@ -47,6 +46,8 @@ export async function approveStopChangeAction(
       toLng: true,
       effectiveAt: true,
       createdBy: true,
+      requestedStopId: true,
+      requestedStop: { select: { id: true, name: true } },
       student: { select: { name: true } },
     },
   });
@@ -56,22 +57,34 @@ export async function approveStopChangeAction(
     return { error: "이미 처리된 요청입니다" };
   }
 
-  // 트랜잭션: 새 Stop 생성 + RouteStudent.stopId 갱신 + 요청 status 업데이트
-  // 자녀가 같은 fromStop을 여러 노선에 사용 중이면 모두 갱신.
+  const usePickerStop = Boolean(reqRow.requestedStopId && reqRow.requestedStop);
+  if (!usePickerStop && inputName.length === 0) {
+    return { error: "새 정류장 이름을 입력해 주세요" };
+  }
+
+  // W24-B C8: requestedStopId가 있으면 (학부모 picker 흐름) — 새 Stop 생성 안 함.
+  // 그 stopId를 resultStopId로 매핑. legacy 자유 좌표 신청은 newStopName + 새 Stop 생성.
   const result = await db.$transaction(async (tx) => {
-    const newStop = await tx.stop.create({
-      data: {
-        orgId,
-        name: parsed.data.newStopName,
-        lat: reqRow.toLat,
-        lng: reqRow.toLng,
-        radiusM: 50,
-      },
-    });
+    const targetStopId = usePickerStop
+      ? reqRow.requestedStopId!
+      : (
+          await tx.stop.create({
+            data: {
+              orgId,
+              name: inputName,
+              lat: reqRow.toLat,
+              lng: reqRow.toLng,
+              radiusM: 50,
+            },
+          })
+        ).id;
+    const targetStopName = usePickerStop
+      ? reqRow.requestedStop!.name
+      : inputName;
 
     await tx.routeStudent.updateMany({
       where: { studentId: reqRow.studentId, stopId: reqRow.fromStopId },
-      data: { stopId: newStop.id },
+      data: { stopId: targetStopId },
     });
 
     await tx.stopChangeRequest.update({
@@ -80,7 +93,7 @@ export async function approveStopChangeAction(
         status: "APPROVED",
         decidedBy: me.staff.id,
         decidedAt: new Date(),
-        resultStopId: newStop.id,
+        resultStopId: targetStopId,
       },
     });
 
@@ -91,13 +104,13 @@ export async function approveStopChangeAction(
         requestId,
         studentId: reqRow.studentId,
         fromStopId: reqRow.fromStopId,
-        toStopId: newStop.id,
+        toStopId: targetStopId,
         appliedById: me.staff.id,
         permanent: true,
       },
     });
 
-    return { newStopId: newStop.id, newStopName: newStop.name };
+    return { newStopId: targetStopId, newStopName: targetStopName };
   });
 
   // 학부모 push — /my-stop-changes (학부모 본인 신청 list, /stop-change-requests

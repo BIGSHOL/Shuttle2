@@ -218,8 +218,9 @@ model Stop {
 
   routes               RouteStop[]
   students             RouteStudent[]
-  changeRequestsFrom   StopChangeRequest[]       @relation("StopChangeFrom")
-  changeRequestsResult StopChangeRequest[]       @relation("StopChangeResult")
+  changeRequestsFrom      StopChangeRequest[]       @relation("StopChangeFrom")
+  changeRequestsResult    StopChangeRequest[]       @relation("StopChangeResult")
+  changeRequestsRequested StopChangeRequest[]       @relation("StopChangeRequested")
   // W24-B: stop-change ledger·override
   assignmentsCurrent   RouteAssignment[]         @relation("AssignmentCurrentStop")
   overrides            RouteAssignmentOverride[]
@@ -546,6 +547,11 @@ model StopChangeRequest {
   toLat       Float
   toLng       Float
   toAddress   String? // 역지오코딩 결과 (선택)
+  // W24-B: 학부모 picker로 같은 노선의 기존 stop을 선택한 경우 채움.
+  // 이 값이 있으면 학원장 승인 시 새 Stop 생성 없이 그 stopId를 resultStopId로 매핑.
+  // null이면 legacy 자유 좌표 신청 — 기존 흐름(newStopName 입력 + Stop 생성).
+  requestedStopId String?
+  requestedStop   Stop?  @relation("StopChangeRequested", fields: [requestedStopId], references: [id])
   reason      String?
   effectiveAt DateTime      @db.Date
   status      RequestStatus @default(PENDING)
