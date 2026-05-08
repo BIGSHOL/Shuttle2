@@ -1,13 +1,13 @@
 "use client";
 
-import { Check, Phone, X } from "lucide-react";
+import { Check, Phone } from "lucide-react";
 import { useTransition } from "react";
 import { toast } from "sonner";
 
 import { toggleBoardingEventAction } from "../../../run/actions";
 
 // W24-D Phase 2 driver: refac Driver Run.html "02 · 운행 중" .student row.
-// 픽셀 단위 align — refac CSS:
+// 픽셀 단위 align — refac CSS 그대로:
 //
 //   .student{background:var(--card);border:1px solid var(--line);
 //            border-radius:14px;margin-bottom:7px;padding:12px 14px;
@@ -16,34 +16,33 @@ import { toggleBoardingEventAction } from "../../../run/actions";
 //   .student.absent{background:transparent;border-color:var(--line);opacity:0.4}
 //   .student.absent .stu-name{text-decoration:line-through}
 //   .student.no-show{background:var(--danger-soft);border-color:rgba(255,97,85,0.4)}
+//
 //   .stu-avatar{width:36px;height:36px;border-radius:999px;background:var(--card2);
-//               font-size:13px;font-weight:900;border:1.5px solid var(--line2)}
+//               display:grid;place-items:center;font-size:13px;font-weight:900;
+//               border:1.5px solid var(--line2)}
 //   .student.boarded .stu-avatar{background:var(--ok);border-color:var(--ok);color:#fff}
 //   .stu-name{font-size:15px;font-weight:800;letter-spacing:-0.01em}
 //   .stu-meta{font-size:11px;color:var(--mute);font-weight:700;margin-top:1px}
 //   .student.no-show .stu-meta{color:var(--danger)}
+//
 //   .stu-action{font-size:11px;font-weight:900;letter-spacing:0.04em;
 //               text-transform:uppercase;padding:5px 10px;border-radius:6px;
-//               background:var(--card2);color:var(--mute)}
+//               background:var(--card2);color:var(--mute);border:0}
 //   .student.boarded .stu-action{background:transparent;color:var(--ok)}
 //   .student.no-show .stu-action{background:var(--danger);color:#fff}
+//   .student .stu-action svg{width:11px;height:11px}
 
-export type StudentRowVariant =
-  | "pending" // 아직 처리 안 됨 (기본)
-  | "boarded" // BOARD/ALIGHT 처리 완료
-  | "absent" // 결석 ACK
-  | "no-show"; // NO_SHOW/NO_DROPOFF
+export type StudentRowVariant = "pending" | "boarded" | "absent" | "no-show";
 
 export function StudentRow({
   tripId,
   studentId,
   studentName,
-  meta, // "7세 · 햇살반 · 보호자 박미선" 또는 결석/미탑승 사유
+  meta,
   variant,
-  eventType, // PICKUP→BOARD, DROPOFF→ALIGHT
+  eventType,
   gpsLat,
   gpsLng,
-  isAtNextStop, // 현재 정류장이 다음 stop이면 primary action 활성화
 }: {
   tripId: string;
   studentId: string;
@@ -53,7 +52,6 @@ export function StudentRow({
   eventType: "BOARD" | "ALIGHT";
   gpsLat: number | null;
   gpsLng: number | null;
-  isAtNextStop: boolean;
 }) {
   const [pending, startTransition] = useTransition();
 
@@ -61,19 +59,17 @@ export function StudentRow({
   const isAbsent = variant === "absent";
   const isNoShow = variant === "no-show";
 
-  // refac variant 별 컨테이너 class
-  let containerCls = "bg-card border-border";
-  let metaCls = "text-muted-foreground";
-  let nameCls = "";
-  if (isBoarded) {
-    containerCls = "bg-muted border-transparent opacity-70";
-  } else if (isAbsent) {
-    containerCls = "bg-transparent border-border opacity-40";
-    nameCls = "line-through";
-  } else if (isNoShow) {
-    containerCls = "bg-destructive-soft border-destructive/40";
-    metaCls = "text-destructive";
-  }
+  // refac container variant 별 — bg + border + opacity
+  const containerCls = isBoarded
+    ? "bg-muted border-transparent opacity-70"
+    : isAbsent
+      ? "bg-transparent border-border opacity-40"
+      : isNoShow
+        ? "bg-destructive-soft border-destructive/40"
+        : "bg-card border-border";
+
+  const metaCls = isNoShow ? "text-destructive" : "text-muted-foreground";
+  const nameCls = isAbsent ? "line-through" : "";
 
   const handleToggle = () => {
     if (pending) return;
@@ -92,9 +88,9 @@ export function StudentRow({
     });
   };
 
-  // refac stu-avatar: 36x36, .boarded면 ok+check, 아니면 글자 첫 자
+  // refac stu-avatar — variant별 색 변환
   const avatar = isBoarded ? (
-    <span className="bg-success text-success-foreground border-success grid h-9 w-9 shrink-0 place-items-center rounded-full border-[1.5px]">
+    <span className="bg-success border-success grid h-9 w-9 shrink-0 place-items-center rounded-full border-[1.5px] text-white">
       <Check className="h-4 w-4" strokeWidth={3} />
     </span>
   ) : isNoShow ? (
@@ -107,9 +103,63 @@ export function StudentRow({
     </span>
   );
 
+  // refac stu-action — pending/boarded/absent/no-show variants
+  let action: React.ReactNode;
+  if (isBoarded) {
+    // refac .student.boarded .stu-action { background: transparent; color: ok }
+    action = (
+      <button
+        type="button"
+        onClick={handleToggle}
+        disabled={pending}
+        className="text-success rounded-[6px] bg-transparent px-[10px] py-[5px] text-[11px] font-black uppercase tracking-[0.04em] disabled:opacity-50"
+      >
+        {pending ? "..." : "탑승됨"}
+      </button>
+    );
+  } else if (isNoShow) {
+    // refac .student.no-show .stu-action { background: danger; color: white }
+    action = (
+      <button
+        type="button"
+        className="bg-destructive inline-flex items-center gap-1 rounded-[6px] px-[10px] py-[5px] text-[11px] font-black uppercase tracking-[0.04em] text-white"
+      >
+        <Phone className="h-[11px] w-[11px]" strokeWidth={2.5} />
+        연락
+      </button>
+    );
+  } else if (isAbsent) {
+    // 결석 — refac에선 "결석" 텍스트만 (transparent action)
+    action = (
+      <span className="text-muted-foreground rounded-[6px] bg-transparent px-[10px] py-[5px] text-[11px] font-black uppercase tracking-[0.04em]">
+        결석
+      </span>
+    );
+  } else {
+    // pending — refac 기본 .stu-action: bg-card2(muted) + mute color + check icon
+    action = (
+      <button
+        type="button"
+        onClick={handleToggle}
+        disabled={pending}
+        className="bg-muted text-muted-foreground inline-flex items-center gap-1 rounded-[6px] px-[10px] py-[5px] text-[11px] font-black uppercase tracking-[0.04em] disabled:opacity-50"
+        aria-label={`${studentName} ${eventType === "BOARD" ? "탑승" : "하차"} 토글`}
+      >
+        {pending ? (
+          "..."
+        ) : (
+          <>
+            <Check className="h-[11px] w-[11px]" strokeWidth={2.5} />
+            {eventType === "BOARD" ? "탑승" : "하차"}
+          </>
+        )}
+      </button>
+    );
+  }
+
   return (
     <div
-      className={`flex items-center gap-[12px] rounded-[14px] border px-[14px] py-[12px] mb-[7px] ${containerCls}`}
+      className={`mb-[7px] flex items-center gap-[12px] rounded-[14px] border px-[14px] py-[12px] ${containerCls}`}
     >
       {avatar}
       <div className="min-w-0 flex-1">
@@ -118,79 +168,7 @@ export function StudentRow({
         </p>
         <p className={`mt-[1px] text-[11px] font-bold ${metaCls}`}>{meta}</p>
       </div>
-      {/* refac stu-action variants */}
-      {isBoarded ? (
-        // 탑승됨 — bg-transparent color-ok, 토글로 취소
-        <button
-          type="button"
-          onClick={handleToggle}
-          disabled={pending}
-          className="text-success rounded-[6px] bg-transparent px-[10px] py-[5px] text-[11px] font-black uppercase tracking-[0.04em] disabled:opacity-50"
-        >
-          {pending ? "..." : "탑승됨"}
-        </button>
-      ) : isNoShow ? (
-        // no-show — bg-danger color-white + 보호자 연락 link
-        <button
-          type="button"
-          className="bg-destructive grid h-7 place-items-center rounded-[6px] px-[10px] text-[11px] font-black uppercase tracking-[0.04em] text-white"
-        >
-          <span className="inline-flex items-center gap-1">
-            <Phone className="h-[11px] w-[11px]" strokeWidth={2.5} />
-            연락
-          </span>
-        </button>
-      ) : isAbsent ? (
-        <span className="bg-transparent text-muted-foreground rounded-[6px] px-[10px] py-[5px] text-[11px] font-black uppercase tracking-[0.04em]">
-          결석
-        </span>
-      ) : (
-        // 기본 — bg-card2 (muted) color-mute, primary action
-        <button
-          type="button"
-          onClick={handleToggle}
-          disabled={pending || !isAtNextStop}
-          className={`rounded-[6px] px-[10px] py-[5px] text-[11px] font-black uppercase tracking-[0.04em] disabled:opacity-50 ${
-            isAtNextStop
-              ? "bg-bus text-bus-foreground"
-              : "bg-muted text-muted-foreground"
-          }`}
-          aria-label={`${studentName} ${eventType === "BOARD" ? "탑승" : "하차"} 토글`}
-        >
-          {pending ? (
-            "..."
-          ) : (
-            <>
-              <Check
-                className="mr-0.5 inline-block h-[11px] w-[11px] align-[-1px]"
-                strokeWidth={2.5}
-              />
-              {eventType === "BOARD" ? "탑승" : "하차"}
-            </>
-          )}
-        </button>
-      )}
+      {action}
     </div>
-  );
-}
-
-// 미보고/no-show 토글용 (마킹 취소)
-export function StudentNoShowToggle({
-  onUnmark,
-  pending,
-}: {
-  onUnmark: () => void;
-  pending: boolean;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onUnmark}
-      disabled={pending}
-      className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-bold underline disabled:opacity-50"
-    >
-      <X className="h-3 w-3" />
-      미탑승 취소
-    </button>
   );
 }

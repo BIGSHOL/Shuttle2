@@ -32,6 +32,7 @@ import {
 } from "./_components/end-trip-modal";
 import { BtnBig } from "./_components/btn-big";
 import { NextStopCard } from "./_components/next-stop-card";
+import { PostTripCheckScreen } from "./_components/post-trip-check-screen";
 import { PreTripCheckScreen } from "./_components/pre-trip-check-screen";
 import { RunTop } from "./_components/run-top";
 import { StudentRow } from "./_components/student-row";
@@ -242,15 +243,12 @@ export function TripRunningView({
     !helper &&
     stops.reduce((acc, s) => acc + s.students.length, 0) >= 1;
 
-  // refac 01 frame: KIDS 모드 + 안전점검 미완료면 dedicated pre-trip 화면 노출.
+  // refac 01 frame: KIDS 모드 + 출발 전 안전점검 미완료면 dedicated pre-trip 화면.
   // 운전 중 화면(02)을 보기 전에 안전점검 완료 강제 — 도교법 §53 의무.
-  // [TEMP] localStorage로 사용자가 점검 완료 후 dismiss 가능하게 — 추후 schema에
-  // preCheckDismissedAt 필드 추가 권장.
   const preTripIncomplete =
     isKidsMode &&
     isDriver &&
     (!safetyCheck?.seatbeltAllOk || !safetyCheck?.helperPresent);
-  // 베타 backlog: dismiss 토글로 임시 우회 가능하게 (현장 긴급 상황 대응)
   if (preTripIncomplete) {
     return (
       <PreTripCheckScreen
@@ -265,6 +263,44 @@ export function TripRunningView({
         onComplete={() => {
           // Server action이 이미 즉시 revalidate → re-render 후 preTripIncomplete=false
         }}
+      />
+    );
+  }
+
+  // refac 03 frame: 모든 stop 통과 + KIDS + 운행 종료 전 → dedicated 도착 후 점검.
+  const passedSetForCheck = new Set([...gps.passed, ...manualPassed]);
+  const allStopsPassed =
+    stops.length > 0 && passedSetForCheck.size >= stops.length;
+  const postTripPhase = isKidsMode && isDriver && allStopsPassed;
+  if (postTripPhase) {
+    const finalStop = stops[stops.length - 1];
+    const elapsedMinNum = startedAtISO
+      ? Math.max(
+          0,
+          Math.floor(
+            (new Date().getTime() - new Date(startedAtISO).getTime()) / 60000,
+          ),
+        )
+      : 0;
+    const nowKstHHmm = new Date(
+      new Date().getTime() + 9 * 60 * 60 * 1000,
+    )
+      .toISOString()
+      .slice(11, 16);
+    const totalAlighted =
+      eventType === "BOARD" ? boardedSet.size : alightedSet.size;
+    return (
+      <PostTripCheckScreen
+        tripId={tripId}
+        finalStopName={finalStop?.name ?? "도착"}
+        endedHHmm={nowKstHHmm}
+        alightedCount={totalAlighted}
+        elapsedMinutes={elapsedMinNum}
+        distanceKm={0}
+        safetyCheck={safetyCheck}
+        onEndTrip={handleEnd}
+        endPending={endPending}
+        backHref={backHref}
       />
     );
   }
@@ -378,14 +414,9 @@ export function TripRunningView({
         />
       ) : null}
 
-      {/* SafetyCheck — KIDS 모드만 */}
-      {isKidsMode ? (
-        <SafetyCheckCard
-          tripId={tripId}
-          phase="pre"
-          safetyCheck={safetyCheck}
-        />
-      ) : null}
+      {/* W24-D Phase 2: pre-trip 안전점검은 별도 PreTripCheckScreen으로 phase 분리.
+          모든 stop 통과 후 post-trip 안전점검도 별도 PostTripCheckScreen 분리.
+          running view 자체에는 더이상 SafetyCheckCard inline 노출 안 함. */}
 
       {/* refac .pickup-wrap — 다음 정류장 학생 + 이전 정류장 완료 학생 두 그룹.
           stop별 grouping(이전 row) → status별 grouping(refac idiom)으로 전환. */}
@@ -444,7 +475,7 @@ export function TripRunningView({
                       eventType={eventType}
                       gpsLat={gps.fix?.latitude ?? null}
                       gpsLng={gps.fix?.longitude ?? null}
-                      isAtNextStop={true}
+
                     />
                   ))}
                   {processedAtNext.map((st) => {
@@ -470,7 +501,7 @@ export function TripRunningView({
                         eventType={eventType}
                         gpsLat={gps.fix?.latitude ?? null}
                         gpsLng={gps.fix?.longitude ?? null}
-                        isAtNextStop={true}
+
                       />
                     );
                   })}
@@ -520,7 +551,7 @@ export function TripRunningView({
                         eventType={eventType}
                         gpsLat={gps.fix?.latitude ?? null}
                         gpsLng={gps.fix?.longitude ?? null}
-                        isAtNextStop={false}
+
                       />
                     );
                   })}

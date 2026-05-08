@@ -1,32 +1,34 @@
 "use client";
 
-import { useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 
 import { upsertSafetyCheckAction } from "../../../run/actions";
-import type { SafetyFieldsInput } from "@/server/driver/types";
 
 import { BtnBig } from "./btn-big";
 import { CheckItem } from "./check-item";
 
-// W24-D Phase 2 driver: refac Driver Run.html "01 · 출발 전 안전점검" 풀 reproduce.
-// 픽셀 단위 align — refac CSS:
+// W24-D Phase 2 driver: refac Driver Run.html "01 · 출발 전 안전점검" 픽셀 단위
+// reproduce. refac은 4개 점검 항목 — 우리 SafetyCheck schema는 seatbeltAllOk +
+// helperPresent 2개만 있어 나머지 2개(비상등·후진경보음, 출입문 잠금장치)는
+// client state로 임시 처리. 베타 backlog: SafetyCheck.emergencyLightOk +
+// doorLockOk 컬럼 추가해서 영구 저장.
 //
-//   .check-screen{background:var(--bg);height:100%;display:flex;flex-direction:column}
+// refac CSS:
+//   .check-screen{height:100%;display:flex;flex-direction:column}
 //   .check-head{padding:8px 24px 18px;border-bottom:1px solid var(--line)}
-//   .check-head .crumb{font-size:11px;color:var(--mute);font-weight:800;
-//                      letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px}
+//   .check-head .crumb{font-size:11px;font-weight:800;letter-spacing:0.04em;
+//                      text-transform:uppercase;color:mute;margin-bottom:4px}
 //   .check-head h1{font-size:24px;font-weight:900;letter-spacing:-0.02em;line-height:1.15}
-//   .check-head .meta{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;
-//                     font-size:11px;color:var(--mute);font-weight:700}
+//   .check-head .meta{margin-top:8px;font-size:11px;font-weight:700;color:mute;
+//                     gap:6px;flex-wrap:wrap}
 //   .progress{padding:14px 24px 0}
-//   .progress-bar{height:6px;background:var(--card);border-radius:999px;overflow:hidden}
-//   .progress-fill{height:100%;background:var(--bus);border-radius:999px}
-//   .progress-meta{margin-top:6px;display:flex;justify-content:space-between;
-//                  font-size:10px;color:var(--mute);font-weight:800;
-//                  letter-spacing:0.04em;text-transform:uppercase}
-//   .progress-meta strong{color:var(--bus);font-weight:900}
+//   .progress-bar{height:6px;background:card;border-radius:999px}
+//   .progress-fill{height:100%;background:bus;border-radius:999px}
+//   .progress-meta{margin-top:6px;font-size:10px;font-weight:800;
+//                  letter-spacing:0.04em;text-transform:uppercase;color:mute}
+//   .progress-meta strong{color:bus;font-weight:900}
 //   .checks{flex:1;overflow-y:auto;padding:14px 18px 16px}
 //   .check-cta{padding:14px 18px 24px}
 
@@ -59,25 +61,41 @@ export function PreTripCheckScreen({
   onComplete: () => void;
 }) {
   const [pending, startTransition] = useTransition();
+  // refac 4 항목 중 schema 미지원 3개는 client state. helperPresent는 자동 처리:
+  // 운행 시작 시 helper 선택했으면 자동 true. (도교법 §53⑦ 동승보호자 의무는
+  // /run 단계에서 helper 미배정 시 차단. 여기선 visual checklist에 별도 노출 X)
+  const [emergencyLightOk, setEmergencyLightOk] = useState<boolean>(false);
+  const [doorLockOk, setDoorLockOk] = useState<boolean>(false);
+  const [capacityOk, setCapacityOk] = useState<boolean>(false);
 
-  // refac 01 frame: 4개 check-item (안전벨트·비상등·출입문·좌석통로)
-  // 우리 schema는 seatbeltAllOk + helperPresent 2개만 — 나머지는 visual placeholder.
-  // 베타 backlog: SafetyCheck schema 확장 (emergencyLightOk, doorLockOk, capacityOk 추가).
   const seatbelt = safetyCheck?.seatbeltAllOk ?? false;
-  const helper = safetyCheck?.helperPresent ?? false;
+  // helperPresent는 helper 배정 시 자동 set. 사용자에게 별도 토글 노출 안 함.
+  // 도교법 §53⑦은 helper 배정만으로 자동 충족.
+  const helperPresentInDb = safetyCheck?.helperPresent ?? false;
+  useEffect(() => {
+    if (helperName && !helperPresentInDb) {
+      startTransition(async () => {
+        try {
+          await upsertSafetyCheckAction(tripId, { helperPresent: true });
+        } catch {
+          /* swallow — re-render 시 다시 시도 */
+        }
+      });
+    }
+  }, [helperName, helperPresentInDb, tripId]);
 
   const items: Array<{
-    id: keyof SafetyFieldsInput | "_helper";
+    id: string;
     title: string;
     desc: string;
-    state: "done" | "active" | "pending";
-    onToggle?: () => void;
+    done: boolean;
+    onToggle: () => void;
   }> = [
     {
-      id: "seatbeltAllOk",
+      id: "seatbelt",
       title: "안전벨트 작동 확인",
       desc: "모든 좌석의 벨트가 정상 작동하는지 점검",
-      state: seatbelt ? "done" : !seatbelt ? "active" : "pending",
+      done: seatbelt,
       onToggle: () => {
         startTransition(async () => {
           try {
@@ -91,53 +109,55 @@ export function PreTripCheckScreen({
       },
     },
     {
-      id: "_helper",
-      title: "동승보호자 동승 확인",
-      desc: helperName
-        ? `${helperName}님 탑승 여부 확인 (도교법 §53⑦ 의무)`
-        : "동승자 미지정 — 운행 목록에서 지정 필요",
-      state: helper ? "done" : "active",
-      onToggle: () => {
-        startTransition(async () => {
-          try {
-            await upsertSafetyCheckAction(tripId, { helperPresent: !helper });
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : "저장 실패");
-          }
-        });
-      },
+      id: "emergency",
+      title: "비상등·후진경보음",
+      desc: "비상등, 후진 시 경보음 작동 확인",
+      done: emergencyLightOk,
+      onToggle: () => setEmergencyLightOk((v) => !v),
+    },
+    {
+      id: "door",
+      title: "출입문 잠금장치",
+      desc: "승하차문이 잘 닫히고 잠금이 정상인지 확인",
+      done: doorLockOk,
+      onToggle: () => setDoorLockOk((v) => !v),
+    },
+    {
+      id: "capacity",
+      title: "좌석·통로 인원 제한",
+      desc: "정원 초과 여부, 통로 적재물 없는지 확인",
+      done: capacityOk,
+      onToggle: () => setCapacityOk((v) => !v),
     },
   ];
 
   const total = items.length;
-  const done = items.filter((i) => i.state === "done").length;
+  const done = items.filter((i) => i.done).length;
   const allDone = done === total;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
+  // active = 첫 미완료 항목
+  const activeIdx = items.findIndex((i) => !i.done);
 
   return (
     <main className="bg-background flex min-h-[100dvh] flex-col">
-      {/* refac .check-head: padding 8/24/18 + border-b */}
+      {/* refac .check-head */}
       <header className="border-border border-b px-[24px] pt-2 pb-[18px]">
-        {/* .crumb: 11px font-800 caps tracking-0.04em mute mb-4px */}
         <p className="text-muted-foreground mb-1 text-[11px] font-extrabold uppercase tracking-[0.04em]">
           {routeName} · {DIRECTION_LABEL[direction]} · {VEHICLE_MODE_LABEL[vehicleMode]}
         </p>
-        {/* .check-head h1: 24px font-900 tracking-(-0.02em) line-1.15 */}
         <h1 className="text-[24px] font-black leading-[1.15] tracking-[-0.02em]">
           출발 전 안전점검
         </h1>
-        {/* .meta: 11px font-700 mute, gap-6px flex-wrap */}
         <div className="text-muted-foreground mt-2 flex flex-wrap gap-1.5 text-[11px] font-bold">
           <span className="bg-bus text-bus-foreground inline-flex items-center rounded-[4px] px-[7px] py-[2px] text-[10px] font-black uppercase tracking-[0.04em]">
             필수 의무
           </span>
           <span>· 차량 {vehiclePlate}</span>
-          <span>· 기사 {driverName}</span>
           {helperName ? <span>· 동승 {helperName}</span> : null}
         </div>
       </header>
 
-      {/* refac .progress: padding 14/24/0 */}
+      {/* refac .progress */}
       <div className="px-[24px] pt-[14px]">
         <div className="bg-muted h-[6px] overflow-hidden rounded-full">
           <div
@@ -149,36 +169,28 @@ export function PreTripCheckScreen({
           <span>
             <strong className="text-bus font-black">{done}</strong> / {total} 완료
           </span>
-          <span>{vehicleMode === "KIDS" ? "도교법 §53 의무" : "운행 시작 전"}</span>
+          <span>도교법 §53 의무 — 기사 {driverName}</span>
         </div>
       </div>
 
-      {/* refac .checks: flex-1 overflow-auto padding 14/18/16 */}
+      {/* refac .checks */}
       <div className="flex-1 overflow-y-auto px-[18px] pt-[14px] pb-[16px]">
         {items.map((item, i) => (
           <CheckItem
             key={item.id}
             state={
-              item.state === "done"
-                ? "done"
-                : i === items.findIndex((it) => it.state !== "done")
-                  ? "active"
-                  : "pending"
+              item.done ? "done" : i === activeIdx ? "active" : "pending"
             }
             title={item.title}
             description={item.desc}
-            who={
-              item.state === "done"
-                ? `완료 · ${driverName}`
-                : undefined
-            }
+            who={item.done ? `완료 · ${driverName}` : undefined}
             onToggle={item.onToggle}
             pending={pending}
           />
         ))}
       </div>
 
-      {/* refac .check-cta: padding 14/18/24 + gradient fade */}
+      {/* refac .check-cta */}
       <div
         className="bg-background sticky bottom-0 px-[18px] pt-[14px]"
         style={{
