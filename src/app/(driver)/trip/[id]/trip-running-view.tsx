@@ -32,6 +32,7 @@ import {
 } from "./_components/end-trip-modal";
 import { BtnBig } from "./_components/btn-big";
 import { NextStopCard } from "./_components/next-stop-card";
+import { PreTripCheckScreen } from "./_components/pre-trip-check-screen";
 import { RunTop } from "./_components/run-top";
 import { StudentRow } from "./_components/student-row";
 import { useGpsTracker } from "./gps-tracker";
@@ -79,6 +80,7 @@ export function TripRunningView({
   safetyCheck,
   boardedStudentIds,
   alightedStudentIds,
+  driver,
   helper,
   helperCandidates,
   isDriver,
@@ -239,6 +241,33 @@ export function TripRunningView({
     isKidsMode &&
     !helper &&
     stops.reduce((acc, s) => acc + s.students.length, 0) >= 1;
+
+  // refac 01 frame: KIDS 모드 + 안전점검 미완료면 dedicated pre-trip 화면 노출.
+  // 운전 중 화면(02)을 보기 전에 안전점검 완료 강제 — 도교법 §53 의무.
+  // [TEMP] localStorage로 사용자가 점검 완료 후 dismiss 가능하게 — 추후 schema에
+  // preCheckDismissedAt 필드 추가 권장.
+  const preTripIncomplete =
+    isKidsMode &&
+    isDriver &&
+    (!safetyCheck?.seatbeltAllOk || !safetyCheck?.helperPresent);
+  // 베타 backlog: dismiss 토글로 임시 우회 가능하게 (현장 긴급 상황 대응)
+  if (preTripIncomplete) {
+    return (
+      <PreTripCheckScreen
+        tripId={tripId}
+        routeName={route.name}
+        direction={route.direction}
+        vehicleMode={vehicle.mode}
+        vehiclePlate={vehicle.plate}
+        helperName={helper?.name ?? null}
+        driverName={driver.name}
+        safetyCheck={safetyCheck}
+        onComplete={() => {
+          // Server action이 이미 즉시 revalidate → re-render 후 preTripIncomplete=false
+        }}
+      />
+    );
+  }
 
   return (
     <main className="bg-background flex min-h-[100dvh] flex-col">
