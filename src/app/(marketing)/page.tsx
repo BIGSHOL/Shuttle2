@@ -168,22 +168,28 @@ export default function MarketingPage() {
         <div className="mx-auto max-w-6xl px-4 py-16 sm:py-24 lg:px-6">
           <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_1fr]">
             <div className="space-y-6">
+              {/* W24-D Phase 4: refac marketing-landing.jpg hero idiom.
+                  pill "도로교통법 어린이통학버스 의무 충족" + headline "학원 셔틀,
+                  이제 안 보이는 게 가장 큰 문제다." (안 보이는 highlight) +
+                  CTAs "무료로 시작하기 / 15초 데모 보기" */}
               <span className="bg-bus text-bus-foreground inline-flex items-center gap-1.5 rounded-full border-2 border-bus-foreground/15 px-3 py-1.5 text-xs font-black tracking-tight shadow-sm">
                 <Sparkles className="h-3.5 w-3.5" />
-                법정 의무 + 학부모 만족 한 번에
+                도로교통법 어린이통학버스 의무 충족
               </span>
-              <h2 className="text-4xl font-black tracking-tighter sm:text-5xl lg:text-[64px] leading-[1.05]">
-                셔틀버스 운영,
+              <h2 className="text-4xl font-black tracking-tighter sm:text-5xl lg:text-[64px] leading-[1.05] break-keep">
+                학원 셔틀,
                 <br />
+                이제{" "}
                 <span className="text-bus-foreground bg-bus inline-block rounded-lg px-2">
-                  이젠 가볍게
+                  안 보이는 게
                 </span>
-                .
+                <br />
+                가장 큰 문제다.
               </h2>
-              <p className="text-muted-foreground max-w-xl text-base font-medium leading-relaxed sm:text-lg">
-                매 운행 자동 누적되는 안전점검·운행 기록을 분기마다 PDF로
-                추출하고, 학부모는 카카오맵에서 셔틀 위치를 실시간으로 봅니다.
-                어린이통학버스 안전운행기록 의무를 자동으로 충족시키는 셔틀 운영 서비스.
+              <p className="text-muted-foreground max-w-xl text-base font-medium leading-relaxed sm:text-lg break-keep">
+                학원·교습소·어린이집·유치원의 셔틀 운영을 자동화하세요. 학부모는
+                실시간 위치를, 기사는 다음 정류장과 학생을, 학원장은 모든
+                운행을 한눈에 봅니다.
               </p>
               <div className="flex flex-wrap gap-3">
                 <Button
@@ -191,8 +197,8 @@ export default function MarketingPage() {
                   size="lg"
                   className="text-base font-black tracking-tight bg-bus text-bus-foreground hover:bg-bus/90 shadow-[var(--shadow-live)] h-12 px-6 border-2 border-bus-foreground/10"
                 >
-                  <Link href="#pre-register">
-                    베타 신청 <ChevronRight className="ml-0.5 h-4 w-4" />
+                  <Link href="/signup">
+                    무료로 시작하기 <ChevronRight className="ml-0.5 h-4 w-4" />
                   </Link>
                 </Button>
                 <Button
@@ -201,7 +207,7 @@ export default function MarketingPage() {
                   variant="outline"
                   className="text-base font-extrabold tracking-tight h-12 px-6 border-2"
                 >
-                  <Link href="/pricing">요금제 보기</Link>
+                  <Link href="#features">15초 데모 보기</Link>
                 </Button>
               </div>
               {/* 소셜프루프 stat strip */}
