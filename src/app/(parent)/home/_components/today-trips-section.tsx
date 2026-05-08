@@ -61,6 +61,9 @@ export async function TodayTripsSection({
               childStopName={card.childStop.name}
               childStopScheduledAt={card.childStopScheduledAt}
               driverName={card.driverName}
+              boardedCount={card.boardedCount}
+              totalAssigned={card.totalAssigned}
+              stopsAheadOfChild={card.stopsAheadOfChild}
             />
           </div>
         );

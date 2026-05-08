@@ -30,6 +30,11 @@ export type ChildTripCard =
       // running 상태에서만 의미 있어 그 분기에만 채움.
       childStopScheduledAt: string | null; // "HH:mm"
       driverName: string | null;
+      // refac hi-fi 3-info row: "현재 위치 N정류장 전" + "탑승 학생 X/Y".
+      // 데이터가 없으면 null — LIVE 카드는 row를 두 칸으로 fallback.
+      boardedCount: number; // BoardingEvent type=BOARD
+      totalAssigned: number; // RouteStudent for this route
+      stopsAheadOfChild: number | null; // 음수면 통과(0으로 clamp), null이면 미산정
     }
   | { kind: "scheduled"; route: RouteSummary; childStop: StopSummary }
   | {
@@ -119,6 +124,49 @@ export async function getTodayChildTrips(
           endedAtISO: trip.endedAt.toISOString(),
         });
       } else if (trip?.startedAt) {
+        // refac hi-fi 3-info row 보강 — 탑승 진행률·자녀 stop까지 남은 정류장 수.
+        // 보통 한 페이지에 running trip 0~2개라 N+1 query 비용 미미.
+        const [boardedCount, totalAssigned, latestEvents] = await Promise.all([
+          db.boardingEvent.count({
+            where: { tripId: trip.id, type: "BOARD" },
+          }),
+          db.routeStudent.count({ where: { routeId: rs.route.id } }),
+          db.boardingEvent.findMany({
+            where: {
+              tripId: trip.id,
+              type: { in: ["BOARD", "ALIGHT"] },
+            },
+            select: {
+              student: {
+                select: {
+                  routes: {
+                    where: { routeId: rs.route.id },
+                    select: { stopId: true },
+                  },
+                },
+              },
+            },
+          }),
+        ]);
+
+        // 자녀 stop의 route order
+        const childStopOrder = rs.route.stops.findIndex(
+          (s) => s.stopId === rs.stopId,
+        );
+        // 이미 들른 stop들의 max order
+        const visitedStopIds = new Set<string>();
+        for (const e of latestEvents) {
+          for (const r of e.student.routes) visitedStopIds.add(r.stopId);
+        }
+        let maxVisitedOrder = -1;
+        for (let i = 0; i < rs.route.stops.length; i++) {
+          if (visitedStopIds.has(rs.route.stops[i].stopId)) maxVisitedOrder = i;
+        }
+        const stopsAheadOfChild =
+          childStopOrder >= 0 && maxVisitedOrder >= 0
+            ? Math.max(0, childStopOrder - maxVisitedOrder)
+            : null;
+
         cards.push({
           kind: "running",
           tripId: trip.id,
@@ -127,6 +175,9 @@ export async function getTodayChildTrips(
           startedAtISO: trip.startedAt.toISOString(),
           childStopScheduledAt,
           driverName: trip.driver?.name ?? null,
+          boardedCount,
+          totalAssigned,
+          stopsAheadOfChild,
         });
       } else {
         // trip이 없거나 startedAt이 아직 null

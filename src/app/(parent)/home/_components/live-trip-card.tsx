@@ -10,8 +10,24 @@ import { LivePulseDot } from "@/components/shuttlee/live-dot";
 //
 // data/refac/docs/02-parent-screens.md §2.1: "운행중 — Badge 노란색 배경
 // (bg-bus text-bus-foreground), pulse 애니메이션, 큰 CTA 실시간 위치 보기".
+//
+// hi-fi 01 frame:
+//   타이틀 "도현이 5분 후 도착" — 자녀명 + 자녀 stop 예정 시각 기준 상대 ETA
+//   3-info row "예상 도착 / 현재 위치 / 탑승 학생"
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
+
+// "08:00" 같은 KST HH:mm을 받아 현재 시각 기준 분 차이로 변환.
+// hi-fi "도현이 5분 후 도착"의 "5분"을 SSR 시점에 derive.
+function relativeMinutesUntil(hhmm: string | null): number | null {
+  if (!hhmm) return null;
+  const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
+  if (!m) return null;
+  const target = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
+  const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const nowMins = nowKst.getUTCHours() * 60 + nowKst.getUTCMinutes();
+  return target - nowMins;
+}
 
 export function LiveTripCard({
   tripId,
@@ -21,6 +37,9 @@ export function LiveTripCard({
   childStopName,
   childStopScheduledAt,
   driverName,
+  boardedCount,
+  totalAssigned,
+  stopsAheadOfChild,
 }: {
   tripId: string;
   childName: string;
@@ -30,8 +49,35 @@ export function LiveTripCard({
   // refac hero row — 자녀 정류장 예정 시각·기사 이름. 없으면 row에서 — 표기.
   childStopScheduledAt: string | null;
   driverName: string | null;
+  boardedCount: number;
+  totalAssigned: number;
+  stopsAheadOfChild: number | null;
 }) {
   const directionLabel = DIRECTION_LABEL[direction];
+
+  // hi-fi 타이틀: "{name}이 X분 후 도착" — childStopScheduledAt 기준 상대 ETA.
+  // 0~30분 안이면 분 단위, 그 외(이미 통과·예정 멀리)는 fallback.
+  const minsUntil = relativeMinutesUntil(childStopScheduledAt);
+  let heroTitle: string;
+  if (stopsAheadOfChild === 0) {
+    heroTitle = `${childName}이 곧 도착`;
+  } else if (minsUntil !== null && minsUntil > 0 && minsUntil <= 30) {
+    heroTitle = `${childName}이 ${minsUntil}분 후 도착`;
+  } else if (minsUntil !== null && minsUntil < 0 && minsUntil > -30) {
+    heroTitle = `${childName} 운행 중`;
+  } else {
+    heroTitle = `${childName} 운행 중`;
+  }
+
+  // 현재 위치 표기 — N=0 이면 "곧 도착", 미산정이면 "—".
+  let positionLabel: string;
+  if (stopsAheadOfChild === null) {
+    positionLabel = "—";
+  } else if (stopsAheadOfChild === 0) {
+    positionLabel = "곧 도착";
+  } else {
+    positionLabel = `${stopsAheadOfChild}정류장 전`;
+  }
 
   return (
     <Link
@@ -47,17 +93,16 @@ export function LiveTripCard({
         운행 중 · {directionLabel}
       </div>
 
-      {/* 메인 hero 텍스트 — refac은 ETA 포함("도현이 5분 후 도착")이지만 home의
-          정적 fetch에서는 정확한 분 단위 ETA 미보유. "{자녀} 운행 중"으로 정직 표기. */}
+      {/* hero 타이틀 — 자녀 stop 예정 시각 기준 상대 ETA */}
       <h2 className="relative mt-2 text-2xl font-black tracking-tight leading-tight">
-        {childName} 운행 중
+        {heroTitle}
       </h2>
       <p className="relative mt-1 text-[13px] font-bold opacity-85">
         {routeName} · {childStopName}
         {driverName ? ` · ${driverName} 기사님` : ""}
       </p>
 
-      {/* 3-info row */}
+      {/* 3-info row — 예상 도착 / 현재 위치 / 탑승 학생 */}
       <div className="relative mt-3.5 grid grid-cols-3 gap-3">
         <div>
           <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
@@ -69,18 +114,18 @@ export function LiveTripCard({
         </div>
         <div>
           <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
-            방향
+            현재 위치
           </p>
           <p className="mt-0.5 text-lg font-black tracking-tight">
-            {directionLabel}
+            {positionLabel}
           </p>
         </div>
-        <div className="min-w-0">
+        <div>
           <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
-            정류장
+            탑승 학생
           </p>
-          <p className="mt-0.5 truncate text-lg font-black tracking-tight">
-            {childStopName}
+          <p className="mt-0.5 text-lg font-black tracking-tight tabular-nums">
+            {boardedCount} / {totalAssigned}
           </p>
         </div>
       </div>
