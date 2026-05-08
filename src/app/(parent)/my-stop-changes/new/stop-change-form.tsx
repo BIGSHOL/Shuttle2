@@ -67,13 +67,13 @@ export function StopChangeForm({ items }: { items: Item[] }) {
     initialState,
   );
 
+  // routeStudentId를 key로 사용 — 같은 student×fromStop이 여러 route에 묶이면
+  // studentId__fromStopId는 collide. RouteStudent는 (studentId, routeId) unique.
   const [selectedKey, setSelectedKey] = useState<string>(
-    items[0] ? `${items[0].studentId}__${items[0].fromStopId}` : "",
+    items[0]?.routeStudentId ?? "",
   );
   const selected = useMemo(
-    () =>
-      items.find((i) => `${i.studentId}__${i.fromStopId}` === selectedKey) ??
-      null,
+    () => items.find((i) => i.routeStudentId === selectedKey) ?? null,
     [items, selectedKey],
   );
 
@@ -134,7 +134,7 @@ export function StopChangeForm({ items }: { items: Item[] }) {
           <SectionTitle>아이 · 방향</SectionTitle>
           <div className="space-y-2">
             {items.map((i) => {
-              const k = `${i.studentId}__${i.fromStopId}`;
+              const k = i.routeStudentId;
               return (
                 <OptCard
                   key={k}
