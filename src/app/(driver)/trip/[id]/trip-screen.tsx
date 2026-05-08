@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Check } from "lucide-react";
+import { ArrowLeft, Check, X } from "lucide-react";
 
 import { TripRealtimeRefresher } from "@/components/trip-realtime-refresher";
 import { db } from "@/lib/db";
@@ -14,6 +14,7 @@ import {
 import { StopArrivalsTable } from "@/app/(owner)/dashboard/trip/[tripId]/_components/stop-arrivals-table";
 import { TripStatsCard } from "@/app/(owner)/dashboard/trip/[tripId]/_components/trip-stats-card";
 
+import { ArrivedBanner } from "./_components/arrived-banner";
 import {
   StudentResultsCard,
   type StopResultGroup,
@@ -238,112 +239,71 @@ export async function TripScreen({
 
     const hasArrivals = stopArrivalRows.some((r) => r.arrivedAt !== null);
 
+    // refac 03 frame: arrived-banner(녹색 그라디언트 + 통계) + 안전점검 결과
+    const finalStop = trip.route.stops[trip.route.stops.length - 1];
+    const elapsedMin = trip.startedAt
+      ? Math.max(
+          0,
+          Math.floor(
+            (trip.endedAt.getTime() - trip.startedAt.getTime()) / 60000,
+          ),
+        )
+      : 0;
+    const alightedCount = boardedSet.size + alightedSet.size;
     return (
-      <main className="space-y-4 px-4 pt-4 pb-6">
-        <div className="flex items-center gap-2">
+      <main className="bg-background flex min-h-[100dvh] flex-col pb-6">
+        {/* 작은 백 헤더 — refac에는 없지만 운행 목록 복귀 필요 */}
+        <header className="border-border flex items-center gap-2 border-b px-4 py-3">
           <Link
             href={backHref}
-            className="bg-card hover:bg-muted/40 active:bg-muted/40 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
+            className="bg-card border-border text-foreground grid h-[38px] w-[38px] place-items-center rounded-[12px] border"
             aria-label="운행 목록으로"
           >
             <ArrowLeft className="h-4 w-4" />
           </Link>
-          <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
-            운행 상세
-          </p>
-        </div>
-
-        {/* 요약 카드 — 운행 종료 + 시작/종료 시각 + 이벤트 수 */}
-        <div className="bg-card rounded-lg border p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="bg-success-soft text-success flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-              <Check className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="text-lg font-extrabold tracking-tight">
-                운행 종료
-              </h2>
-              <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-                {trip.route.name} · {trip.vehicle.plate}
-              </p>
-            </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-muted-foreground truncate text-[11px] font-extrabold uppercase tracking-[0.04em]">
+              {trip.route.name} · 운행 종료
+            </p>
+            <p className="truncate text-[16px] font-black tracking-[-0.015em]">
+              {trip.startedAt ? formatKstHHmm(trip.startedAt) : "—"} ~{" "}
+              {formatKstHHmm(trip.endedAt)} · {trip.events.length}건
+            </p>
           </div>
-          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-                시작
-              </dt>
-              <dd className="mt-0.5 font-mono text-base font-extrabold">
-                {trip.startedAt ? formatKstHHmm(trip.startedAt) : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-                종료
-              </dt>
-              <dd className="mt-0.5 font-mono text-base font-extrabold">
-                {formatKstHHmm(trip.endedAt)}
-              </dd>
-            </div>
-            <div className="col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-                탑승·하차 이벤트
-              </dt>
-              <dd className="mt-0.5 font-mono text-base font-extrabold">
-                {trip.events.length}건
-              </dd>
-            </div>
-          </dl>
-        </div>
+        </header>
 
-        {/* 운행 통계 (학원장 컴포넌트 재사용) */}
-        {tripStats ? (
-          <TripStatsCard stats={tripStats} isRunning={false} />
-        ) : null}
-
-        {/* 정류장 도착 표 (학원장 컴포넌트 재사용 — 모바일은 카드 stack 자동) */}
-        {hasArrivals ? <StopArrivalsTable rows={stopArrivalRows} /> : null}
-
-        {/* 학생별 처리 결과 */}
-        <StudentResultsCard
-          stops={stopGroups}
-          direction={trip.route.direction}
+        {/* refac .arrived-banner: 녹색 그라디언트 + 54px check + h2 + p + 3-stat */}
+        <ArrivedBanner
+          alightedCount={alightedCount}
+          elapsedMinutes={elapsedMin}
+          distanceKm={tripStats?.distanceKm ?? 0}
+          finalStopName={finalStop?.stop.name ?? "도착"}
+          endedHHmm={formatKstHHmm(trip.endedAt)}
         />
 
-        {/* KIDS 안전점검 (있을 때만) */}
+        {/* refac .final-checks h3 + check-item list — 안전점검 결과(read-only) */}
         {trip.vehicle.mode === "KIDS" && sc ? (
-          <section className="border-warning/30 bg-warning-soft/40 rounded-lg border p-4">
-            <h3 className="text-sm font-extrabold tracking-tight">
-              안전점검 (어린이용)
+          <section className="px-[18px]">
+            <h3 className="text-muted-foreground mb-2 ml-1 text-[13px] font-black uppercase tracking-[0.06em]">
+              안전점검 결과 — {[sc.seatbeltAllOk, sc.helperPresent, sc.allAlightedOk].filter(Boolean).length} / 3
             </h3>
-            <ul className="mt-2 space-y-1.5 text-sm font-medium">
-              <li className="flex items-center gap-2">
-                {sc.seatbeltAllOk ? (
-                  <Check className="text-success h-4 w-4" />
-                ) : (
-                  <span className="text-destructive">✗</span>
-                )}
-                좌석 안전띠 전원 확인
-              </li>
-              <li className="flex items-center gap-2">
-                {sc.helperPresent ? (
-                  <Check className="text-success h-4 w-4" />
-                ) : (
-                  <span className="text-destructive">✗</span>
-                )}
-                동승보호자 동승 확인
-              </li>
-              <li className="flex items-center gap-2">
-                {sc.allAlightedOk ? (
-                  <Check className="text-success h-4 w-4" />
-                ) : (
-                  <span className="text-destructive">✗</span>
-                )}
-                전원 하차 확인
-              </li>
-            </ul>
+            <FinalCheck label="좌석 안전띠 전원 확인" ok={sc.seatbeltAllOk} />
+            <FinalCheck label="동승보호자 동승 확인" ok={sc.helperPresent} />
+            <FinalCheck label="전원 하차 확인" ok={sc.allAlightedOk} />
           </section>
         ) : null}
+
+        {/* 본문 추가 정보 (학원장 컴포넌트 재사용) */}
+        <div className="mt-4 space-y-4 px-4">
+          {tripStats ? (
+            <TripStatsCard stats={tripStats} isRunning={false} />
+          ) : null}
+          {hasArrivals ? <StopArrivalsTable rows={stopArrivalRows} /> : null}
+          <StudentResultsCard
+            stops={stopGroups}
+            direction={trip.route.direction}
+          />
+        </div>
       </main>
     );
   }
@@ -408,5 +368,35 @@ export async function TripScreen({
         isHelper={access.isHelper}
       />
     </>
+  );
+}
+
+// refac .check-item.done 스타일 — 운행 종료 후 안전점검 결과 read-only.
+function FinalCheck({ label, ok }: { label: string; ok: boolean }) {
+  return (
+    <div
+      className={`mb-2 flex items-center gap-[12px] rounded-[14px] border p-[14px] ${
+        ok ? "bg-muted border-transparent" : "bg-destructive-soft border-destructive/40"
+      }`}
+    >
+      <span
+        className={`grid h-[26px] w-[26px] shrink-0 place-items-center rounded-[8px] border-2 ${
+          ok ? "bg-success border-success" : "border-destructive bg-transparent"
+        }`}
+      >
+        {ok ? (
+          <Check className="h-4 w-4 text-white" strokeWidth={3.5} />
+        ) : (
+          <X className="text-destructive h-4 w-4" strokeWidth={3} />
+        )}
+      </span>
+      <span
+        className={`text-[15px] font-extrabold tracking-[-0.01em] ${
+          ok ? "text-muted-foreground" : "text-destructive"
+        }`}
+      >
+        {label}
+      </span>
+    </div>
   );
 }
