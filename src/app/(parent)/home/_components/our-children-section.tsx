@@ -19,12 +19,6 @@ import { ChevronRight } from "lucide-react";
 //             padding:2px 7px;border-radius:4px}
 //   .child-meta{font-size:11px;color:var(--muted-foreground);font-weight:700;margin-top:2px}
 
-const ORG_TYPE_LABEL = {
-  ACADEMY: "학원",
-  DAYCARE: "어린이집",
-  KINDERGARTEN: "유치원",
-} as const;
-
 export type OurChildrenItem = {
   id: string;
   name: string;
@@ -71,7 +65,9 @@ export function OurChildrenSection({ items }: { items: OurChildrenItem[] }) {
                   ) : null}
                 </div>
                 <p className="text-muted-foreground mt-0.5 truncate text-[11px] font-bold">
-                  {c.age}세 · {c.orgName} · {ORG_TYPE_LABEL[c.orgType]}
+                  {/* refac child-meta: "5세 · 해솔어린이집 · A노선" — orgName이 이미 종류 식별,
+                      orgType 별도 노출 안 함. routeName 있으면 추가. */}
+                  {c.age}세 · {c.orgName}
                   {c.routeName ? ` · ${c.routeName}` : ""}
                 </p>
               </div>

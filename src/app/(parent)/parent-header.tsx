@@ -31,11 +31,21 @@ export function ParentHeader({
   const [pending, startTransition] = useTransition();
   const pathname = usePathname();
 
-  // W24-D Phase 1 home: refac data/refac/design-files/Parent App.html "01 · /home"
-  // 에서 셔틀이 로고·dropdown 헤더 없음 — page hero(GreetingSection)가 헤더 역할.
-  // 다른 parent 화면(/notifications, /my-absences 등)은 자체 페이지에 뒤로가기
-  // 헤더가 있으므로 ParentHeader 자체를 home에서 숨겨도 안전.
-  if (pathname === "/home") return null;
+  // W24-D Phase 1: refac Parent App.html에서 home/form pages는 ParentHeader 없음.
+  //   01·home: app-bar(GreetingSection)가 헤더 역할
+  //   03·absences/new + 04·stop-change/new: form-back만 있음
+  //   02·trip-live: 자체 fullscreen 헤더
+  // 따라서 다음 경로에서 ParentHeader 숨김:
+  const HIDE_ON: (string | RegExp)[] = [
+    "/home",
+    "/my-absences/new",
+    "/my-stop-changes/new",
+    /^\/trip-live(\/|$)/,
+  ];
+  const hide = HIDE_ON.some((p) =>
+    typeof p === "string" ? pathname === p : p.test(pathname),
+  );
+  if (hide) return null;
 
   return (
     <header className="bg-background sticky top-0 z-30 border-b">

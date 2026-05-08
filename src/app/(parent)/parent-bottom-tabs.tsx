@@ -27,6 +27,18 @@ type TabDef = {
 export function ParentBottomTabs({ unreadCount }: { unreadCount: number }) {
   const pathname = usePathname();
 
+  // refac form pages(absences/new·stop-change/new)는 자체 bottom-cta sticky이고
+  // bottom-nav 없음. trip-live는 fullscreen이라 z-50으로 가려져도 무방.
+  const HIDE_ON: (string | RegExp)[] = [
+    "/my-absences/new",
+    "/my-stop-changes/new",
+    /^\/trip-live(\/|$)/,
+  ];
+  const hide = HIDE_ON.some((p) =>
+    typeof p === "string" ? pathname === p : p.test(pathname),
+  );
+  if (hide) return null;
+
   const tabs: TabDef[] = [
     { href: "/home", matchPrefixes: ["/home"], label: "홈", Icon: Home },
     {
