@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { Bus, Calendar, MapPin } from "lucide-react";
 
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/shuttlee/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/db";
 

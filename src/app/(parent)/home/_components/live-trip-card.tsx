@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { ChevronRight, MapPin } from "lucide-react";
 
-import { ChildAvatar } from "@/components/child-avatar";
-import { LivePulseDot } from "@/components/live-pulse-dot";
+import { ChildAvatar } from "@/components/shuttlee/child-avatar";
+import { LivePulseDot } from "@/components/shuttlee/live-dot";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 

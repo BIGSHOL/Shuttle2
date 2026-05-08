@@ -1,6 +1,6 @@
 import { FileText } from "lucide-react";
 
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/shuttlee/empty-state";
 
 // W24-C P3 C8: 청구서 history (12건). UI만 — 실제 데이터는 결제 게이트웨이 webhook으로 채워짐.
 

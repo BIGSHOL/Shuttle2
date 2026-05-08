@@ -12,7 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/shuttlee/empty-state";
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 

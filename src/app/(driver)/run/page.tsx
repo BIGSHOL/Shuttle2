@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Bus, CheckCircle2, Clock, MapPin } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-import { EmptyState } from "@/components/empty-state";
+import { EmptyState } from "@/components/shuttlee/empty-state";
 import { db } from "@/lib/db";
 import { requireDriver } from "@/lib/auth/session";
 import { todayBitKst, todayUtcDateKst } from "@/lib/date/today";

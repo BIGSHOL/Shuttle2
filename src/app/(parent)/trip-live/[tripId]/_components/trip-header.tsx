@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 
-import { LivePulseDot } from "@/components/live-pulse-dot";
+import { LivePulseDot } from "@/components/shuttlee/live-dot";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 

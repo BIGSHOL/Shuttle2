@@ -1,8 +1,8 @@
 import { Calendar } from "lucide-react";
 
-import { ChildAvatar } from "@/components/child-avatar";
-import { ModeBadge } from "@/components/mode-badge";
-import { TripStatusBadge } from "@/components/trip-status-badge";
+import { ChildAvatar } from "@/components/shuttlee/child-avatar";
+import { ModeBadge } from "@/components/shuttlee/mode-badge";
+import { TripStatusBadge } from "@/components/shuttlee/trip-status-badge";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
