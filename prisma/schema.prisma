@@ -25,13 +25,18 @@ model Organization {
   suspendReason String?
   createdAt     DateTime  @default(now())
 
-  vehicles           Vehicle[]
-  students           Student[]
-  staffs             Staff[]
-  stops              Stop[]
-  invites            StaffInvite[]
-  guardianInvites    GuardianInvite[]
-  stopChangeRequests StopChangeRequest[]
+  vehicles                 Vehicle[]
+  students                 Student[]
+  staffs                   Staff[]
+  stops                    Stop[]
+  invites                  StaffInvite[]
+  guardianInvites          GuardianInvite[]
+  stopChangeRequests       StopChangeRequest[]
+  // W24-B: 정류장 변경 정책·ledger·assignment 신규
+  routeAssignments         RouteAssignment[]
+  routeAssignmentOverrides RouteAssignmentOverride[]
+  stopChangeLedger         StopChangeLedger[]
+  policy                   TenantPolicy?
 }
 
 // 기사·동승자 초대 토큰 (1회용).
@@ -185,9 +190,11 @@ model Route {
   direction RouteDirection
   weekdays  Int // 비트마스크: 월=1 화=2 수=4 목=8 금=16 토=32 일=64
 
-  stops    RouteStop[]
-  students RouteStudent[]
-  trips    Trip[]
+  stops       RouteStop[]
+  students    RouteStudent[]
+  trips       Trip[]
+  // W24-B: 임시·영구 정류장 매핑 (RouteStudent 보완)
+  assignments RouteAssignment[]
 
   @@index([vehicleId])
 }
@@ -211,8 +218,13 @@ model Stop {
 
   routes               RouteStop[]
   students             RouteStudent[]
-  changeRequestsFrom   StopChangeRequest[] @relation("StopChangeFrom")
-  changeRequestsResult StopChangeRequest[] @relation("StopChangeResult")
+  changeRequestsFrom   StopChangeRequest[]       @relation("StopChangeFrom")
+  changeRequestsResult StopChangeRequest[]       @relation("StopChangeResult")
+  // W24-B: stop-change ledger·override
+  assignmentsCurrent   RouteAssignment[]         @relation("AssignmentCurrentStop")
+  overrides            RouteAssignmentOverride[]
+  ledgerFrom           StopChangeLedger[]        @relation("LedgerFromStop")
+  ledgerTo             StopChangeLedger[]        @relation("LedgerToStop")
 
   @@index([orgId])
 }
@@ -246,6 +258,9 @@ model Student {
   absences           AbsenceRequest[]
   guardianInvites    GuardianInviteStudent[]
   stopChangeRequests StopChangeRequest[]
+  // W24-B
+  assignments        RouteAssignment[]
+  ledgerEntries      StopChangeLedger[]
 
   @@index([orgId])
 }
@@ -381,20 +396,22 @@ model SafetyCheck {
 
 // 결석·일시 불승차 신청
 model AbsenceRequest {
-  id           String        @id @default(cuid())
-  studentId    String
-  student      Student       @relation(fields: [studentId], references: [id])
-  date         DateTime      @db.Date
-  type         AbsenceType
-  reason       String?
-  status       AbsenceStatus @default(PENDING)
-  createdBy    String // guardianId
-  guardian     Guardian      @relation(fields: [createdBy], references: [id])
-  createdAt    DateTime      @default(now())
+  id             String        @id @default(cuid())
+  studentId      String
+  student        Student       @relation(fields: [studentId], references: [id])
+  date           DateTime      @db.Date
+  type           AbsenceType
+  reason         String?
+  status         AbsenceStatus @default(PENDING)
+  createdBy      String // guardianId
+  guardian       Guardian      @relation(fields: [createdBy], references: [id])
+  createdAt      DateTime      @default(now())
   // W10 보강 — OWNER 결정 트래킹
-  decidedBy    String? // staffId (OWNER)
-  decidedAt    DateTime?
-  rejectReason String? // status REJECTED일 때만
+  decidedBy      String? // staffId (OWNER)
+  decidedAt      DateTime?
+  rejectReason   String? // status REJECTED일 때만
+  // W24-B: 승인/반려 시 결정 메모 (rejectReason과 별도 — 자동 처리·정책 기록 등 일반 메모)
+  decisionReason String?
 
   @@index([studentId, date])
   @@index([createdBy])
@@ -537,11 +554,15 @@ model StopChangeRequest {
   createdAt   DateTime      @default(now())
 
   // OWNER 결정 트래킹
-  decidedBy    String? // staffId
-  decidedAt    DateTime?
-  rejectReason String?
-  resultStopId String? // 승인 시 매핑·생성된 새 Stop.id
-  resultStop   Stop?     @relation("StopChangeResult", fields: [resultStopId], references: [id])
+  decidedBy      String? // staffId
+  decidedAt      DateTime?
+  rejectReason   String?
+  decisionReason String? // W24-B: 승인 시 결정 메모(자동 승인·정책 기록 등)
+  resultStopId   String? // 승인 시 매핑·생성된 새 Stop.id
+  resultStop     Stop?                     @relation("StopChangeResult", fields: [resultStopId], references: [id])
+  // W24-B: 이 요청에서 파생된 ledger·override
+  ledgerEntries  StopChangeLedger[]
+  overrides      RouteAssignmentOverride[]
 
   @@index([orgId, status])
   @@index([studentId])
@@ -586,4 +607,92 @@ model DriverAppRelease {
   createdAt     DateTime @default(now())
 
   @@index([isActive, createdAt])
+}
+
+// === W24-B: 정류장 변경 ledger·정책 ===
+//
+// data/HANDOFF.md spec — 학부모·학원장이 신규 정류장을 만들 수 없게 하면서도
+// "오늘만 다른 정류장" 임시 변경을 허용하기 위한 모델 4종.
+//
+// 동작:
+// - 학생-노선-방향마다 RouteAssignment 1개 (currentStopId가 영구 효력 stop)
+// - 임시 변경은 RouteAssignmentOverride (effectiveFrom~Until 기간)
+// - 모든 결정은 StopChangeLedger에 기록 (감사 로그)
+// - 학원별 운영 정책(자동 승인 등)은 TenantPolicy
+//
+// 기존 RouteStudent는 그대로 유지(legacy + 운행 생성 로직 호환). RouteAssignment는
+// stop-change 흐름이 처음 학생을 만나면 lazy upsert로 RouteStudent에서 backfill.
+
+model RouteAssignment {
+  id            String         @id @default(cuid())
+  orgId         String
+  org           Organization   @relation(fields: [orgId], references: [id])
+  studentId     String
+  student       Student        @relation(fields: [studentId], references: [id])
+  routeId       String
+  route         Route          @relation(fields: [routeId], references: [id])
+  kind          RouteDirection // PICKUP | DROPOFF (기존 enum 재사용)
+  currentStopId String
+  currentStop   Stop           @relation("AssignmentCurrentStop", fields: [currentStopId], references: [id])
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  overrides RouteAssignmentOverride[]
+
+  @@unique([studentId, routeId, kind])
+  @@index([orgId])
+  @@index([routeId])
+}
+
+model RouteAssignmentOverride {
+  id              String             @id @default(cuid())
+  orgId           String
+  org             Organization       @relation(fields: [orgId], references: [id])
+  assignmentId    String
+  assignment      RouteAssignment    @relation(fields: [assignmentId], references: [id])
+  stopId          String
+  stop            Stop               @relation(fields: [stopId], references: [id])
+  effectiveFrom   DateTime           @db.Date
+  effectiveUntil  DateTime           @db.Date
+  sourceRequestId String?
+  sourceRequest   StopChangeRequest? @relation(fields: [sourceRequestId], references: [id])
+  createdAt       DateTime           @default(now())
+
+  @@index([orgId, assignmentId, effectiveFrom])
+}
+
+model StopChangeLedger {
+  id          String            @id @default(cuid())
+  orgId       String
+  org         Organization      @relation(fields: [orgId], references: [id])
+  requestId   String
+  request     StopChangeRequest @relation(fields: [requestId], references: [id])
+  studentId   String
+  student     Student           @relation(fields: [studentId], references: [id])
+  fromStopId  String?
+  fromStop    Stop?             @relation("LedgerFromStop", fields: [fromStopId], references: [id])
+  toStopId    String
+  toStop      Stop              @relation("LedgerToStop", fields: [toStopId], references: [id])
+  appliedById String // staffId
+  appliedAt   DateTime          @default(now())
+  permanent   Boolean
+
+  @@index([orgId, studentId])
+  @@index([orgId, appliedAt])
+}
+
+model TenantPolicy {
+  orgId                    String       @id
+  org                      Organization @relation(fields: [orgId], references: [id])
+  // 결석 정책
+  absenceAutoAck           Boolean      @default(true) // 마감 전 결석은 자동 확인
+  absenceCutoffMin         Int          @default(15) // 운행 시작 N분 전까지 자동 처리
+  // 정류장 변경 정책
+  stopChangeAutoApprove    Boolean      @default(false) // 인접 stop(±1) 자동 승인
+  stopChangeRequiresReason Boolean      @default(false)
+  stopChangeMaxDays        Int          @default(30)
+  // 알림 정책
+  notifyParentOnDecision   Boolean      @default(true)
+  notifyDriverOnApprove    Boolean      @default(true)
+  updatedAt                DateTime     @updatedAt
 }
