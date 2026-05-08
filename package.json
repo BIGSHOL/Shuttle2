@@ -14,6 +14,8 @@
     "db:push": "dotenv -e .env.local -- prisma db push",
     "db:migrate": "dotenv -e .env.local -- prisma migrate dev",
     "db:migrate:deploy": "dotenv -e .env.local -- prisma migrate deploy",
+    "db:migrate:resolve:w24b-1": "dotenv -e .env.local -- prisma migrate resolve --applied 20260508140000_w24b_stop_change_ledger_policies",
+    "db:migrate:resolve:w24b-2": "dotenv -e .env.local -- prisma migrate resolve --applied 20260508150000_w24b_stop_change_requested_stop",
     "db:studio": "dotenv -e .env.local -- prisma studio",
     "db:seed": "dotenv -e .env.local -- prisma db seed",
     "sb": "supabase",
