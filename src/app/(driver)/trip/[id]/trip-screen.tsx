@@ -7,9 +7,18 @@ import { db } from "@/lib/db";
 import { requireTripAccess } from "@/lib/auth/trip-access";
 import {
   computeStopArrivals,
+  computeTripStats,
   formatKstHHmm,
 } from "@/lib/geo/trip-stats";
 
+import { StopArrivalsTable } from "@/app/(owner)/dashboard/trip/[tripId]/_components/stop-arrivals-table";
+import { TripStatsCard } from "@/app/(owner)/dashboard/trip/[tripId]/_components/trip-stats-card";
+
+import {
+  StudentResultsCard,
+  type StopResultGroup,
+  type StudentResultStatus,
+} from "./_components/student-results-card";
 import { TripRunningView } from "./trip-running-view";
 
 // driver와 helper 양쪽 trip page에서 공유.
@@ -71,123 +80,21 @@ export async function TripScreen({
 
   if (!trip) notFound();
 
-  // 종료된 trip이면 요약 카드만
-  if (trip.endedAt) {
-    const sc = trip.safetyCheck;
-    return (
-      <main className="space-y-4 px-4 pt-4 pb-6">
-        <div className="flex items-center gap-2">
-          <Link
-            href={backHref}
-            className="bg-card hover:bg-muted/40 active:bg-muted/40 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
-            aria-label="운행 목록으로"
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Link>
-          <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
-            운행 상세
-          </p>
-        </div>
-        <div className="bg-card rounded-lg border p-5 shadow-sm">
-          <div className="flex items-center gap-3">
-            <span className="bg-success-soft text-success flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
-              <Check className="h-5 w-5" />
-            </span>
-            <div>
-              <h2 className="text-lg font-extrabold tracking-tight">
-                운행 종료
-              </h2>
-              <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-                {trip.route.name}
-              </p>
-            </div>
-          </div>
-          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
-            <div>
-              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-                시작
-              </dt>
-              <dd className="mt-0.5 font-mono text-base font-extrabold">
-                {trip.startedAt ? formatKstHHmm(trip.startedAt) : "—"}
-              </dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-                종료
-              </dt>
-              <dd className="mt-0.5 font-mono text-base font-extrabold">
-                {formatKstHHmm(trip.endedAt)}
-              </dd>
-            </div>
-            <div className="col-span-2">
-              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-                탑승·하차 이벤트
-              </dt>
-              <dd className="mt-0.5 font-mono text-base font-extrabold">
-                {trip.events.length}건
-              </dd>
-            </div>
-          </dl>
-          {trip.vehicle.mode === "KIDS" && sc ? (
-            <div className="border-warning/30 bg-warning-soft/40 mt-4 rounded-md border p-3 text-xs font-medium">
-              <p className="text-foreground/80 mb-1.5 text-[10px] font-extrabold tracking-wide">
-                안전점검 (어린이용)
-              </p>
-              <ul className="space-y-1">
-                <li className="flex items-center gap-2">
-                  {sc.seatbeltAllOk ? (
-                    <Check className="text-success h-3.5 w-3.5" />
-                  ) : (
-                    <span className="text-destructive">✗</span>
-                  )}
-                  좌석 안전띠
-                </li>
-                <li className="flex items-center gap-2">
-                  {sc.helperPresent ? (
-                    <Check className="text-success h-3.5 w-3.5" />
-                  ) : (
-                    <span className="text-destructive">✗</span>
-                  )}
-                  동승보호자
-                </li>
-                <li className="flex items-center gap-2">
-                  {sc.allAlightedOk ? (
-                    <Check className="text-success h-3.5 w-3.5" />
-                  ) : (
-                    <span className="text-destructive">✗</span>
-                  )}
-                  전원 하차
-                </li>
-              </ul>
-            </div>
-          ) : null}
-        </div>
-      </main>
-    );
-  }
-
-  // helper 후보 + 정류장 도착 시각 (LocationPing.STOP_PASS 기반).
-  // 학원장 trip 상세와 같은 데이터를 기사 PWA에서도 보여주기 위함.
-  const [helperCandidates, stopPassPings] = await Promise.all([
-    access.isDriver
-      ? db.staff.findMany({
-          where: { orgId: access.user.org.id, role: "HELPER" },
-          orderBy: { name: "asc" },
-          select: { id: true, name: true },
-        })
-      : Promise.resolve<Array<{ id: string; name: string }>>([]),
-    db.locationPing.findMany({
-      where: { tripId, source: "STOP_PASS" },
-      orderBy: { recordedAt: "asc" },
-      select: {
-        lat: true,
-        lng: true,
-        recordedAt: true,
-        speed: true,
-        source: true,
-      },
-    }),
-  ]);
+  // ── 공유 데이터 prep (운행 중 + 종료 양쪽에서 사용) ─────────────────────────
+  // LocationPing 전체 (computeTripStats: INTERVAL/START/END/STOP_PASS 모두,
+  // computeStopArrivals: STOP_PASS만 필터해 사용).
+  const allPings = await db.locationPing.findMany({
+    where: { tripId },
+    orderBy: { recordedAt: "asc" },
+    select: {
+      lat: true,
+      lng: true,
+      recordedAt: true,
+      speed: true,
+      source: true,
+    },
+  });
+  const stopPassPings = allPings.filter((p) => p.source === "STOP_PASS");
 
   const stopArrivals = computeStopArrivals(
     stopPassPings,
@@ -237,6 +144,23 @@ export async function TripScreen({
     }
   }
 
+  // 학생 → 정류장 역매핑 (StopArrivalsTable의 boardCount/noShowCount 집계용)
+  const studentToStopId = new Map<string, string>();
+  for (const rs of trip.route.students) {
+    studentToStopId.set(rs.student.id, rs.stop.id);
+  }
+  const stopBoardCounts = new Map<string, number>();
+  const stopNoShowCounts = new Map<string, number>();
+  for (const e of trip.events) {
+    const stopId = studentToStopId.get(e.studentId);
+    if (!stopId) continue;
+    if (e.type === "BOARD" || e.type === "ALIGHT") {
+      stopBoardCounts.set(stopId, (stopBoardCounts.get(stopId) ?? 0) + 1);
+    } else if (e.type === "NO_SHOW" || e.type === "NO_DROPOFF") {
+      stopNoShowCounts.set(stopId, (stopNoShowCounts.get(stopId) ?? 0) + 1);
+    }
+  }
+
   // 오늘 결석 학생 (route.direction 영향 받는 type만 — 등원 노선이면
   // ABSENT_BOTH/ABSENT_PICKUP, 하원 노선이면 ABSENT_BOTH/ABSENT_DROPOFF)
   const allStudentIds = trip.route.students.map((rs) => rs.student.id);
@@ -265,6 +189,173 @@ export async function TripScreen({
       (a) => [a.studentId, { status: a.status, reason: a.reason }] as const,
     ),
   );
+
+  // ── 종료 trip이면 4개 카드 (운행 통계·정류장 도착·학생 결과·안전점검) ────
+  if (trip.endedAt) {
+    const sc = trip.safetyCheck;
+
+    const tripStats = trip.startedAt
+      ? computeTripStats(allPings, trip.startedAt, trip.endedAt)
+      : null;
+
+    const stopArrivalRows = stopArrivals.map((a) => ({
+      ...a,
+      boardCount: stopBoardCounts.get(a.stopId) ?? 0,
+      noShowCount: stopNoShowCounts.get(a.stopId) ?? 0,
+    }));
+
+    const stopGroups: StopResultGroup[] = trip.route.stops.map((rs) => {
+      const students = (studentsByStop.get(rs.stop.id) ?? []).map((s) => {
+        let status: StudentResultStatus = "NONE";
+        let reason: string | null = null;
+        const issue = issueByStudent.get(s.id);
+        const absence = absenceByStudent.get(s.id);
+        if (issue) {
+          status = issue.type;
+          reason = issue.reason;
+        } else if (boardedSet.has(s.id)) {
+          status = "BOARDED";
+        } else if (alightedSet.has(s.id)) {
+          status = "ALIGHTED";
+        } else if (absence) {
+          status = "ABSENT";
+          reason = absence.reason;
+        }
+        return {
+          studentId: s.id,
+          studentName: s.name,
+          status,
+          reason,
+        };
+      });
+      return {
+        stopId: rs.stop.id,
+        stopOrder: rs.order,
+        stopName: rs.stop.name,
+        students,
+      };
+    });
+
+    const hasArrivals = stopArrivalRows.some((r) => r.arrivedAt !== null);
+
+    return (
+      <main className="space-y-4 px-4 pt-4 pb-6">
+        <div className="flex items-center gap-2">
+          <Link
+            href={backHref}
+            className="bg-card hover:bg-muted/40 active:bg-muted/40 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
+            aria-label="운행 목록으로"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+            운행 상세
+          </p>
+        </div>
+
+        {/* 요약 카드 — 운행 종료 + 시작/종료 시각 + 이벤트 수 */}
+        <div className="bg-card rounded-lg border p-5 shadow-sm">
+          <div className="flex items-center gap-3">
+            <span className="bg-success-soft text-success flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+              <Check className="h-5 w-5" />
+            </span>
+            <div>
+              <h2 className="text-lg font-extrabold tracking-tight">
+                운행 종료
+              </h2>
+              <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+                {trip.route.name} · {trip.vehicle.plate}
+              </p>
+            </div>
+          </div>
+          <dl className="mt-4 grid grid-cols-2 gap-3 text-sm">
+            <div>
+              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+                시작
+              </dt>
+              <dd className="mt-0.5 font-mono text-base font-extrabold">
+                {trip.startedAt ? formatKstHHmm(trip.startedAt) : "—"}
+              </dd>
+            </div>
+            <div>
+              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+                종료
+              </dt>
+              <dd className="mt-0.5 font-mono text-base font-extrabold">
+                {formatKstHHmm(trip.endedAt)}
+              </dd>
+            </div>
+            <div className="col-span-2">
+              <dt className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
+                탑승·하차 이벤트
+              </dt>
+              <dd className="mt-0.5 font-mono text-base font-extrabold">
+                {trip.events.length}건
+              </dd>
+            </div>
+          </dl>
+        </div>
+
+        {/* 운행 통계 (학원장 컴포넌트 재사용) */}
+        {tripStats ? (
+          <TripStatsCard stats={tripStats} isRunning={false} />
+        ) : null}
+
+        {/* 정류장 도착 표 (학원장 컴포넌트 재사용 — 모바일은 카드 stack 자동) */}
+        {hasArrivals ? <StopArrivalsTable rows={stopArrivalRows} /> : null}
+
+        {/* 학생별 처리 결과 */}
+        <StudentResultsCard
+          stops={stopGroups}
+          direction={trip.route.direction}
+        />
+
+        {/* KIDS 안전점검 (있을 때만) */}
+        {trip.vehicle.mode === "KIDS" && sc ? (
+          <section className="border-warning/30 bg-warning-soft/40 rounded-lg border p-4">
+            <h3 className="text-sm font-extrabold tracking-tight">
+              안전점검 (어린이용)
+            </h3>
+            <ul className="mt-2 space-y-1.5 text-sm font-medium">
+              <li className="flex items-center gap-2">
+                {sc.seatbeltAllOk ? (
+                  <Check className="text-success h-4 w-4" />
+                ) : (
+                  <span className="text-destructive">✗</span>
+                )}
+                좌석 안전띠 전원 확인
+              </li>
+              <li className="flex items-center gap-2">
+                {sc.helperPresent ? (
+                  <Check className="text-success h-4 w-4" />
+                ) : (
+                  <span className="text-destructive">✗</span>
+                )}
+                동승보호자 동승 확인
+              </li>
+              <li className="flex items-center gap-2">
+                {sc.allAlightedOk ? (
+                  <Check className="text-success h-4 w-4" />
+                ) : (
+                  <span className="text-destructive">✗</span>
+                )}
+                전원 하차 확인
+              </li>
+            </ul>
+          </section>
+        ) : null}
+      </main>
+    );
+  }
+
+  // ── 운행 중 ─────────────────────────────────────────────────────────────
+  const helperCandidates = access.isDriver
+    ? await db.staff.findMany({
+        where: { orgId: access.user.org.id, role: "HELPER" },
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
+      })
+    : [];
 
   return (
     <>
