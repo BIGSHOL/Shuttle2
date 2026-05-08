@@ -1,69 +1,95 @@
 import Link from "next/link";
-import { ChevronRight, MapPin } from "lucide-react";
+import { MapPin } from "lucide-react";
 
-import { ChildAvatar } from "@/components/shuttlee/child-avatar";
 import { LivePulseDot } from "@/components/shuttlee/live-dot";
+
+// W24-D Phase 1: data/refac/screenshots/parent-app.jpg "01 · /home" hero 카드.
+// `bg-bus` 노란 풀 배경 + 검정 텍스트 + 우상단 검정 원 데코 + 3-info row +
+// 풀폭 검정 CTA "실시간 위치 보기". 학부모가 home 진입 시 자녀 셔틀 운행 상태가
+// 한눈에 들어오는 가장 눈에 띄는 영역.
+//
+// data/refac/docs/02-parent-screens.md §2.1: "운행중 — Badge 노란색 배경
+// (bg-bus text-bus-foreground), pulse 애니메이션, 큰 CTA 실시간 위치 보기".
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
 export function LiveTripCard({
   tripId,
   childName,
-  orgName,
   direction,
   routeName,
   childStopName,
+  childStopScheduledAt,
+  driverName,
 }: {
   tripId: string;
   childName: string;
-  orgName: string;
   direction: "PICKUP" | "DROPOFF";
   routeName: string;
   childStopName: string;
+  // refac hero row — 자녀 정류장 예정 시각·기사 이름. 없으면 row에서 — 표기.
+  childStopScheduledAt: string | null;
+  driverName: string | null;
 }) {
+  const directionLabel = DIRECTION_LABEL[direction];
+
   return (
     <Link
       href={`/trip-live/${tripId}`}
-      className="relative block overflow-hidden rounded-2xl bg-gradient-to-br from-zinc-900 to-zinc-950 p-4 text-white shadow-lg transition-transform hover:scale-[1.01] active:scale-[0.99]"
+      className="bg-bus text-bus-foreground relative block overflow-hidden rounded-lg p-4 shadow-md transition-transform active:scale-[0.99]"
     >
-      {/* 노란 accent stripe — 좌측에서 우측으로 페이드 */}
-      <div className="from-bus via-bus/60 pointer-events-none absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r to-transparent" />
-      {/* 우상단 글로우 */}
-      <div className="bg-bus/15 pointer-events-none absolute -top-12 -right-8 h-32 w-32 rounded-full blur-3xl" />
+      {/* refac 우상단 검정 원 데코 */}
+      <div className="bg-bus-foreground/5 pointer-events-none absolute -top-8 -right-8 h-36 w-36 rounded-full" />
 
-      <div className="relative mb-3 flex items-center gap-2.5">
-        <ChildAvatar name={childName} tone="live" size="default" />
-        <div className="flex-1">
-          <p className="text-sm font-extrabold tracking-tight">{childName}</p>
-          <p className="text-[11px] font-medium text-white/60">
-            {orgName} · {DIRECTION_LABEL[direction]} 중
+      {/* 상태 라벨 */}
+      <div className="relative inline-flex items-center gap-1.5 text-[11px] font-black tracking-[0.06em] uppercase">
+        <LivePulseDot className="h-1.5 w-1.5" />
+        운행 중 · {directionLabel}
+      </div>
+
+      {/* 메인 hero 텍스트 — refac은 ETA 포함("도현이 5분 후 도착")이지만 home의
+          정적 fetch에서는 정확한 분 단위 ETA 미보유. "{자녀} 운행 중"으로 정직 표기. */}
+      <h2 className="relative mt-2 text-2xl font-black tracking-tight leading-tight">
+        {childName} 운행 중
+      </h2>
+      <p className="relative mt-1 text-[13px] font-bold opacity-85">
+        {routeName} · {childStopName}
+        {driverName ? ` · ${driverName} 기사님` : ""}
+      </p>
+
+      {/* 3-info row */}
+      <div className="relative mt-3.5 grid grid-cols-3 gap-3">
+        <div>
+          <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
+            예상 도착
+          </p>
+          <p className="mt-0.5 text-lg font-black tracking-tight tabular-nums">
+            {childStopScheduledAt ?? "—"}
           </p>
         </div>
-        <span className="border-bus/40 bg-bus/20 text-bus inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-[11px] font-bold">
-          <LivePulseDot />
-          운행 중
-        </span>
-      </div>
-
-      <div className="relative rounded-xl border border-white/10 bg-white/5 px-3.5 py-3 backdrop-blur-sm">
-        <div className="flex items-center gap-2.5">
-          <div className="bg-bus/20 flex h-8 w-8 shrink-0 items-center justify-center rounded-full">
-            <MapPin className="text-bus h-4 w-4" />
-          </div>
-          <div className="flex-1">
-            <p className="text-[11px] font-medium text-white/55">{routeName}</p>
-            <p className="mt-0.5 text-sm font-bold tracking-tight">
-              자녀 정류장 · {childStopName}
-            </p>
-          </div>
-          <ChevronRight className="h-5 w-5 text-white/40" />
+        <div>
+          <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
+            방향
+          </p>
+          <p className="mt-0.5 text-lg font-black tracking-tight">
+            {directionLabel}
+          </p>
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
+            정류장
+          </p>
+          <p className="mt-0.5 truncate text-lg font-black tracking-tight">
+            {childStopName}
+          </p>
         </div>
       </div>
 
-      <p className="relative mt-3 flex items-center justify-center gap-1 text-[11px] font-semibold text-white/60">
-        탭하면 실시간 위치를 볼 수 있어요
-        <ChevronRight className="h-3 w-3" />
-      </p>
+      {/* 검정 CTA */}
+      <div className="bg-bus-foreground/85 text-bus relative mt-3.5 flex h-11 items-center justify-center gap-1.5 rounded-md text-sm font-black">
+        <MapPin className="h-4 w-4" />
+        실시간 위치 보기
+      </div>
     </Link>
   );
 }

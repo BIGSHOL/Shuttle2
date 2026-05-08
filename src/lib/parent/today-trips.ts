@@ -26,6 +26,10 @@ export type ChildTripCard =
       route: RouteSummary;
       childStop: StopSummary;
       startedAtISO: string;
+      // refac hi-fi: hero 카드 보조 정보 — 자녀 정류장 예정 시각·기사 이름.
+      // running 상태에서만 의미 있어 그 분기에만 채움.
+      childStopScheduledAt: string | null; // "HH:mm"
+      driverName: string | null;
     }
   | { kind: "scheduled"; route: RouteSummary; childStop: StopSummary }
   | {
@@ -59,14 +63,20 @@ export async function getTodayChildTrips(
       route: {
         include: {
           vehicle: { select: { plate: true, mode: true } },
+          // 첫 stop의 scheduledAt(전체 노선 출발 시각) + 자녀 stop의 scheduledAt 모두
+          // 필요 — 같은 query에서 stops 전체를 가져와 client에서 derive.
           stops: {
             orderBy: { order: "asc" },
-            take: 1,
-            select: { scheduledAt: true },
+            select: { scheduledAt: true, stopId: true },
           },
           trips: {
             where: { date: today },
-            select: { id: true, startedAt: true, endedAt: true },
+            select: {
+              id: true,
+              startedAt: true,
+              endedAt: true,
+              driver: { select: { name: true } },
+            },
           },
         },
       },
@@ -95,6 +105,9 @@ export async function getTodayChildTrips(
         },
       };
       const childStop: StopSummary = rs.stop;
+      const childStopScheduledAt =
+        rs.route.stops.find((rsStop) => rsStop.stopId === rs.stopId)
+          ?.scheduledAt ?? null;
 
       const trip = rs.route.trips[0];
       if (trip?.endedAt) {
@@ -112,6 +125,8 @@ export async function getTodayChildTrips(
           route,
           childStop,
           startedAtISO: trip.startedAt.toISOString(),
+          childStopScheduledAt,
+          driverName: trip.driver?.name ?? null,
         });
       } else {
         // trip이 없거나 startedAt이 아직 null

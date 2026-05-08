@@ -60,10 +60,11 @@ export async function TodayTripsSection({
                 key={key}
                 tripId={card.tripId}
                 childName={c.studentName}
-                orgName={orgName}
                 direction={card.route.direction}
                 routeName={card.route.name}
                 childStopName={card.childStop.name}
+                childStopScheduledAt={card.childStopScheduledAt}
+                driverName={card.driverName}
               />
             );
           }
