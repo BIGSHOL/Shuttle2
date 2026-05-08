@@ -21,6 +21,8 @@ export default async function BillingPage() {
   });
 
   // 첫 진입 시 default trial subscription 생성. trialEndsAt = 30일 후.
+  const now = new Date();
+  const thirtyDaysLater = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
   const subscription = await db.tenantSubscription.upsert({
     where: { orgId },
     update: {},
@@ -29,9 +31,9 @@ export default async function BillingPage() {
       plan: org?.plan ?? "TRIAL",
       status: "TRIAL",
       billingCycle: "MONTHLY",
-      currentPeriodStart: new Date(),
-      currentPeriodEnd: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-      trialEndsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      currentPeriodStart: now,
+      currentPeriodEnd: thirtyDaysLater,
+      trialEndsAt: thirtyDaysLater,
     },
   });
 

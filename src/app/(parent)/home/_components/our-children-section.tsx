@@ -27,11 +27,11 @@ export type OurChildrenItem = {
 };
 
 export function OurChildrenSection({
-  children,
+  items,
 }: {
-  children: OurChildrenItem[];
+  items: OurChildrenItem[];
 }) {
-  if (children.length === 0) return null;
+  if (items.length === 0) return null;
 
   return (
     <section className="px-4">
@@ -45,7 +45,7 @@ export function OurChildrenSection({
         </Link>
       </div>
       <ul className="space-y-2">
-        {children.map((c) => (
+        {items.map((c) => (
           <li key={c.id}>
             <Link
               href="/me"

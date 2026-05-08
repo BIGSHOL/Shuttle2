@@ -57,8 +57,9 @@ export default function ParentMePage() {
               셔틀이 앱 설치
             </h2>
             <p className="text-muted-foreground mt-0.5 text-[12px] font-semibold leading-relaxed">
-              안드로이드 Chrome 메뉴 → "홈 화면에 추가" / iOS Safari 공유 →
-              "홈 화면에 추가"로 설치하면 일반 앱처럼 사용할 수 있어요.
+              안드로이드 Chrome 메뉴 → &ldquo;홈 화면에 추가&rdquo; / iOS Safari
+              공유 → &ldquo;홈 화면에 추가&rdquo;로 설치하면 일반 앱처럼 사용할
+              수 있어요.
             </p>
           </div>
         </div>

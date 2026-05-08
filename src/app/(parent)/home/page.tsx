@@ -93,7 +93,7 @@ export default async function ParentHomePage() {
         />
       </Suspense>
 
-      <OurChildrenSection children={ourChildren} />
+      <OurChildrenSection items={ourChildren} />
 
       <HomeActionsGrid
         pendingAbsenceCount={pendingAbsenceCount}

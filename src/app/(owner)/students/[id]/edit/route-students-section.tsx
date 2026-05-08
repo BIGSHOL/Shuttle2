@@ -66,9 +66,9 @@ export function RouteStudentsSection({
         {routes.length === 0 ? (
           <p className="text-destructive text-sm">
             먼저{" "}
-            <a href="/routes" className="font-medium underline">
+            <Link href="/routes" className="font-medium underline">
               노선을 등록
-            </a>
+            </Link>
             해야 배정할 수 있습니다.
           </p>
         ) : null}
