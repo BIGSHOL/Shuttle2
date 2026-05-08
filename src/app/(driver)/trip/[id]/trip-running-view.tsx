@@ -32,6 +32,7 @@ import {
   upsertSafetyCheckAction,
 } from "../../run/actions";
 import type { SafetyFieldsInput } from "@/server/driver/types";
+import { formatKstHHmm, formatSegment } from "@/lib/geo/trip-stats";
 import {
   EndTripModal,
   type UnprocessedItem,
@@ -48,6 +49,10 @@ type StopRow = {
   lat: number;
   lng: number;
   radiusM: number;
+  // GPS STOP_PASS로 자동 기록된 통과 시각 (ISO). 미통과면 null.
+  arrivedAtISO: string | null;
+  // 직전 통과 정류장과의 구간 소요(초). 첫 stop·미통과면 null.
+  segmentSec: number | null;
   students: {
     id: string;
     name: string;
@@ -444,33 +449,48 @@ export function TripRunningView({
           {stops.map((s) => {
             const isPassed = gps.passed.has(s.id) || manualPassed.has(s.id);
             const isStopPending = stopPassPending.has(s.id);
+            const arrivedAt = s.arrivedAtISO
+              ? new Date(s.arrivedAtISO)
+              : null;
             return (
               <li key={s.id}>
-                <div className="flex items-center gap-3 text-sm">
+                <div className="flex items-start gap-3 text-sm">
                   <span
                     className={
                       isPassed
-                        ? "bg-success text-success-foreground flex h-9 w-9 items-center justify-center rounded-full font-bold shadow-sm"
-                        : "bg-muted text-muted-foreground flex h-9 w-9 items-center justify-center rounded-full text-sm font-extrabold"
+                        ? "bg-success text-success-foreground mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold shadow-sm"
+                        : "bg-muted text-muted-foreground mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-extrabold"
                     }
                   >
                     {isPassed ? <Check className="h-4 w-4" /> : s.order}
                   </span>
-                  <span
-                    className={
-                      isPassed
-                        ? "text-muted-foreground flex-1 truncate text-sm font-bold line-through"
-                        : "flex-1 truncate text-sm font-bold"
-                    }
-                  >
-                    {s.name}
-                  </span>
+                  <div className="min-w-0 flex-1">
+                    <span
+                      className={
+                        isPassed
+                          ? "text-muted-foreground block truncate text-sm font-bold line-through"
+                          : "block truncate text-sm font-bold"
+                      }
+                    >
+                      {s.name}
+                    </span>
+                    {arrivedAt ? (
+                      <span className="text-success mt-0.5 inline-flex items-center gap-1 font-mono text-[11px] font-extrabold tabular-nums">
+                        통과 {formatKstHHmm(arrivedAt)}
+                        {s.segmentSec !== null ? (
+                          <span className="text-muted-foreground font-bold">
+                            · {formatSegment(s.segmentSec)}
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </div>
                   {!isPassed && isDriver ? (
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
-                      className="h-7 px-2 text-[11px] font-bold"
+                      className="mt-0.5 h-7 shrink-0 px-2 text-[11px] font-bold"
                       disabled={isStopPending}
                       onClick={() => {
                         setStopPassPending((p) => new Set(p).add(s.id));
@@ -504,7 +524,7 @@ export function TripRunningView({
                       {isStopPending ? "처리 중" : "도착"}
                     </Button>
                   ) : null}
-                  <span className="text-muted-foreground inline-flex items-center gap-1 text-xs font-medium font-mono">
+                  <span className="text-muted-foreground mt-1 inline-flex shrink-0 items-center gap-1 font-mono text-xs font-medium">
                     <Clock className="h-3 w-3" />
                     {s.scheduledAt}
                   </span>

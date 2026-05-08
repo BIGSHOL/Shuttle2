@@ -4,6 +4,10 @@ import { Check } from "lucide-react";
 import { TripRealtimeRefresher } from "@/components/trip-realtime-refresher";
 import { db } from "@/lib/db";
 import { requireTripAccess } from "@/lib/auth/trip-access";
+import {
+  computeStopArrivals,
+  formatKstHHmm,
+} from "@/lib/geo/trip-stats";
 
 import { TripRunningView } from "./trip-running-view";
 
@@ -62,9 +66,6 @@ export async function TripScreen({ tripId }: { tripId: string }) {
   // 종료된 trip이면 요약 카드만
   if (trip.endedAt) {
     const sc = trip.safetyCheck;
-    // KST = UTC + 9. ISO slice(11,16) = UTC HH:MM. KST 변환:
-    const fmtKstHHmm = (d: Date) =>
-      new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16);
     return (
       <main className="space-y-4 px-4 pt-4 pb-6">
         <div className="bg-card rounded-lg border p-5 shadow-sm">
@@ -87,7 +88,7 @@ export async function TripScreen({ tripId }: { tripId: string }) {
                 시작
               </dt>
               <dd className="mt-0.5 font-mono text-base font-extrabold">
-                {trip.startedAt ? fmtKstHHmm(trip.startedAt) : "—"}
+                {trip.startedAt ? formatKstHHmm(trip.startedAt) : "—"}
               </dd>
             </div>
             <div>
@@ -95,7 +96,7 @@ export async function TripScreen({ tripId }: { tripId: string }) {
                 종료
               </dt>
               <dd className="mt-0.5 font-mono text-base font-extrabold">
-                {fmtKstHHmm(trip.endedAt)}
+                {formatKstHHmm(trip.endedAt)}
               </dd>
             </div>
             <div className="col-span-2">
@@ -145,14 +146,45 @@ export async function TripScreen({ tripId }: { tripId: string }) {
     );
   }
 
-  // helper 후보 — driver만 picker 사용. 같은 org의 HELPER role staff.
-  const helperCandidates = access.isDriver
-    ? await db.staff.findMany({
-        where: { orgId: access.user.org.id, role: "HELPER" },
-        orderBy: { name: "asc" },
-        select: { id: true, name: true },
-      })
-    : [];
+  // helper 후보 + 정류장 도착 시각 (LocationPing.STOP_PASS 기반).
+  // 학원장 trip 상세와 같은 데이터를 기사 PWA에서도 보여주기 위함.
+  const [helperCandidates, stopPassPings] = await Promise.all([
+    access.isDriver
+      ? db.staff.findMany({
+          where: { orgId: access.user.org.id, role: "HELPER" },
+          orderBy: { name: "asc" },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve<Array<{ id: string; name: string }>>([]),
+    db.locationPing.findMany({
+      where: { tripId, source: "STOP_PASS" },
+      orderBy: { recordedAt: "asc" },
+      select: {
+        lat: true,
+        lng: true,
+        recordedAt: true,
+        speed: true,
+        source: true,
+      },
+    }),
+  ]);
+
+  const stopArrivals = computeStopArrivals(
+    stopPassPings,
+    trip.route.stops.map((rs) => ({
+      stopId: rs.stop.id,
+      stopName: rs.stop.name,
+      stopOrder: rs.order,
+      lat: rs.stop.lat,
+      lng: rs.stop.lng,
+    })),
+  );
+  const arrivedAtByStopId = new Map(
+    stopArrivals.map((a) => [a.stopId, a.arrivedAt] as const),
+  );
+  const segmentSecByStopId = new Map(
+    stopArrivals.map((a) => [a.stopId, a.segmentSec] as const),
+  );
 
   // RouteStop별 학생 매핑
   const studentsByStop = new Map<string, { id: string; name: string }[]>();
@@ -231,6 +263,9 @@ export async function TripScreen({ tripId }: { tripId: string }) {
           lat: rs.stop.lat,
           lng: rs.stop.lng,
           radiusM: rs.stop.radiusM,
+          arrivedAtISO:
+            arrivedAtByStopId.get(rs.stop.id)?.toISOString() ?? null,
+          segmentSec: segmentSecByStopId.get(rs.stop.id) ?? null,
           students: (studentsByStop.get(rs.stop.id) ?? []).map((s) => {
             const ab = absenceByStudent.get(s.id);
             const iss = issueByStudent.get(s.id);
