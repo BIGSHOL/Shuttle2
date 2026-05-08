@@ -322,6 +322,23 @@ vercel deploy --prod --yes  # 프로덕션 배포
     `<DriverAppShareCard>` 학원장 dashboard 카드(다운로드+가이드 링크 클립보드 복사).
   - 베타 운영 약속: 안드로이드 기사만 RN 앱, iOS 기사는 PWA 화면 켠 채. 베타
     APK는 Supabase Storage `driver-apks` public bucket에서 서빙.
+- W23-C·D: 학생 list 페이지네이션·필터·정렬 (`e46e941`) + 학생 toolbar 한 줄·
+  차량 삭제 UX·404 home 경로 (`8bb8761`).
+- W23-E·F·G: 기사 RN APK 흰 화면 진단·해결 — 1.0.2 newArch off +
+  `<AppErrorBoundary>` + lazy task → 1.0.3 React duplication metro
+  `extraNodeModules` (무효) → **1.0.4** 결정적 해결, BlueStacks 로그인 화면
+  진입 검증 완료. logcat USB 직결 절차(`adb devices` → `adb logcat`) +
+  EXPO_TOKEN 1Password 보관 정책 확립.
+- W23-H: 디자인 풀세트 + 1.0.5/1.0.6 통합 빌드 — 사용자 `data/`
+  design_merge_patches Phase 0·1·2 적용 (shadow 토큰·학부모 home 6 컴포넌트·
+  trip-live 3 컴포넌트·driver `/run` 풀세트·owner KPI/QuickLink·marketing
+  hero/pain/features/pricing) + RN driver-rn 영문 한글화 + 9 컴포넌트
+  (Button·Card·ChildAvatar·Collapsible·DirectionBadge·Header·LivePulseDot·
+  ModeBadge·Icon) + 4 화면 재작성 + TripScreen dark gradient header +
+  RunListScreen `Promise.allSettled` resilience + `/api/driver/me` endpoint
+  신설. 1.0.5는 운영 검증 안 한 채 **1.0.6에 통합**(/admin/apk 단일 활성).
+  검증 시나리오: 로그인 한글 알림 / me endpoint 헤더 / RunListScreen 풀세트 /
+  TripScreen 다크 그라디언트(155° #1a1c22→#0f1014).
 - **W24: 셔틀이 플랫폼 매니저(어드민) 시스템** — 학원·정류장·차량을 총괄
   관리하는 `/admin/*` 풀세트. 베타 학원이 5곳 넘어가도 prisma studio·Supabase
   Studio 안 들어가고 UI에서 운영 가능.
@@ -382,6 +399,27 @@ vercel deploy --prod --yes  # 프로덕션 배포
        upgrade 또는 GitHub public Releases / Vercel Blob 검토 후 전환
   - ⚠️ EXPO_TOKEN 2개 회전 필수 — 채팅 transcript에 평문 노출. 베타 시작 전
        expo.dev → Account → Access Tokens에서 revoke + 재발급 → 1Password 보관
+- 사용자 작업 (W23-H 2026-05-08 시점 — 디자인 풀세트 검증):
+  - ⏰ EAS 1.0.6 빌드 결과 → /admin/apk 등록 (1.0.5는 skip, 1.0.6 단일 활성화)
+  - ⏰ BlueStacks 검증 시나리오 4개 통과 (로그인 한글 알림 / 헤더 me endpoint /
+       RunListScreen 풀세트 / TripScreen 다크 그라디언트)
+  - ⚠️ EXPO_TOKEN 2개 회전 (W23-B에서 carry-over, 베타 시작 전 필수)
+  - ⏰ EAS APK 30일 retention 만료 (~2026-05-21, ~13일 남음) — Vercel Blob /
+       GitHub Releases / Supabase Pro 검토 후 전환
+
+### 베타 진입 backlog (W23-H 1.0.7+ 또는 운영 정책)
+
+1. RN `/api/auth/login-id-lookup` endpoint — `recoveryEmail` 등록한 driver의 RN
+   로그인이 placeholder 이메일만 시도해 깨짐. web actions의 lookup 흐름 RN 포팅
+   필요. 또는 운영 정책: driver는 recoveryEmail 미입력 권고.
+2. Pretendard 폰트 RN 명시 로드 — 현재 system 기본 sans-serif. `expo-font` +
+   `Pretendard-Bold.ttf` 등록 필요.
+3. RN 권한 카드 실제 status — 현재 "운행 환경 이상 없음" 고정 표시.
+   `expo-location`, FCM messaging의 실제 권한 status로 동적 update 필요.
+4. EXPO_TOKEN 운영 정책 — 1Password에 보관. PowerShell history·채팅에 평문
+   노출 절대 금지 (`$env:EXPO_TOKEN = "<1Password>"` placeholder만).
+5. EAS APK 30일 retention 대비 — Vercel Blob, GitHub public Releases,
+   또는 Supabase Pro upgrade 검토.
 
 ### 환경 변수 가드레일 (W15-D·W18 트러블슈팅 결과)
 
