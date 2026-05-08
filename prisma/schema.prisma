@@ -37,6 +37,9 @@ model Organization {
   routeAssignmentOverrides RouteAssignmentOverride[]
   stopChangeLedger         StopChangeLedger[]
   policy                   TenantPolicy?
+  // W24-C: 결제·구독
+  subscription             TenantSubscription?
+  invoices                 Invoice[]
 }
 
 // 기사·동승자 초대 토큰 (1회용).
@@ -216,16 +219,16 @@ model Stop {
   address String?
   radiusM Int          @default(50) // 도착 판정 반경 (미터)
 
-  routes               RouteStop[]
-  students             RouteStudent[]
+  routes                  RouteStop[]
+  students                RouteStudent[]
   changeRequestsFrom      StopChangeRequest[]       @relation("StopChangeFrom")
   changeRequestsResult    StopChangeRequest[]       @relation("StopChangeResult")
   changeRequestsRequested StopChangeRequest[]       @relation("StopChangeRequested")
   // W24-B: stop-change ledger·override
-  assignmentsCurrent   RouteAssignment[]         @relation("AssignmentCurrentStop")
-  overrides            RouteAssignmentOverride[]
-  ledgerFrom           StopChangeLedger[]        @relation("LedgerFromStop")
-  ledgerTo             StopChangeLedger[]        @relation("LedgerToStop")
+  assignmentsCurrent      RouteAssignment[]         @relation("AssignmentCurrentStop")
+  overrides               RouteAssignmentOverride[]
+  ledgerFrom              StopChangeLedger[]        @relation("LedgerFromStop")
+  ledgerTo                StopChangeLedger[]        @relation("LedgerToStop")
 
   @@index([orgId])
 }
@@ -537,27 +540,27 @@ enum NotificationCategory {
 // Stop은 새로 만들지 않고 기존 stop 매핑 또는 신규 stop 별도 생성하는 흐름은
 // 1차 단순화 — OWNER가 승인 시 toLat/toLng로 새 Stop 만들어 매핑.
 model StopChangeRequest {
-  id          String        @id @default(cuid())
-  orgId       String
-  org         Organization  @relation(fields: [orgId], references: [id])
-  studentId   String
-  student     Student       @relation(fields: [studentId], references: [id])
-  fromStopId  String
-  fromStop    Stop          @relation("StopChangeFrom", fields: [fromStopId], references: [id])
-  toLat       Float
-  toLng       Float
-  toAddress   String? // 역지오코딩 결과 (선택)
+  id              String        @id @default(cuid())
+  orgId           String
+  org             Organization  @relation(fields: [orgId], references: [id])
+  studentId       String
+  student         Student       @relation(fields: [studentId], references: [id])
+  fromStopId      String
+  fromStop        Stop          @relation("StopChangeFrom", fields: [fromStopId], references: [id])
+  toLat           Float
+  toLng           Float
+  toAddress       String? // 역지오코딩 결과 (선택)
   // W24-B: 학부모 picker로 같은 노선의 기존 stop을 선택한 경우 채움.
   // 이 값이 있으면 학원장 승인 시 새 Stop 생성 없이 그 stopId를 resultStopId로 매핑.
   // null이면 legacy 자유 좌표 신청 — 기존 흐름(newStopName 입력 + Stop 생성).
   requestedStopId String?
-  requestedStop   Stop?  @relation("StopChangeRequested", fields: [requestedStopId], references: [id])
-  reason      String?
-  effectiveAt DateTime      @db.Date
-  status      RequestStatus @default(PENDING)
-  createdBy   String // guardianId
-  guardian    Guardian      @relation(fields: [createdBy], references: [id])
-  createdAt   DateTime      @default(now())
+  requestedStop   Stop?         @relation("StopChangeRequested", fields: [requestedStopId], references: [id])
+  reason          String?
+  effectiveAt     DateTime      @db.Date
+  status          RequestStatus @default(PENDING)
+  createdBy       String // guardianId
+  guardian        Guardian      @relation(fields: [createdBy], references: [id])
+  createdAt       DateTime      @default(now())
 
   // OWNER 결정 트래킹
   decidedBy      String? // staffId
@@ -701,4 +704,62 @@ model TenantPolicy {
   notifyParentOnDecision   Boolean      @default(true)
   notifyDriverOnApprove    Boolean      @default(true)
   updatedAt                DateTime     @updatedAt
+}
+
+// === W24-C: 결제·구독 (UI/schema only) ===
+//
+// 결제 게이트웨이(Toss/Stripe) 통합은 별도 turn. 본 모델은 schema·UI만.
+// Organization.plan은 그대로 두되(legacy 호환), TenantSubscription에 상태·주기·
+// 다음 결제일 등 풍부한 정보 보관. /billing 페이지가 이 모델을 source로 사용.
+
+model TenantSubscription {
+  orgId                  String             @id
+  org                    Organization       @relation(fields: [orgId], references: [id])
+  plan                   Plan               @default(TRIAL)
+  status                 SubscriptionStatus @default(TRIAL)
+  billingCycle           BillingCycle       @default(MONTHLY)
+  currentPeriodStart     DateTime           @default(now())
+  currentPeriodEnd       DateTime
+  trialEndsAt            DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  // 결제 게이트웨이 식별자 (별도 turn에서 채움)
+  externalCustomerId     String?
+  externalSubscriptionId String?
+  updatedAt              DateTime           @updatedAt
+}
+
+enum SubscriptionStatus {
+  TRIAL
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+enum BillingCycle {
+  MONTHLY
+  YEARLY
+}
+
+model Invoice {
+  id                String        @id @default(cuid())
+  orgId             String
+  org               Organization  @relation(fields: [orgId], references: [id])
+  amount            Int // 원 단위 (KRW)
+  currency          String        @default("KRW")
+  status            InvoiceStatus @default(DRAFT)
+  periodStart       DateTime
+  periodEnd         DateTime
+  issuedAt          DateTime      @default(now())
+  paidAt            DateTime?
+  externalInvoiceId String?
+
+  @@index([orgId, issuedAt])
+}
+
+enum InvoiceStatus {
+  DRAFT
+  ISSUED
+  PAID
+  VOID
 }
