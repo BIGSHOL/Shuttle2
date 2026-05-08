@@ -39,6 +39,7 @@ import {
   EndTripModal,
   type UnprocessedItem,
 } from "./_components/end-trip-modal";
+import { NextStopCard } from "./_components/next-stop-card";
 import { useGpsTracker } from "./gps-tracker";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
@@ -425,6 +426,47 @@ export function TripRunningView({
           </div>
         ) : null}
       </div>
+
+      {/* W24-D Phase 2: refac driver-run.jpg "02 · 운행 중" .next-stop hero card.
+          다음 정류장(=첫 미통과 stop)을 운전 중 한눈에 노출. ETA는 GPS 거리/30km/h
+          간이 추정 (정밀 ETA는 학부모 trip-live의 카카오 API 사용). */}
+      {(() => {
+        const passedSet = new Set([...gps.passed, ...manualPassed]);
+        const next = stops.find((s) => !passedSet.has(s.id));
+        if (!next) return null;
+        const checked =
+          eventType === "BOARD" ? boardedSet : alightedSet;
+        const waitingCount = next.students.filter(
+          (st) =>
+            st.absence?.status !== "ACKNOWLEDGED" &&
+            !checked.has(st.id) &&
+            !st.issue,
+        ).length;
+        let etaMin: number | null = null;
+        if (gps.fix) {
+          const R = 6_371_000;
+          const dLat = ((next.lat - gps.fix.latitude) * Math.PI) / 180;
+          const dLng = ((next.lng - gps.fix.longitude) * Math.PI) / 180;
+          const lat1 = (gps.fix.latitude * Math.PI) / 180;
+          const lat2 = (next.lat * Math.PI) / 180;
+          const h =
+            Math.sin(dLat / 2) ** 2 +
+            Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+          const meters = 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+          // 가정 평균속도 25km/h (시내 셔틀) — 정밀하진 않지만 한눈 ETA로 충분
+          etaMin = Math.max(1, Math.round(meters / 1000 / 25 * 60));
+        }
+        return (
+          <NextStopCard
+            nextStopName={next.name}
+            nextStopOrder={next.order}
+            totalStops={stops.length}
+            scheduledAt={next.scheduledAt}
+            waitingCount={waitingCount}
+            etaMin={etaMin}
+          />
+        );
+      })()}
 
       {/* Helper picker — driver만 */}
       {isDriver ? (
