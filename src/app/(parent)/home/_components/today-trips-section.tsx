@@ -4,33 +4,26 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { IdleTripCard } from "./idle-trip-card";
 import { LiveTripCard } from "./live-trip-card";
 
+// W24-D Phase 1 home: refac Parent App.html 구조와 align.
+// - running 운행 1개 → 페이지 hero(첫 영역) — LiveTripCard 우선 렌더
+// - 나머지(scheduled/finished/none) → "오늘 일정" 2-card grid (등원/하원 IdleTripCard)
+
 function fmtKstHHmm(d: Date): string {
   const kst = new Date(d.getTime() + 9 * 60 * 60 * 1000);
   return kst.toISOString().slice(11, 16);
 }
 
-type StudentMeta = {
-  id: string;
-  name: string;
-  org: { name: string; type: "ACADEMY" | "DAYCARE" | "KINDERGARTEN" };
-};
-
 export async function TodayTripsSection({
   students,
-  studentInfo,
 }: {
   students: { id: string; name: string }[];
-  studentInfo: Map<string, StudentMeta>;
 }) {
   const todayCards = await getTodayChildTrips(students);
 
   if (todayCards.length === 0) {
     return (
-      <section className="space-y-2.5 px-4">
-        <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
-          오늘 운행
-        </p>
-        <div className="bg-card rounded-xl border p-6 text-center shadow-sm">
+      <section className="px-4">
+        <div className="bg-card rounded-lg border p-6 text-center shadow-sm">
           <p className="text-base font-extrabold tracking-tight">
             연결된 자녀가 아직 없어요
           </p>
@@ -42,99 +35,98 @@ export async function TodayTripsSection({
     );
   }
 
-  return (
-    <section className="space-y-2.5 px-4">
-      <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
-        오늘 운행
-      </p>
-      {todayCards.flatMap((c) =>
-        c.cards.map((card, i) => {
-          const info = studentInfo.get(c.studentId);
-          const orgName = info?.org.name ?? "";
-          const orgType = info?.org.type ?? "ACADEMY";
-          const key = `${c.studentId}-${i}`;
+  // 첫 running 카드 → hero LIVE
+  let liveCardEl: React.ReactNode = null;
+  type IdleEntry = {
+    key: string;
+    card: Exclude<
+      Awaited<ReturnType<typeof getTodayChildTrips>>[number]["cards"][number],
+      { kind: "running" }
+    >;
+  };
+  const idleEntries: IdleEntry[] = [];
 
-          if (card.kind === "running") {
-            return (
-              <LiveTripCard
-                key={key}
-                tripId={card.tripId}
-                childName={c.studentName}
-                direction={card.route.direction}
-                routeName={card.route.name}
-                childStopName={card.childStop.name}
-                childStopScheduledAt={card.childStopScheduledAt}
-                driverName={card.driverName}
-              />
-            );
-          }
-          if (card.kind === "scheduled") {
-            return (
-              <IdleTripCard
-                key={key}
-                kind="scheduled"
-                childName={c.studentName}
-                orgName={orgName}
-                orgType={orgType}
-                mode={card.route.vehicle.mode}
-                routeName={card.route.name}
-                direction={card.route.direction}
-                childStopName={card.childStop.name}
-                scheduledFirstAt={card.route.scheduledFirstAt}
-              />
-            );
-          }
-          if (card.kind === "finished") {
-            return (
-              <IdleTripCard
-                key={key}
-                kind="finished"
-                childName={c.studentName}
-                orgName={orgName}
-                orgType={orgType}
-                mode={card.route.vehicle.mode}
-                routeName={card.route.name}
-                direction={card.route.direction}
-                endedAtKstHHmm={fmtKstHHmm(new Date(card.endedAtISO))}
-              />
-            );
-          }
-          return (
-            <IdleTripCard
-              key={key}
-              kind="none"
+  for (const c of todayCards) {
+    for (let i = 0; i < c.cards.length; i++) {
+      const card = c.cards[i];
+      const key = `${c.studentId}-${i}`;
+      if (card.kind === "running" && !liveCardEl) {
+        liveCardEl = (
+          <div key={key} className="px-4">
+            <LiveTripCard
+              tripId={card.tripId}
               childName={c.studentName}
-              orgName={orgName}
-              orgType={orgType}
-              mode="GENERAL"
-              reason={card.reason}
+              direction={card.route.direction}
+              routeName={card.route.name}
+              childStopName={card.childStop.name}
+              childStopScheduledAt={card.childStopScheduledAt}
+              driverName={card.driverName}
             />
-          );
-        }),
-      )}
-    </section>
+          </div>
+        );
+      } else if (card.kind !== "running") {
+        idleEntries.push({ key, card });
+      }
+    }
+  }
+
+  return (
+    <>
+      {liveCardEl}
+
+      {idleEntries.length > 0 ? (
+        <section className="px-4">
+          <h2 className="mb-2 text-[13px] font-black tracking-tight">
+            오늘 일정
+          </h2>
+          <div className="grid grid-cols-2 gap-2">
+            {idleEntries.map(({ key, card }) => {
+              if (card.kind === "scheduled") {
+                return (
+                  <IdleTripCard
+                    key={key}
+                    kind="scheduled"
+                    direction={card.route.direction}
+                    childStopName={card.childStop.name}
+                    scheduledFirstAt={card.route.scheduledFirstAt}
+                  />
+                );
+              }
+              if (card.kind === "finished") {
+                return (
+                  <IdleTripCard
+                    key={key}
+                    kind="finished"
+                    direction={card.route.direction}
+                    childStopName={card.childStop.name}
+                    endedAtKstHHmm={fmtKstHHmm(new Date(card.endedAtISO))}
+                  />
+                );
+              }
+              return (
+                <IdleTripCard
+                  key={key}
+                  kind="none"
+                  direction="PICKUP"
+                  reason={card.reason}
+                />
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
+    </>
   );
 }
 
 export function TodayTripsSectionSkeleton() {
   return (
-    <section className="space-y-2.5 px-4">
-      <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
-        오늘 운행
-      </p>
-      {Array.from({ length: 2 }).map((_, i) => (
-        <div key={i} className="bg-card space-y-3 rounded-xl border p-4">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-10 w-10 rounded-full" />
-            <div className="flex-1 space-y-1">
-              <Skeleton className="h-4 w-24" />
-              <Skeleton className="h-3 w-16" />
-            </div>
-            <Skeleton className="h-6 w-16 rounded-md" />
-          </div>
-          <Skeleton className="h-20 w-full rounded-md" />
-        </div>
-      ))}
+    <section className="px-4">
+      <Skeleton className="mb-2 h-3.5 w-16" />
+      <div className="grid grid-cols-2 gap-2">
+        <Skeleton className="h-24 rounded-md" />
+        <Skeleton className="h-24 rounded-md" />
+      </div>
     </section>
   );
 }

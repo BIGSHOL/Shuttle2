@@ -4,14 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
-  CalendarOff,
   Home,
   MapPin,
+  User,
   type LucideIcon,
 } from "lucide-react";
 
-// 학부모 모바일 BottomTabBar. layout이 max-w-md로 모바일 폭을 고정하므로
-// 데스크톱에서도 같은 폭에 정렬.
+// W24-D Phase 1: refac data/refac/design-files/Parent App.html 의 .bottom-nav
+// 4탭 idiom. 홈·실시간·알림·내 정보. 결석·정류장 변경은 home의 "빠른 처리"
+// 또는 내 정보 페이지 list로 진입.
 //
 // trip-live 풀스크린(fixed inset-0 z-50)는 이 탭바를 가려도 OK — z-30 < z-50.
 
@@ -30,6 +31,12 @@ export function ParentBottomTabs({ unreadCount }: { unreadCount: number }) {
   const tabs: TabDef[] = [
     { href: "/home", matchPrefixes: ["/home"], label: "홈", Icon: Home },
     {
+      href: "/trip-live",
+      matchPrefixes: ["/trip-live"],
+      label: "실시간",
+      Icon: MapPin,
+    },
+    {
       href: "/notifications",
       matchPrefixes: ["/notifications"],
       label: "알림",
@@ -37,16 +44,10 @@ export function ParentBottomTabs({ unreadCount }: { unreadCount: number }) {
       badge: unreadCount,
     },
     {
-      href: "/my-absences",
-      matchPrefixes: ["/my-absences"],
-      label: "결석",
-      Icon: CalendarOff,
-    },
-    {
-      href: "/my-stop-changes",
-      matchPrefixes: ["/my-stop-changes"],
-      label: "정류장",
-      Icon: MapPin,
+      href: "/me",
+      matchPrefixes: ["/me", "/my-absences", "/my-stop-changes"],
+      label: "내 정보",
+      Icon: User,
     },
   ];
 
