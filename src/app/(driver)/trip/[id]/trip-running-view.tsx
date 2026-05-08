@@ -1,18 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import {
   AlertTriangle,
   Check,
   CircleAlert,
-  Clock,
   MapPin,
   Square,
-  X,
 } from "lucide-react";
 import { toast } from "sonner";
 
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -25,20 +22,18 @@ import { useWakeLock } from "@/lib/wake-lock/use-wake-lock";
 import {
   assignHelperAction,
   endTripAction,
-  markBoardingIssueAction,
   markStopPassedAction,
-  toggleBoardingEventAction,
-  unmarkBoardingIssueAction,
   upsertSafetyCheckAction,
 } from "../../run/actions";
 import type { SafetyFieldsInput } from "@/server/driver/types";
-import { formatKstHHmm, formatSegment } from "@/lib/geo/trip-stats";
 import {
   EndTripModal,
   type UnprocessedItem,
 } from "./_components/end-trip-modal";
+import { BtnBig } from "./_components/btn-big";
 import { NextStopCard } from "./_components/next-stop-card";
 import { RunTop } from "./_components/run-top";
+import { StudentRow } from "./_components/student-row";
 import { useGpsTracker } from "./gps-tracker";
 
 type StopRow = {
@@ -113,39 +108,16 @@ export function TripRunningView({
   // Wake Lock — 화면 자동 꺼짐 방지
   const wakeLock = useWakeLock(true);
 
-  // M1: 정류장 통과 후 60초가 지났는데도 미처리(미체크 + issue 없음 + 결석 ACK 아님)
-  // 학생을 노란 강조로 알림. 기사가 학생 처리를 잊은 케이스 시각 보강.
-  // S1(종료 모달 강제)과 함께 NO_SHOW 누락 위험을 다층으로 차단.
-  const [stopExpired, setStopExpired] = useState<Set<string>>(new Set());
   // W23+: 정류장 수기 "도착" 마킹 — GPS 자동 감지 안 됐을 때.
   const [manualPassed, setManualPassed] = useState<Set<string>>(new Set());
   const [stopPassPending, setStopPassPending] = useState<Set<string>>(
     new Set(),
   );
-  const expireTimeoutsRef = useRef<Map<string, number>>(new Map());
 
-  const handleStopPassed = useCallback((stopId: string) => {
-    // 같은 정류장에 timeout이 이미 등록돼 있으면 무시 (idempotent)
-    if (expireTimeoutsRef.current.has(stopId)) return;
-    const id = window.setTimeout(() => {
-      setStopExpired((prev) => {
-        if (prev.has(stopId)) return prev;
-        const next = new Set(prev);
-        next.add(stopId);
-        return next;
-      });
-      expireTimeoutsRef.current.delete(stopId);
-    }, 60_000);
-    expireTimeoutsRef.current.set(stopId, id);
-  }, []);
-
-  // unmount 시 timeout 모두 cleanup (메모리 누수 방지)
-  useEffect(() => {
-    const m = expireTimeoutsRef.current;
-    return () => {
-      for (const tid of m.values()) window.clearTimeout(tid);
-      m.clear();
-    };
+  // 정류장 통과 callback — refac 02 layout에서는 60초 미처리 강조 미사용.
+  // GpsTracker가 STOP_PASS 자동 등록만 하면 됨. handle은 idempotent no-op.
+  const handleStopPassed = useCallback(() => {
+    // no-op
   }, []);
 
   // GPS 추적
@@ -386,171 +358,221 @@ export function TripRunningView({
         />
       ) : null}
 
-      {/* 정류장 진행도 + 학생 탑승·하차 토글 */}
-      <section className="bg-card rounded-lg border p-4 shadow-sm">
-        {(() => {
-          const passedCount = Math.min(
-            stops.length,
-            new Set([...gps.passed, ...manualPassed]).size,
-          );
-          const pct =
-            stops.length > 0 ? Math.round((passedCount / stops.length) * 100) : 0;
-          const done = stops.length > 0 && passedCount === stops.length;
-          return (
-            <>
-              <div className="mb-3 flex items-end justify-between gap-3">
-                <div>
-                  <h3 className="text-base font-extrabold tracking-tight">
-                    정류장·{eventType === "BOARD" ? "탑승" : "하차"} 체크
-                  </h3>
-                  <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-                    {stops.length}개 중 통과 {passedCount}개
-                  </p>
-                </div>
-                <div className="text-right">
-                  <p className="text-[10px] font-extrabold tracking-wide uppercase text-muted-foreground">
-                    진행
-                  </p>
-                  <p className="font-mono text-lg font-extrabold tracking-tight">
-                    {passedCount}/{stops.length}
-                  </p>
-                </div>
-              </div>
-              {/* W24-A: 정류장 진행 progress bar — 한눈에 보이는 시각 진행도 */}
-              {stops.length > 0 ? (
-                <div
-                  className="bg-muted mb-3 h-2 overflow-hidden rounded-full"
-                  role="progressbar"
-                  aria-valuenow={passedCount}
-                  aria-valuemin={0}
-                  aria-valuemax={stops.length}
-                  aria-label={`정류장 ${passedCount}개 / ${stops.length}개 통과`}
-                >
-                  <div
-                    className={`h-full rounded-full transition-all duration-500 ${
-                      done
-                        ? "bg-success shadow-[0_0_8px_var(--success)]"
-                        : "bg-bus"
-                    }`}
-                    style={{ width: `${pct}%` }}
-                  />
-                </div>
-              ) : null}
-            </>
-          );
-        })()}
-        <ol className="space-y-3">
-          {stops.map((s) => {
-            const isPassed = gps.passed.has(s.id) || manualPassed.has(s.id);
-            const isStopPending = stopPassPending.has(s.id);
-            const arrivedAt = s.arrivedAtISO
-              ? new Date(s.arrivedAtISO)
-              : null;
-            return (
-              <li key={s.id}>
-                <div className="flex items-start gap-3 text-sm">
-                  <span
-                    className={
-                      isPassed
-                        ? "bg-success text-success-foreground mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full font-bold shadow-sm"
-                        : "bg-muted text-muted-foreground mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-extrabold"
-                    }
-                  >
-                    {isPassed ? <Check className="h-4 w-4" /> : s.order}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <span
-                      className={
-                        isPassed
-                          ? "text-muted-foreground block truncate text-sm font-bold line-through"
-                          : "block truncate text-sm font-bold"
-                      }
-                    >
-                      {s.name}
-                    </span>
-                    {arrivedAt ? (
-                      <span className="text-success mt-0.5 inline-flex items-center gap-1 font-mono text-[11px] font-extrabold tabular-nums">
-                        통과 {formatKstHHmm(arrivedAt)}
-                        {s.segmentSec !== null ? (
-                          <span className="text-muted-foreground font-bold">
-                            · {formatSegment(s.segmentSec)}
-                          </span>
-                        ) : null}
-                      </span>
-                    ) : null}
+      {/* refac .pickup-wrap — 다음 정류장 학생 + 이전 정류장 완료 학생 두 그룹.
+          stop별 grouping(이전 row) → status별 grouping(refac idiom)으로 전환. */}
+      {(() => {
+        const passedSet = new Set([...gps.passed, ...manualPassed]);
+        const nextStop = stops.find((s) => !passedSet.has(s.id));
+        // 미처리 학생 = 다음 stop 학생 중 ack 결석/체크/이슈 아닌 학생
+        // 완료 학생 = 모든 stop 학생 중 boarded/absent/no-show + 이전 stop의 미체크
+        const upcoming = nextStop?.students ?? [];
+        const completedAll: { stop: (typeof stops)[number]; student: (typeof upcoming)[number] }[] = [];
+        for (const stop of stops) {
+          if (!passedSet.has(stop.id) && nextStop && stop.id === nextStop.id)
+            continue;
+          for (const st of stop.students) {
+            completedAll.push({ stop, student: st });
+          }
+        }
+        // upcoming 중에서도 이미 처리된 학생은 completedAll로 이동
+        const processedAtNext = upcoming.filter(
+          (st) =>
+            st.absence?.status === "ACKNOWLEDGED" ||
+            checkedSet.has(st.id) ||
+            !!st.issue,
+        );
+        const upcomingPending = upcoming.filter(
+          (st) => !processedAtNext.includes(st),
+        );
+        const upcomingCount = upcomingPending.length;
+
+        return (
+          <section className="-mx-4">
+            {/* refac .pickup: padding 14/18/14 */}
+            <div className="px-[18px] py-[14px]">
+              {nextStop && upcoming.length > 0 ? (
+                <>
+                  {/* refac .pickup-head: justify-between mb-10px */}
+                  <div className="mb-[10px] flex items-center justify-between">
+                    <h3 className="text-muted-foreground text-[13px] font-black uppercase tracking-[0.06em]">
+                      {nextStop.name} — {eventType === "BOARD" ? "탑승" : "하차"} 예정
+                    </h3>
+                    <p className="text-muted-foreground text-[11px] font-bold">
+                      <strong className="text-bus font-black">
+                        {upcoming.length - upcomingCount}
+                      </strong>{" "}
+                      / {upcoming.length}
+                    </p>
                   </div>
-                  {!isPassed && isDriver ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="mt-0.5 h-7 shrink-0 px-2 text-[11px] font-bold"
-                      disabled={isStopPending}
-                      onClick={() => {
-                        setStopPassPending((p) => new Set(p).add(s.id));
-                        setManualPassed((p) => new Set(p).add(s.id));
-                        void markStopPassedAction(tripId, s.id)
-                          .then(() => {
-                            toast.success(`${s.name} 도착으로 기록했어요`);
-                          })
-                          .catch((err) => {
-                            setManualPassed((p) => {
-                              const n = new Set(p);
-                              n.delete(s.id);
-                              return n;
-                            });
-                            toast.error(
-                              err instanceof Error
-                                ? err.message
-                                : "도착 마킹에 실패했어요",
-                            );
-                          })
-                          .finally(() => {
-                            setStopPassPending((p) => {
-                              const n = new Set(p);
-                              n.delete(s.id);
-                              return n;
-                            });
-                          });
-                      }}
-                    >
-                      <MapPin className="mr-0.5 h-3 w-3" />
-                      {isStopPending ? "처리 중" : "도착"}
-                    </Button>
-                  ) : null}
-                  <span className="text-muted-foreground mt-1 inline-flex shrink-0 items-center gap-1 font-mono text-xs font-medium">
-                    <Clock className="h-3 w-3" />
-                    {s.scheduledAt}
-                  </span>
-                </div>
-                {s.students.length > 0 ? (
-                  <ul className="mt-2 space-y-1.5 pl-12">
-                    {s.students.map((st) => (
-                      <BoardingRow
+                  {upcomingPending.map((st) => (
+                    <StudentRow
+                      key={st.id}
+                      tripId={tripId}
+                      studentId={st.id}
+                      studentName={st.name}
+                      meta={`보호자 알림 발송 가능 · ${nextStop.name}`}
+                      variant={"pending"}
+                      eventType={eventType}
+                      gpsLat={gps.fix?.latitude ?? null}
+                      gpsLng={gps.fix?.longitude ?? null}
+                      isAtNextStop={true}
+                    />
+                  ))}
+                  {processedAtNext.map((st) => {
+                    const variant: "boarded" | "absent" | "no-show" = st.issue
+                      ? "no-show"
+                      : st.absence?.status === "ACKNOWLEDGED"
+                        ? "absent"
+                        : "boarded";
+                    const meta =
+                      variant === "no-show"
+                        ? `미${eventType === "BOARD" ? "탑승" : "하차"} · ${nextStop.name}`
+                        : variant === "absent"
+                          ? `학부모 결석 신청 · ${st.absence?.reason ?? "사유 미입력"}`
+                          : `${nextStop.name} · ${eventType === "BOARD" ? "탑승" : "하차"}됨`;
+                    return (
+                      <StudentRow
                         key={st.id}
                         tripId={tripId}
                         studentId={st.id}
                         studentName={st.name}
-                        type={eventType}
-                        checked={checkedSet.has(st.id)}
+                        meta={meta}
+                        variant={variant}
+                        eventType={eventType}
                         gpsLat={gps.fix?.latitude ?? null}
                         gpsLng={gps.fix?.longitude ?? null}
-                        absence={st.absence}
-                        issue={st.issue}
-                        stopPassedExpired={stopExpired.has(s.id)}
+                        isAtNextStop={true}
                       />
-                    ))}
-                  </ul>
-                ) : (
-                  <p className="text-muted-foreground mt-1 pl-12 text-xs font-medium">
-                    배정된 학생 없음
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ol>
-      </section>
+                    );
+                  })}
+                </>
+              ) : null}
+
+              {/* 이전 정류장 (완료) */}
+              {completedAll.length > 0 ? (
+                <>
+                  <div className="mt-[18px] mb-[10px] flex items-center justify-between">
+                    <h3 className="text-muted-foreground text-[13px] font-black uppercase tracking-[0.06em]">
+                      이전 정류장 (완료)
+                    </h3>
+                    <p className="text-muted-foreground text-[11px] font-bold tabular-nums">
+                      {completedAll.filter(
+                        (e) =>
+                          checkedSet.has(e.student.id) ||
+                          e.student.absence?.status === "ACKNOWLEDGED",
+                      ).length}{" "}
+                      / {completedAll.length}
+                    </p>
+                  </div>
+                  {completedAll.map(({ stop, student: st }) => {
+                    const variant: "pending" | "boarded" | "absent" | "no-show" = st.issue
+                      ? "no-show"
+                      : st.absence?.status === "ACKNOWLEDGED"
+                        ? "absent"
+                        : checkedSet.has(st.id)
+                          ? "boarded"
+                          : "pending";
+                    const meta =
+                      variant === "no-show"
+                        ? `미${eventType === "BOARD" ? "탑승" : "하차"} · ${stop.name} · 보호자 알림 발송`
+                        : variant === "absent"
+                          ? `학부모 결석 신청 · ${st.absence?.reason ?? "사유 미입력"}`
+                          : variant === "boarded"
+                            ? `${stop.name} · ${stop.scheduledAt} ${eventType === "BOARD" ? "탑승" : "하차"}`
+                            : `${stop.name} · 미처리`;
+                    return (
+                      <StudentRow
+                        key={`${stop.id}-${st.id}`}
+                        tripId={tripId}
+                        studentId={st.id}
+                        studentName={st.name}
+                        meta={meta}
+                        variant={variant}
+                        eventType={eventType}
+                        gpsLat={gps.fix?.latitude ?? null}
+                        gpsLng={gps.fix?.longitude ?? null}
+                        isAtNextStop={false}
+                      />
+                    );
+                  })}
+                </>
+              ) : null}
+            </div>
+
+            {/* refac run-bottom: progress-mini + btn-big */}
+            <div
+              className="bg-background border-border sticky bottom-0 flex flex-col gap-2 border-t px-[16px] pt-[12px]"
+              style={{
+                paddingBottom: "max(22px, env(safe-area-inset-bottom))",
+              }}
+            >
+              {/* progress-mini: 진행 + bar + count */}
+              {stops.length > 0 ? (
+                <div className="flex items-center gap-[10px] px-1 text-[11px] font-extrabold text-muted-foreground">
+                  <span>진행</span>
+                  <div className="bg-muted h-[5px] flex-1 overflow-hidden rounded-full">
+                    <div
+                      className="bg-bus h-full"
+                      style={{
+                        width: `${Math.round((passedSet.size / stops.length) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <span className="tabular-nums">
+                    {passedSet.size} / {stops.length}
+                  </span>
+                </div>
+              ) : null}
+              {/* primary btn-big: 다음 stop이 있으면 "정류장 도착", 없으면 "운행 종료" */}
+              {nextStop ? (
+                <BtnBig
+                  variant="primary"
+                  icon={<MapPin />}
+                  disabled={stopPassPending.has(nextStop.id)}
+                  onClick={() => {
+                    setStopPassPending((p) => new Set(p).add(nextStop.id));
+                    setManualPassed((p) => new Set(p).add(nextStop.id));
+                    void markStopPassedAction(tripId, nextStop.id)
+                      .then(() => {
+                        toast.success(`${nextStop.name} 도착으로 기록했어요`);
+                      })
+                      .catch((err) => {
+                        setManualPassed((p) => {
+                          const n = new Set(p);
+                          n.delete(nextStop.id);
+                          return n;
+                        });
+                        toast.error(
+                          err instanceof Error
+                            ? err.message
+                            : "도착 마킹에 실패했어요",
+                        );
+                      })
+                      .finally(() => {
+                        setStopPassPending((p) => {
+                          const n = new Set(p);
+                          n.delete(nextStop.id);
+                          return n;
+                        });
+                      });
+                  }}
+                >
+                  {stopPassPending.has(nextStop.id) ? "처리 중..." : "정류장 도착"}
+                </BtnBig>
+              ) : (
+                <BtnBig
+                  variant="danger"
+                  icon={<Square />}
+                  disabled={endPending}
+                  onClick={handleEnd}
+                >
+                  {endPending ? "종료 중..." : "운행 종료"}
+                </BtnBig>
+              )}
+            </div>
+          </section>
+        );
+      })()}
 
       {/* 전원 하차 확인 — KIDS 모드 종료 전 */}
       {isKidsMode ? (
@@ -561,33 +583,17 @@ export function TripRunningView({
         />
       ) : null}
 
-      {/* 운행 종료 — driver만 */}
-      {isDriver ? (
-        <div className="border-destructive/30 bg-destructive/5 space-y-2 rounded-lg border p-4">
-          <Button
-            type="button"
-            variant="destructive"
-            size="lg"
-            className="w-full text-base font-extrabold"
-            disabled={endPending}
-            onClick={handleEnd}
-          >
-            <Square className="mr-1 h-4 w-4 fill-current" />
-            {endPending ? "종료 중..." : "운행 종료"}
-          </Button>
-          {endError ? (
-            <p className="text-destructive text-xs font-medium" role="alert">
-              {endError}
-            </p>
-          ) : null}
-          <p className="text-muted-foreground text-[11px] font-medium">
-            종료를 누르면 GPS 송신이 멈추고 운행 기록이 마감됩니다.
-          </p>
-        </div>
+      {/* 운행 종료 에러 안내 — BtnBig 위 sticky run-bottom에서 처리하지 못한 에러만 별도 노출 */}
+      {endError ? (
+        <p
+          className="text-destructive px-4 py-2 text-xs font-bold"
+          role="alert"
+        >
+          {endError}
+        </p>
       ) : null}
-
       {!isDriver && isHelper ? (
-        <p className="text-muted-foreground pt-2 text-center text-xs font-medium">
+        <p className="text-muted-foreground px-4 pt-2 text-center text-xs font-medium">
           동승보호자는 종료할 수 없습니다. 기사님만 운행 종료 가능.
         </p>
       ) : null}
@@ -734,332 +740,6 @@ function CheckboxRow({
   );
 }
 
-function BoardingRow({
-  tripId,
-  studentId,
-  studentName,
-  type,
-  checked,
-  gpsLat,
-  gpsLng,
-  absence,
-  issue,
-  stopPassedExpired,
-}: {
-  tripId: string;
-  studentId: string;
-  studentName: string;
-  type: "BOARD" | "ALIGHT";
-  checked: boolean;
-  gpsLat: number | null;
-  gpsLng: number | null;
-  absence:
-    | {
-        status: "PENDING" | "NOTIFIED_DRIVER" | "ACKNOWLEDGED" | "REJECTED";
-        reason: string | null;
-      }
-    | null;
-  issue:
-    | {
-        type: "NO_SHOW" | "NO_DROPOFF";
-        reason: string | null;
-      }
-    | null;
-  // M1: 정류장 통과 후 60초가 지났는데도 처리되지 않은 학생 강조 플래그.
-  stopPassedExpired: boolean;
-}) {
-  const [pending, startTransition] = useTransition();
-  const [error, setError] = useState<string | null>(null);
-  const [reportOpen, setReportOpen] = useState(false);
-  const [reportReason, setReportReason] = useState("");
-
-  function toggle() {
-    setError(null);
-    startTransition(async () => {
-      try {
-        await toggleBoardingEventAction({
-          tripId,
-          studentId,
-          type,
-          lat: gpsLat ?? undefined,
-          lng: gpsLng ?? undefined,
-        });
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "저장 실패");
-      }
-    });
-  }
-
-  function reportIssue() {
-    if (reportReason.trim().length === 0) {
-      setError("사유를 입력하세요");
-      return;
-    }
-    setError(null);
-    const issueType = type === "BOARD" ? "NO_SHOW" : "NO_DROPOFF";
-    startTransition(async () => {
-      try {
-        await markBoardingIssueAction({
-          tripId,
-          studentId,
-          type: issueType,
-          reason: reportReason.trim(),
-          lat: gpsLat ?? undefined,
-          lng: gpsLng ?? undefined,
-        });
-        setReportOpen(false);
-        setReportReason("");
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "저장 실패");
-      }
-    });
-  }
-
-  function clearIssue() {
-    if (!issue) return;
-    setError(null);
-    startTransition(async () => {
-      try {
-        await unmarkBoardingIssueAction(tripId, studentId, issue.type);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : "해제 실패");
-      }
-    });
-  }
-
-  const action = type === "BOARD" ? "탑승" : "하차";
-  const issueLabel = type === "BOARD" ? "미탑승" : "미하차";
-
-  // 미탑승·미하차 마크된 학생: destructive 배경 + 사유 + 해제 버튼
-  if (issue) {
-    return (
-      <li>
-        <div className="border-destructive bg-destructive/10 flex items-center gap-2 rounded-md border-2 px-3 py-2.5 text-sm">
-          <AlertTriangle className="text-destructive h-4 w-4 shrink-0" />
-          <div className="min-w-0 flex-1">
-            <p className="text-destructive truncate font-extrabold">
-              {studentName}{" "}
-              <span className="text-[11px]">
-                — {issue.type === "NO_SHOW" ? "미탑승" : "미하차"}
-              </span>
-            </p>
-            {issue.reason ? (
-              <p className="text-muted-foreground mt-0.5 truncate text-[11px] font-medium">
-                사유: {issue.reason}
-              </p>
-            ) : null}
-          </div>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-7 px-2 text-xs"
-            onClick={clearIssue}
-            disabled={pending}
-          >
-            해제
-          </Button>
-        </div>
-        {error ? (
-          <p className="text-destructive mt-0.5 px-3 text-[10px] font-medium">
-            {error}
-          </p>
-        ) : null}
-      </li>
-    );
-  }
-
-  // 결석 신청된 학생: 회색 배경 + "결석" 뱃지 + 사유 (있으면). 탑승 토글
-  // 자체는 막지 않음 — driver가 학부모 사정 변경됐을 수 있음.
-  if (absence) {
-    const ackLabel =
-      absence.status === "ACKNOWLEDGED"
-        ? "결석 (확인)"
-        : absence.status === "NOTIFIED_DRIVER"
-          ? "결석 (전달됨)"
-          : "결석 (대기)";
-    return (
-      <li>
-        <button
-          type="button"
-          disabled={pending}
-          onClick={toggle}
-          className={
-            checked
-              ? "border-success bg-success-soft text-success flex w-full items-center gap-2 rounded-md border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
-              : "border-warning/40 bg-warning-soft/50 text-muted-foreground hover:bg-warning-soft/80 flex w-full items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm font-medium line-through disabled:opacity-60"
-          }
-        >
-          <span
-            className={
-              checked
-                ? "bg-success text-success-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
-                : "border-warning/60 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
-            }
-          >
-            {checked ? <Check className="h-3.5 w-3.5" /> : null}
-          </span>
-          <span className="min-w-0 flex-1 truncate">{studentName}</span>
-          <span className="bg-warning text-warning-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide whitespace-nowrap">
-            {ackLabel}
-          </span>
-        </button>
-        {absence.reason ? (
-          <p className="text-muted-foreground mt-0.5 px-3 text-[10px] font-medium">
-            사유: {absence.reason}
-          </p>
-        ) : null}
-        {error ? (
-          <p className="text-destructive mt-0.5 px-3 text-[10px] font-medium">
-            {error}
-          </p>
-        ) : null}
-      </li>
-    );
-  }
-
-  // M1: 정류장 통과 후 60초 미처리이면 노란 깜빡임 + "처리 누락" 배지 강조.
-  const expiredHighlight = stopPassedExpired && !checked;
-
-  return (
-    <li>
-      <div
-        className={
-          expiredHighlight
-            ? "ring-warning relative flex animate-pulse items-center gap-1.5 rounded-md ring-2 ring-offset-1"
-            : "flex items-center gap-1.5"
-        }
-      >
-        <button
-          type="button"
-          disabled={pending}
-          onClick={toggle}
-          className={
-            checked
-              ? "border-success bg-success-soft text-success flex flex-1 items-center gap-2 rounded-md border-2 px-3 py-2.5 text-left text-sm font-extrabold disabled:opacity-60"
-              : expiredHighlight
-                ? "border-warning bg-warning-soft hover:bg-warning-soft/80 active:bg-warning-soft/80 text-foreground flex flex-1 items-center gap-2 rounded-md border-2 px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
-                : "border-input bg-background hover:bg-muted active:bg-muted flex flex-1 items-center gap-2 rounded-md border px-3 py-2.5 text-left text-sm font-bold disabled:opacity-60"
-          }
-        >
-          <span
-            className={
-              checked
-                ? "bg-success text-success-foreground flex h-5 w-5 shrink-0 items-center justify-center rounded-md"
-                : expiredHighlight
-                  ? "border-warning bg-background flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2"
-                  : "border-input flex h-5 w-5 shrink-0 items-center justify-center rounded-md border"
-            }
-          >
-            {checked ? <Check className="h-3.5 w-3.5" /> : null}
-          </span>
-          <span className="min-w-0 flex-1 truncate">{studentName}</span>
-          {expiredHighlight ? (
-            <span className="bg-warning text-warning-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide whitespace-nowrap">
-              처리 누락
-            </span>
-          ) : null}
-          <span className="text-muted-foreground text-xs font-bold whitespace-nowrap">
-            {action}
-          </span>
-        </button>
-        {!checked ? (
-          <button
-            type="button"
-            onClick={() => setReportOpen(true)}
-            disabled={pending}
-            className="border-destructive/30 bg-destructive/5 hover:bg-destructive/10 text-destructive flex h-10 w-10 shrink-0 items-center justify-center rounded-md border disabled:opacity-60"
-            title={`${issueLabel} 보고`}
-            aria-label={`${issueLabel} 보고`}
-          >
-            <AlertTriangle className="h-4 w-4" />
-          </button>
-        ) : null}
-      </div>
-      {error ? (
-        <p className="text-destructive mt-0.5 px-3 text-[10px] font-medium">
-          {error}
-        </p>
-      ) : null}
-
-      {/* 사유 다이얼로그 (간단 모달) */}
-      {reportOpen ? (
-        <div
-          className="bg-foreground/40 fixed inset-0 z-50 flex items-end justify-center sm:items-center"
-          onClick={() => !pending && setReportOpen(false)}
-        >
-          <div
-            className="bg-card w-full max-w-md rounded-t-2xl border p-5 shadow-xl sm:rounded-lg"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-start gap-2">
-              <span className="bg-destructive/10 text-destructive flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-                <AlertTriangle className="h-4 w-4" />
-              </span>
-              <div className="min-w-0 flex-1">
-                <h3 className="text-base font-extrabold tracking-tight">
-                  {studentName} {issueLabel} 보고
-                </h3>
-                <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-                  {type === "BOARD"
-                    ? "정류장에서 학생이 보이지 않으면 사유를 적고 보고하세요. 학부모·학원장에 즉시 푸시 알림이 갑니다."
-                    : "정류장에서 학생이 내리지 못한 경우 사유와 후속 조치를 적으세요. 매우 위험 — 학부모·학원장에 즉시 경고됩니다."}
-                </p>
-              </div>
-            </div>
-            <textarea
-              value={reportReason}
-              onChange={(e) => setReportReason(e.target.value)}
-              maxLength={200}
-              rows={3}
-              placeholder={
-                type === "BOARD"
-                  ? "예: 부모님과 통화했으나 안 나옴 / 결석 사전 미통보 / 시간 늦음 후 불가능"
-                  : "예: 잠들어 있어 종점까지 동승 / 보호자 미도착 → 학원으로 복귀"
-              }
-              className="border-input bg-background mt-3 w-full rounded-md border p-3 text-sm font-medium"
-              disabled={pending}
-              autoFocus
-            />
-            {error ? (
-              <p className="text-destructive mt-1.5 text-xs font-medium">
-                {error}
-              </p>
-            ) : null}
-            <div className="mt-3 flex gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="flex-1"
-                onClick={() => {
-                  setReportOpen(false);
-                  setReportReason("");
-                  setError(null);
-                }}
-                disabled={pending}
-              >
-                <X className="mr-1 h-3.5 w-3.5" />
-                취소
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                size="sm"
-                className="flex-1 font-extrabold"
-                onClick={reportIssue}
-                disabled={pending}
-              >
-                <AlertTriangle className="mr-1 h-3.5 w-3.5" />
-                {pending ? "보고 중..." : `${issueLabel} 보고`}
-              </Button>
-            </div>
-          </div>
-        </div>
-      ) : null}
-    </li>
-  );
-}
 
 function HelperPicker({
   tripId,
