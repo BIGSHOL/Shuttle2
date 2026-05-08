@@ -1,30 +1,34 @@
 import Link from "next/link";
 import { MapPin } from "lucide-react";
 
-import { LivePulseDot } from "@/components/shuttlee/live-dot";
-
-// W24-D Phase 1: data/refac/screenshots/parent-app.jpg "01 · /home" hero 카드.
-// `bg-bus` 노란 풀 배경 + 검정 텍스트 + 우상단 검정 원 데코 + 3-info row +
-// 풀폭 검정 CTA "실시간 위치 보기". 학부모가 home 진입 시 자녀 셔틀 운행 상태가
-// 한눈에 들어오는 가장 눈에 띄는 영역.
+// W24-D Phase 1 home: data/refac/screenshots/parent-app.jpg "01 · /home" hero 카드.
+// 픽셀 단위 align — refac CSS와 1:1 매핑:
 //
-// data/refac/docs/02-parent-screens.md §2.1: "운행중 — Badge 노란색 배경
-// (bg-bus text-bus-foreground), pulse 애니메이션, 큰 CTA 실시간 위치 보기".
-//
-// hi-fi 01 frame:
-//   타이틀 "도현이 5분 후 도착" — 자녀명 + 자녀 stop 예정 시각 기준 상대 ETA
-//   3-info row "예상 도착 / 현재 위치 / 탑승 학생"
+//   .hero{background:var(--bus);color:var(--bus-foreground);border-radius:18px;
+//         padding:18px;margin-top:12px;position:relative;overflow:hidden}
+//   .hero::after{position:absolute;right:-30px;top:-30px;width:140px;height:140px;
+//                border-radius:999px;background:rgba(0,0,0,0.05)}
+//   .hero-status{font-size:11px;font-weight:900;letter-spacing:0.06em;
+//                text-transform:uppercase;display:inline-flex;gap:6px}
+//   .hero h2{margin:8px 0 4px;font-size:24px;font-weight:900;
+//            letter-spacing:-0.025em;line-height:1.15}
+//   .hero .sub{font-size:13px;font-weight:700;opacity:0.85}
+//   .hero .row{display:flex;gap:14px;margin-top:14px}
+//   .hero .row .lbl{font-size:10px;font-weight:900;letter-spacing:0.04em;
+//                   text-transform:uppercase;opacity:0.7}
+//   .hero .row .val{font-size:18px;font-weight:900;letter-spacing:-0.02em;margin-top:2px}
+//   .hero-cta{height:44px;background:rgba(0,0,0,0.85);color:var(--bus);
+//             border-radius:10px;font-size:14px;font-weight:900;gap:6px}
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
-// "08:00" 같은 KST HH:mm을 받아 현재 시각 기준 분 차이로 변환.
-// hi-fi "도현이 5분 후 도착"의 "5분"을 SSR 시점에 derive.
 function relativeMinutesUntil(hhmm: string | null): number | null {
   if (!hhmm) return null;
   const m = /^(\d{2}):(\d{2})$/.exec(hhmm);
   if (!m) return null;
   const target = parseInt(m[1], 10) * 60 + parseInt(m[2], 10);
-  const nowKst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const now = new Date();
+  const nowKst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   const nowMins = nowKst.getUTCHours() * 60 + nowKst.getUTCMinutes();
   return target - nowMins;
 }
@@ -46,7 +50,6 @@ export function LiveTripCard({
   direction: "PICKUP" | "DROPOFF";
   routeName: string;
   childStopName: string;
-  // refac hero row — 자녀 정류장 예정 시각·기사 이름. 없으면 row에서 — 표기.
   childStopScheduledAt: string | null;
   driverName: string | null;
   boardedCount: number;
@@ -54,22 +57,16 @@ export function LiveTripCard({
   stopsAheadOfChild: number | null;
 }) {
   const directionLabel = DIRECTION_LABEL[direction];
-
-  // hi-fi 타이틀: "{name}이 X분 후 도착" — childStopScheduledAt 기준 상대 ETA.
-  // 0~30분 안이면 분 단위, 그 외(이미 통과·예정 멀리)는 fallback.
   const minsUntil = relativeMinutesUntil(childStopScheduledAt);
   let heroTitle: string;
   if (stopsAheadOfChild === 0) {
     heroTitle = `${childName}이 곧 도착`;
   } else if (minsUntil !== null && minsUntil > 0 && minsUntil <= 30) {
     heroTitle = `${childName}이 ${minsUntil}분 후 도착`;
-  } else if (minsUntil !== null && minsUntil < 0 && minsUntil > -30) {
-    heroTitle = `${childName} 운행 중`;
   } else {
     heroTitle = `${childName} 운행 중`;
   }
 
-  // 현재 위치 표기 — N=0 이면 "곧 도착", 미산정이면 "—".
   let positionLabel: string;
   if (stopsAheadOfChild === null) {
     positionLabel = "—";
@@ -82,56 +79,60 @@ export function LiveTripCard({
   return (
     <Link
       href={`/trip-live/${tripId}`}
-      className="bg-bus text-bus-foreground relative block overflow-hidden rounded-lg p-4 shadow-md transition-transform active:scale-[0.99]"
+      className="bg-bus text-bus-foreground relative block overflow-hidden rounded-[18px] p-[18px] transition-transform active:scale-[0.99]"
     >
-      {/* refac 우상단 검정 원 데코 */}
-      <div className="bg-bus-foreground/5 pointer-events-none absolute -top-8 -right-8 h-36 w-36 rounded-full" />
+      {/* refac .hero::after — 우상단 검정 원 데코 (rgba 0,0,0, 0.05) */}
+      <div className="pointer-events-none absolute -top-[30px] -right-[30px] h-[140px] w-[140px] rounded-full bg-black/5" />
 
-      {/* 상태 라벨 */}
-      <div className="relative inline-flex items-center gap-1.5 text-[11px] font-black tracking-[0.06em] uppercase">
-        <LivePulseDot className="h-1.5 w-1.5" />
+      {/* .hero-status: 11px font-900 caps tracking 0.06em */}
+      <div className="relative inline-flex items-center gap-1.5 text-[11px] font-black uppercase tracking-[0.06em]">
+        <span className="relative inline-block h-1.5 w-1.5 rounded-full bg-current">
+          <span className="absolute -inset-[3px] animate-ping rounded-full bg-current opacity-40" />
+        </span>
         운행 중 · {directionLabel}
       </div>
 
-      {/* hero 타이틀 — 자녀 stop 예정 시각 기준 상대 ETA */}
-      <h2 className="relative mt-2 text-2xl font-black tracking-tight leading-tight">
+      {/* .hero h2: 24px font-900 tracking -0.025em line-height 1.15, mt-8px mb-4px */}
+      <h2 className="relative mt-2 mb-1 text-[24px] font-black leading-[1.15] tracking-[-0.025em]">
         {heroTitle}
       </h2>
-      <p className="relative mt-1 text-[13px] font-bold opacity-85">
+
+      {/* .hero .sub: 13px font-700 opacity 0.85 */}
+      <p className="relative text-[13px] font-bold opacity-85">
         {routeName} · {childStopName}
         {driverName ? ` · ${driverName} 기사님` : ""}
       </p>
 
-      {/* 3-info row — 예상 도착 / 현재 위치 / 탑승 학생 */}
-      <div className="relative mt-3.5 grid grid-cols-3 gap-3">
-        <div>
-          <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
+      {/* .hero .row: flex gap 14px mt-14px (not grid) */}
+      <div className="relative mt-[14px] flex gap-[14px]">
+        <div className="flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.04em] opacity-70">
             예상 도착
           </p>
-          <p className="mt-0.5 text-lg font-black tracking-tight tabular-nums">
+          <p className="mt-0.5 text-[18px] font-black tracking-[-0.02em] tabular-nums">
             {childStopScheduledAt ?? "—"}
           </p>
         </div>
-        <div>
-          <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
+        <div className="flex-1">
+          <p className="text-[10px] font-black uppercase tracking-[0.04em] opacity-70">
             현재 위치
           </p>
-          <p className="mt-0.5 text-lg font-black tracking-tight">
+          <p className="mt-0.5 text-[18px] font-black tracking-[-0.02em]">
             {positionLabel}
           </p>
         </div>
-        <div>
-          <p className="text-[10px] font-black tracking-[0.04em] uppercase opacity-70">
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-black uppercase tracking-[0.04em] opacity-70">
             탑승 학생
           </p>
-          <p className="mt-0.5 text-lg font-black tracking-tight tabular-nums">
+          <p className="mt-0.5 text-[18px] font-black tracking-[-0.02em] tabular-nums">
             {boardedCount} / {totalAssigned}
           </p>
         </div>
       </div>
 
-      {/* 검정 CTA */}
-      <div className="bg-bus-foreground/85 text-bus relative mt-3.5 flex h-11 items-center justify-center gap-1.5 rounded-md text-sm font-black">
+      {/* .hero-cta: 44px height, rounded-10px, bg-rgba(0,0,0,0.85), text-bus */}
+      <div className="bg-black/85 text-bus relative mt-[14px] flex h-11 items-center justify-center gap-1.5 rounded-[10px] text-sm font-black">
         <MapPin className="h-4 w-4" />
         실시간 위치 보기
       </div>

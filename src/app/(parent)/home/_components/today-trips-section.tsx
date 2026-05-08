@@ -52,7 +52,8 @@ export async function TodayTripsSection({
       const key = `${c.studentId}-${i}`;
       if (card.kind === "running" && !liveCardEl) {
         liveCardEl = (
-          <div key={key} className="px-4">
+          // refac .hero { margin-top: 12px }
+          <div key={key} className="mt-3 px-4">
             <LiveTripCard
               tripId={card.tripId}
               childName={c.studentName}
@@ -79,10 +80,14 @@ export async function TodayTripsSection({
 
       {idleEntries.length > 0 ? (
         <section className="px-4">
-          <h2 className="mb-2 text-[13px] font-black tracking-tight">
-            오늘 일정
-          </h2>
-          <div className="grid grid-cols-2 gap-2">
+          {/* refac .sec: mt-18px flex justify-between, h3 13px font-900 */}
+          <div className="mt-[18px] flex items-center justify-between">
+            <h3 className="text-[13px] font-black tracking-[-0.01em]">
+              오늘 일정
+            </h3>
+          </div>
+          {/* refac .sched: gap-8px mt-8px */}
+          <div className="mt-2 grid grid-cols-2 gap-2">
             {idleEntries.map(({ key, card }) => {
               if (card.kind === "scheduled") {
                 return (

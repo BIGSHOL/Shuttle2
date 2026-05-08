@@ -1,11 +1,15 @@
-// W24-D Phase 1 trip-live: data/refac/screenshots/parent-app.jpg "02 · /trip-live"
-// 하단 운행 정보 카드 reproduce. refac:
-//   <div class="card" padding 10/14>
-//     운행 정보 [8.4km · 22분 경과 pill]
-//     김기사님 + 동승 이도우미님 · 25인승 어린이용 차량 · 11/14 탑승 중
+// W24-D Phase 1 trip-live: refac Parent App.html "02 · /trip-live" 운행 정보 card.
+// 픽셀 단위 align — refac:
+//   <div class="card" style="padding:10px 14px">
+//     <row> "운행 정보" + pill "8.4km · 22분 경과" </row>
+//     <line> {driver}님 + 동승 {helper}님 · 25인승 어린이용 차량 · 11/14 탑승 중 </line>
 //
-// distanceKm·elapsedMinutes는 trip-stats utility에서 client side로 계산.
-// 차량 capacity는 schema에 없어 plate + KIDS 표시로 대체.
+// .card { background:var(--card); border:1px solid var(--border);
+//         border-radius:14px; padding:14px (override 10px 14px) }
+// .pill.muted { background:var(--muted); color:var(--muted-foreground);
+//               font-size:10px; font-weight:900; letter-spacing:0.04em;
+//               text-transform:uppercase; padding:2px 7px; border-radius:4px }
+
 export function TripInfoCard({
   driverName,
   helperName,
@@ -31,17 +35,20 @@ export function TripInfoCard({
       : null;
 
   return (
-    <div className="bg-card rounded-md border px-3.5 py-2.5">
+    <div className="bg-card border-border rounded-[14px] border px-[14px] py-[10px]">
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <p className="text-[12px] font-black tracking-tight">운행 정보</p>
+        {/* refac inline style 12px font-900 letter-spacing-(-0.01em) */}
+        <p className="text-[12px] font-black tracking-[-0.01em]">운행 정보</p>
         {pillText ? (
-          <span className="bg-muted text-muted-foreground rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-tight">
+          // refac .pill.muted: 10px font-900 caps tracking-0.04em rounded-[4px] px-[7px] py-[2px]
+          <span className="bg-muted text-muted-foreground inline-flex items-center rounded-[4px] px-[7px] py-[2px] text-[10px] font-black uppercase tracking-[0.04em]">
             {pillText}
           </span>
         ) : null}
       </div>
-      <p className="text-muted-foreground text-[12px] font-bold leading-relaxed">
-        <span className="text-foreground font-black">{driverName} 기사님</span>
+      {/* refac body: 12px font-700 muted line-height-1.5, strong foreground 800 */}
+      <p className="text-muted-foreground text-[12px] font-bold leading-[1.5]">
+        <span className="text-foreground font-extrabold">{driverName} 기사님</span>
         {helperName ? ` + 동승 ${helperName}님` : ""} · {vehiclePlate}
         {vehicleMode === "KIDS" ? " · 어린이통학버스" : ""} · {boardedCount}/
         {totalAssigned} 탑승 중

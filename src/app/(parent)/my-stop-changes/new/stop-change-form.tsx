@@ -10,20 +10,19 @@ import {
   type CreateStopChangeState,
 } from "../actions";
 
-// W24-D Phase 1: data/refac/screenshots/parent-app.jpg "04 · /stop-change/new"
-// 풀세트 reproduce. refac 영역 순서:
-//   form-back ("정류장 변경 신청")
-//   - 아이 · 방향 (opt-list radio)
-//   - 변경 유형 (chip-row 이번 한 번만 / 기간 지정 / 영구 변경)
-//   - 날짜 (date input)
-//   - 현재 정류장 (stop-pick.cur — info color)
-//   - 변경할 정류장 — A노선 정류장 중 선택 (stop-list)
-//   - 사유 (textarea)
-//   - summary (변경 요약 card, warning tone)
-//   bottom-cta (meta + bus CTA)
-//
-// 변경 유형 "기간 지정"·"영구 변경"은 schema endDate·permanent 미지원 → 베타 backlog.
-// 이번 turn은 "이번 한 번만"만 functional, 나머진 disabled.
+// W24-D Phase 1: refac Parent App.html "04 · /stop-change/new" 픽셀 단위 align.
+// refac CSS와 1:1:
+//   .stop-pick{padding:12px 14px;background:var(--card);border:1.5px solid var(--border);
+//              border-radius:12px;display:flex;gap:12px;align-items:center}
+//   .stop-pick.on{border-color:var(--bus);background:var(--bus-soft)}
+//   .stop-pick.cur{border-color:var(--info);background:var(--info-soft)}
+//   .stop-pick .num{width:26px;height:26px;border-radius:999px;background:var(--muted);
+//                   color:var(--muted-foreground);font-size:11px;font-weight:900}
+//   .stop-pick.on .num{background:var(--bus);color:var(--bus-foreground)}
+//   .stop-pick.cur .num{background:var(--info);color:#fff}
+//   .stop-pick .name{font-size:13px;font-weight:800}
+//   .stop-pick .meta{font-size:11px;color:var(--muted-foreground);font-weight:700;margin-top:2px}
+//   .summary: bg-warning-soft variant on this screen (refac uses warning tone for "30분 이내 승인")
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 const DIRECTION_DETAIL = {
@@ -34,7 +33,8 @@ const DIRECTION_DETAIL = {
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
 function todayKstDateString(): string {
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   return kst.toISOString().slice(0, 10);
 }
 
@@ -42,7 +42,7 @@ type AllStop = {
   stopId: string;
   stopName: string;
   stopAddress: string | null;
-  scheduledAt: string; // "HH:mm"
+  scheduledAt: string;
   order: number;
   isTerminal: boolean;
 };
@@ -67,8 +67,6 @@ export function StopChangeForm({ items }: { items: Item[] }) {
     initialState,
   );
 
-  // routeStudentId를 key로 사용 — 같은 student×fromStop이 여러 route에 묶이면
-  // studentId__fromStopId는 collide. RouteStudent는 (studentId, routeId) unique.
   const [selectedKey, setSelectedKey] = useState<string>(
     items[0]?.routeStudentId ?? "",
   );
@@ -111,10 +109,7 @@ export function StopChangeForm({ items }: { items: Item[] }) {
     <>
       <FormBackHeader title="정류장 변경 신청" href="/my-stop-changes" />
 
-      <form
-        action={formAction}
-        className="flex min-h-[calc(100dvh-3rem)] flex-col"
-      >
+      <form action={formAction} className="relative">
         <input
           type="hidden"
           name="studentId"
@@ -129,10 +124,10 @@ export function StopChangeForm({ items }: { items: Item[] }) {
         <input type="hidden" name="effectiveAt" value={effectiveAt} />
         <input type="hidden" name="reason" value={reason} />
 
-        <div className="flex-1 px-4 pt-2 pb-28">
-          {/* 아이 · 방향 */}
-          <SectionTitle>아이 · 방향</SectionTitle>
-          <div className="space-y-2">
+        {/* refac .form-content { padding: 8px 16px 100px } */}
+        <div className="px-4 pt-2 pb-[100px]">
+          <SectionTitle first>아이 · 방향</SectionTitle>
+          <OptList>
             {items.map((i) => {
               const k = i.routeStudentId;
               return (
@@ -144,24 +139,23 @@ export function StopChangeForm({ items }: { items: Item[] }) {
                     setToStopId("");
                   }}
                 >
-                  <p className="text-sm font-black tracking-tight">
+                  <p className="text-[14px] font-black">
                     {i.studentName} · {DIRECTION_LABEL[i.direction]}{" "}
                     <span className="text-muted-foreground font-bold">
                       ({DIRECTION_DETAIL[i.direction]})
                     </span>
                   </p>
-                  <p className="text-muted-foreground mt-0.5 text-[11px] font-bold">
+                  <p className="text-muted-foreground mt-[3px] text-[11px] font-bold">
                     {i.routeName}
                     {i.driverName ? ` · ${i.driverName} 기사님` : ""}
                   </p>
                 </OptCard>
               );
             })}
-          </div>
+          </OptList>
 
-          {/* 변경 유형 */}
           <SectionTitle>변경 유형</SectionTitle>
-          <div className="mb-3 flex flex-wrap gap-1.5">
+          <div className="mb-[12px] flex flex-wrap gap-[6px]">
             <Chip
               selected={changeMode === "ONE_TIME"}
               onSelect={() => setChangeMode("ONE_TIME")}
@@ -184,12 +178,9 @@ export function StopChangeForm({ items }: { items: Item[] }) {
             </Chip>
           </div>
 
-          {/* 날짜 */}
-          <div className="space-y-1.5 mb-2">
-            <label
-              htmlFor="effectiveAtUI"
-              className="text-xs font-extrabold"
-            >
+          {/* refac .field: gap 6px, label 12px font-800, input 44px height 10px radius */}
+          <div className="mb-3 flex flex-col gap-[6px]">
+            <label htmlFor="effectiveAtUI" className="text-[12px] font-extrabold">
               날짜
             </label>
             <input
@@ -198,45 +189,45 @@ export function StopChangeForm({ items }: { items: Item[] }) {
               value={effectiveAt}
               onChange={(e) => setEffectiveAt(e.target.value)}
               min={todayKstDateString()}
-              className="bg-card h-11 w-full rounded-md border px-3 text-sm font-medium focus:outline-2 focus:outline-bus"
               required
+              className="bg-card border-border focus:border-bus focus:outline-bus h-[44px] w-full rounded-[10px] border px-[13px] text-[14px] font-semibold focus:outline-2"
             />
           </div>
 
-          {/* 현재 정류장 */}
           {selected ? (
             <>
               <SectionTitle>현재 정류장</SectionTitle>
-              <div className="border-info bg-info-soft flex items-center gap-3 rounded-md border-[1.5px] p-3">
-                <span className="bg-info text-info-foreground flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black">
+              {/* refac .stop-pick.cur: border-info bg-info-soft, .num: 26x26 round bg-info color-white */}
+              <div className="bg-info-soft border-info flex items-center gap-[12px] rounded-[12px] border-[1.5px] px-[14px] py-[12px]">
+                <span className="bg-info grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full text-[11px] font-black text-white">
                   {selected.fromStopOrder ?? "·"}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm font-black tracking-tight">
+                  <p className="text-[13px] font-extrabold">
                     {selected.fromStopName}
                   </p>
-                  <p className="text-muted-foreground mt-0.5 text-[11px] font-bold">
+                  <p className="text-muted-foreground mt-[2px] text-[11px] font-bold">
                     평소 사용 정류장
                   </p>
                 </div>
                 <CheckCircle2
-                  className="text-info h-4 w-4 shrink-0"
+                  className="text-info h-[18px] w-[18px] shrink-0"
                   aria-hidden
                 />
               </div>
             </>
           ) : null}
 
-          {/* 변경할 정류장 */}
           {selected ? (
             <>
-              <p className="text-muted-foreground mt-4 mb-2 text-[11px] font-black tracking-[0.06em] uppercase">
+              <p className="text-muted-foreground mt-[18px] mb-[8px] text-[11px] font-black uppercase tracking-[0.06em]">
                 변경할 정류장{" "}
                 <span className="text-muted-foreground/80 font-bold normal-case tracking-normal">
                   · {selected.routeName} 정류장 중 선택
                 </span>
               </p>
-              <ul className="space-y-1.5">
+              {/* refac .stop-list: flex flex-col gap-6px */}
+              <ul className="flex flex-col gap-[6px]">
                 {selected.allStops.map((s) => {
                   const isCurrent = s.stopId === selected.fromStopId;
                   const isSelected = s.stopId === toStopId;
@@ -250,7 +241,8 @@ export function StopChangeForm({ items }: { items: Item[] }) {
                           setToStopId(s.stopId);
                         }}
                         disabled={disabled}
-                        className={`flex w-full items-center gap-3 rounded-md border-[1.5px] p-3 text-left transition-colors ${
+                        // refac .stop-pick padding 12px 14px
+                        className={`flex w-full items-center gap-[12px] rounded-[12px] border-[1.5px] px-[14px] py-[12px] text-left transition-colors ${
                           isSelected
                             ? "border-bus bg-bus-soft"
                             : isCurrent
@@ -261,7 +253,7 @@ export function StopChangeForm({ items }: { items: Item[] }) {
                         }`}
                       >
                         <span
-                          className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-[11px] font-black ${
+                          className={`grid h-[26px] w-[26px] shrink-0 place-items-center rounded-full text-[11px] font-black ${
                             isSelected
                               ? "bg-bus text-bus-foreground"
                               : "bg-muted text-muted-foreground"
@@ -270,10 +262,10 @@ export function StopChangeForm({ items }: { items: Item[] }) {
                           {s.order}
                         </span>
                         <div className="min-w-0 flex-1">
-                          <p className="text-[13px] font-black tracking-tight">
+                          <p className="text-[13px] font-extrabold">
                             {s.stopName}
                           </p>
-                          <p className="text-muted-foreground mt-0.5 text-[11px] font-bold">
+                          <p className="text-muted-foreground mt-[2px] text-[11px] font-bold">
                             {s.scheduledAt}
                             {s.isTerminal
                               ? ` · ${
@@ -289,9 +281,9 @@ export function StopChangeForm({ items }: { items: Item[] }) {
                           </p>
                         </div>
                         {isSelected ? (
-                          <CheckCircle2 className="text-bus-foreground h-4 w-4 shrink-0" />
+                          <CheckCircle2 className="text-bus-foreground h-[18px] w-[18px] shrink-0" />
                         ) : disabled ? (
-                          <span className="bg-muted text-muted-foreground rounded-full px-1.5 py-0.5 text-[9px] font-extrabold tracking-tight shrink-0">
+                          <span className="bg-muted text-muted-foreground inline-flex items-center rounded-[4px] px-[7px] py-[2px] text-[10px] font-black uppercase tracking-[0.04em] shrink-0">
                             선택 불가
                           </span>
                         ) : null}
@@ -308,29 +300,26 @@ export function StopChangeForm({ items }: { items: Item[] }) {
             </>
           ) : null}
 
-          {/* 사유 (선택) */}
           <SectionTitle>사유 (선택)</SectionTitle>
           <textarea
             value={reason}
             onChange={(e) => setReason(e.target.value.slice(0, 500))}
             placeholder="이날만 할머니 댁에서 등원해요"
-            className="bg-card w-full rounded-md border px-3 py-2.5 text-sm font-medium focus:outline-2 focus:outline-bus"
-            rows={3}
+            className="bg-card border-border focus:border-bus focus:outline-bus min-h-[80px] w-full resize-y rounded-[10px] border px-[13px] py-[12px] text-[14px] font-semibold focus:outline-2"
           />
 
-          {/* summary */}
+          {/* refac .summary: bg-info-soft. stop-change에서는 warning 톤(승인 안내) — 우리는 hi-fi의 .summary 그대로 info-soft 유지(refac도 동일) */}
           {selected && toStop && summaryDateLabel ? (
-            <div className="bg-warning-soft border-warning/30 mt-4 rounded-md border p-3">
-              <p className="text-warning text-[11px] font-black tracking-[0.04em] uppercase">
+            <div className="bg-info-soft border-info/25 mt-[14px] rounded-[12px] border p-[12px]">
+              <h4 className="text-info text-[12px] font-black uppercase tracking-[0.04em]">
                 변경 요약
-              </p>
-              <p className="mt-1.5 text-[13px] font-bold leading-relaxed">
-                <span className="font-black">
-                  {summaryDateLabel}{" "}
-                  {DIRECTION_LABEL[selected.direction]}
-                </span>{" "}
+              </h4>
+              <p className="mt-1.5 text-[13px] font-bold leading-[1.5]">
+                <strong className="font-black">
+                  {summaryDateLabel} {DIRECTION_LABEL[selected.direction]}
+                </strong>{" "}
                 · {selected.fromStopName} →{" "}
-                <span className="font-black">{toStop.stopName}</span>
+                <strong className="font-black">{toStop.stopName}</strong>
               </p>
               <p className="text-warning mt-1 text-[11px] font-extrabold">
                 학원장 승인 후 적용됩니다 (보통 30분 이내)
@@ -339,23 +328,24 @@ export function StopChangeForm({ items }: { items: Item[] }) {
           ) : null}
 
           {state.error ? (
-            <p
-              className="text-destructive mt-3 text-sm font-bold"
-              role="alert"
-            >
+            <p className="text-destructive mt-3 text-sm font-bold" role="alert">
               {state.error}
             </p>
           ) : null}
         </div>
 
-        <div className="bg-card sticky bottom-0 border-t px-4 pt-3 pb-6">
-          <p className="text-muted-foreground mb-2 text-center text-[11px] font-bold">
+        {/* refac .bottom-cta */}
+        <div
+          className="bg-card border-border sticky bottom-0 left-0 right-0 border-t px-[16px] pt-[12px]"
+          style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}
+        >
+          <p className="text-muted-foreground mb-[8px] text-center text-[11px] font-bold">
             학원장 승인 후 기사님께 자동 전달됩니다
           </p>
           <button
             type="submit"
             disabled={pending || !toStopId || !selected}
-            className="bg-bus text-bus-foreground h-12 w-full rounded-md text-[15px] font-black disabled:opacity-50"
+            className="bg-bus text-bus-foreground h-[48px] w-full rounded-[12px] text-[15px] font-black disabled:opacity-50"
           >
             {pending ? "신청 중..." : "변경 신청"}
           </button>
@@ -365,12 +355,26 @@ export function StopChangeForm({ items }: { items: Item[] }) {
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+function SectionTitle({
+  children,
+  first,
+}: {
+  children: React.ReactNode;
+  first?: boolean;
+}) {
   return (
-    <p className="text-muted-foreground mt-4 mb-2 text-[11px] font-black tracking-[0.06em] uppercase first:mt-2">
+    <p
+      className={`text-muted-foreground mb-[8px] text-[11px] font-black uppercase tracking-[0.06em] ${
+        first ? "mt-[8px]" : "mt-[18px]"
+      }`}
+    >
       {children}
     </p>
   );
+}
+
+function OptList({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-col gap-[8px]">{children}</div>;
 }
 
 function OptCard({
@@ -386,18 +390,18 @@ function OptCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`flex w-full items-center gap-3 rounded-md border-[1.5px] p-3.5 text-left transition-colors ${
+      className={`flex w-full items-center gap-[12px] rounded-[12px] border-[1.5px] p-[14px] text-left transition-colors ${
         selected ? "border-bus bg-bus-soft" : "border-border bg-card"
       }`}
     >
       <span
-        className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-          selected ? "border-bus-foreground" : "border-border bg-card"
+        className={`grid h-[20px] w-[20px] shrink-0 place-items-center rounded-full border-2 bg-white ${
+          selected ? "border-bus-foreground" : "border-border"
         }`}
         aria-hidden
       >
         {selected ? (
-          <span className="bg-bus-foreground h-2.5 w-2.5 rounded-full" />
+          <span className="bg-bus-foreground h-[10px] w-[10px] rounded-full" />
         ) : null}
       </span>
       <span className="min-w-0 flex-1">{children}</span>
@@ -421,7 +425,7 @@ function Chip({
       type="button"
       onClick={() => !disabled && onSelect()}
       disabled={disabled}
-      className={`rounded-full border-[1.5px] px-3 py-2 text-xs font-extrabold tracking-tight transition-colors ${
+      className={`rounded-full border-[1.5px] px-[12px] py-[8px] text-[12px] font-extrabold transition-colors ${
         selected
           ? "bg-bus border-bus text-bus-foreground"
           : disabled

@@ -1,14 +1,23 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 
-import { ChildAvatar } from "@/components/shuttlee/child-avatar";
-
-// W24-D Phase 1 home: refac Parent App.html "우리 아이" 섹션.
-// `<div class="sec"><h3>우리 아이</h3><a>아이 추가</a></div>`
-// `<div class="card child-card">avatar + name + pill + meta + chevron</div>`
+// W24-D Phase 1 home: data/refac/screenshots/parent-app.jpg "01 · /home"
+// "우리 아이" 섹션 픽셀 단위 align — refac CSS:
 //
-// 자녀 클릭 → 자녀 detail (학부모 입장에서 별도 페이지 없으면 결석/정류장 변경 진입).
-// "아이 추가"는 학원 초대 토큰 흐름 안내 (베타: 학원장에 요청 메시지).
+//   .sec{margin-top:18px;display:flex;justify-content:space-between;align-items:center}
+//   .sec h3{font-size:13px;font-weight:900;letter-spacing:-0.01em}
+//   .sec a{font-size:12px;color:var(--info);font-weight:800}
+//   .card{background:var(--card);border:1px solid var(--border);
+//         border-radius:14px;padding:14px}
+//   .child-card{margin-top:8px;display:flex;gap:12px;align-items:center}
+//   .child-ava{width:42px;height:42px;border-radius:999px;
+//              background:var(--info-soft);color:var(--info);font-weight:900;
+//              font-size:15px;border:1px solid color-mix(info 30%,transparent)}
+//   .child-name{font-size:14px;font-weight:900}
+//   .pill.bus{background:var(--bus);color:var(--bus-foreground);font-size:10px;
+//             font-weight:900;letter-spacing:0.04em;text-transform:uppercase;
+//             padding:2px 7px;border-radius:4px}
+//   .child-meta{font-size:11px;color:var(--muted-foreground);font-weight:700;margin-top:2px}
 
 const ORG_TYPE_LABEL = {
   ACADEMY: "학원",
@@ -23,42 +32,40 @@ export type OurChildrenItem = {
   orgName: string;
   orgType: "ACADEMY" | "DAYCARE" | "KINDERGARTEN";
   routeName: string | null;
-  classLabel: string | null; // "햇살반" 등 — 베타에서는 학년·반 미보유, 일단 null
+  classLabel: string | null;
 };
 
-export function OurChildrenSection({
-  items,
-}: {
-  items: OurChildrenItem[];
-}) {
+export function OurChildrenSection({ items }: { items: OurChildrenItem[] }) {
   if (items.length === 0) return null;
 
   return (
     <section className="px-4">
-      <div className="mb-2 flex items-end justify-between gap-2">
-        <h2 className="text-[13px] font-black tracking-tight">우리 아이</h2>
-        <Link
-          href="/me"
-          className="text-info text-[12px] font-extrabold"
-        >
+      {/* refac .sec: mt-18px flex justify-between */}
+      <div className="mt-[18px] flex items-center justify-between">
+        <h3 className="text-[13px] font-black tracking-[-0.01em]">우리 아이</h3>
+        <Link href="/me" className="text-info text-[12px] font-extrabold">
           아이 추가
         </Link>
       </div>
-      <ul className="space-y-2">
+      <ul className="mt-2 space-y-2">
         {items.map((c) => (
           <li key={c.id}>
             <Link
               href="/me"
-              className="bg-card hover:bg-muted/40 flex items-center gap-3 rounded-lg border p-3.5 shadow-sm transition-colors"
+              className="bg-card border-border flex items-center gap-3 rounded-[14px] border p-[14px]"
             >
-              <ChildAvatar name={c.name} tone="idle" size="default" />
+              {/* refac .child-ava: 42px round info-soft, 15px font-900, info-30% border */}
+              <span
+                className="bg-info-soft text-info border-info/30 grid h-[42px] w-[42px] shrink-0 place-items-center rounded-full border text-[15px] font-black"
+                aria-hidden
+              >
+                {c.name.slice(0, 1)}
+              </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
-                  <span className="text-sm font-black tracking-tight">
-                    {c.name}
-                  </span>
+                  <span className="text-[14px] font-black">{c.name}</span>
                   {c.classLabel ? (
-                    <span className="bg-bus text-bus-foreground rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                    <span className="bg-bus text-bus-foreground inline-flex items-center rounded-[4px] px-[7px] py-[2px] text-[10px] font-black uppercase tracking-[0.04em]">
                       {c.classLabel}
                     </span>
                   ) : null}
@@ -68,7 +75,10 @@ export function OurChildrenSection({
                   {c.routeName ? ` · ${c.routeName}` : ""}
                 </p>
               </div>
-              <ChevronRight className="text-muted-foreground h-4 w-4 shrink-0" />
+              <ChevronRight
+                className="text-muted-foreground h-[18px] w-[18px] shrink-0"
+                strokeWidth={2}
+              />
             </Link>
           </li>
         ))}

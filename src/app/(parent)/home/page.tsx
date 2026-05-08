@@ -88,7 +88,9 @@ export default async function ParentHomePage() {
   }));
 
   return (
-    <main className="space-y-4 pb-6">
+    // refac structure: app-bar(GreetingSection) + scr with pb-80px
+    // 각 section은 자체 mt-12px(hero) / mt-18px(.sec) 관리.
+    <main className="pb-20">
       <GreetingSection
         guardianName={me.guardian.name}
         unreadCount={unreadCount}

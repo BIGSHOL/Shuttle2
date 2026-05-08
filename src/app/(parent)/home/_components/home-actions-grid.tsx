@@ -1,23 +1,34 @@
 import Link from "next/link";
 import { MapPinOff, UserX } from "lucide-react";
 
-// W24-D Phase 1 home: refac Parent App.html "빠른 처리" 섹션 quick-btn idiom.
-// `<div class="quick">` 2-card grid (1fr 1fr · gap 10px)
-// 각 card: padding 14px, rounded-md (refac은 12px raw), 32x32 ico(soft tone) + name + desc
+// W24-D Phase 1 home: refac Parent App.html "빠른 처리" quick-btn.
+// 픽셀 단위 align — refac CSS:
+//
+//   .quick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}
+//   .quick-btn{padding:14px;background:var(--card);border:1px solid var(--border);
+//              border-radius:12px;display:flex;flex-direction:column;gap:6px}
+//   .quick-btn .ico{width:32px;height:32px;border-radius:8px;
+//                   background:var(--bus-soft);display:grid;place-items:center}
+//   .quick-btn .ico svg{width:16px;height:16px}
+//   .quick-btn .ico.warn{background:var(--warning-soft);color:var(--warning)}
+//   .quick-btn .ico.info{background:var(--info-soft);color:var(--info)}
+//   .quick-btn .name{font-size:13px;font-weight:900}
+//   .quick-btn .desc{font-size:11px;color:var(--muted-foreground);
+//                    font-weight:700;line-height:1.4}
 
 export function HomeActionsGrid({
   pendingAbsenceCount,
   pendingStopChangeCount,
 }: {
-  // 베타 운영자가 PENDING 카운트 노출하면 학부모가 한눈에 파악 — refac
-  // hi-fi에는 카운트 표시 없지만 우리는 baseline UX로 보존(작은 숫자 chip).
   pendingAbsenceCount: number;
   pendingStopChangeCount: number;
 }) {
   return (
     <section className="px-4">
-      <h2 className="mb-2 text-[13px] font-black tracking-tight">빠른 처리</h2>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="mt-[18px] flex items-center justify-between">
+        <h3 className="text-[13px] font-black tracking-[-0.01em]">빠른 처리</h3>
+      </div>
+      <div className="mt-[10px] grid grid-cols-2 gap-[10px]">
         <ActionCard
           href="/my-absences/new"
           icon={UserX}
@@ -57,15 +68,15 @@ function ActionCard({
   return (
     <Link
       href={href}
-      className="bg-card hover:bg-muted/40 active:bg-muted/40 relative flex flex-col gap-1.5 rounded-lg border p-3.5 shadow-sm transition-colors"
+      className="bg-card border-border relative flex flex-col gap-1.5 rounded-[12px] border p-[14px]"
     >
       <div
-        className={`flex h-8 w-8 items-center justify-center rounded-md ${iconClass}`}
+        className={`grid h-8 w-8 place-items-center rounded-lg ${iconClass}`}
       >
-        <Icon className="h-4 w-4" strokeWidth={2.5} />
+        <Icon className="h-4 w-4" strokeWidth={2.25} />
       </div>
-      <div className="text-[13px] font-black tracking-tight">{title}</div>
-      <p className="text-muted-foreground text-[11px] font-bold leading-tight">
+      <div className="text-[13px] font-black">{title}</div>
+      <p className="text-muted-foreground text-[11px] font-bold leading-[1.4]">
         {description}
       </p>
       {badge > 0 ? (

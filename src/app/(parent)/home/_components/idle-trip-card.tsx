@@ -1,16 +1,17 @@
 import { Sunrise, Sunset } from "lucide-react";
 
-// W24-D Phase 1 home: refac Parent App.html "오늘 일정" 섹션 sched-item idiom.
-// `<div class="sched"><div class="sched-item">lbl + stop + time</div>×2</div>`
+// W24-D Phase 1 home: refac Parent App.html "오늘 일정" sched-item.
+// 픽셀 단위 align — refac CSS:
 //
-// refac 디자인:
-// - 2-card grid (1fr 1fr · gap 8px)
-// - 각 card: bg-muted, rounded-md, padding 10px
-// - lbl: 작은 캡스 + 일출/일몰 아이콘 + "등원"/"하원"
-// - stop: 13px 800
-// - time: 14px 900 tabular-nums
-//
-// running·finished·none 상태도 같은 sched-item idiom으로 표시.
+//   .sched{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px}
+//   .sched-item{padding:10px;background:var(--muted);border-radius:10px}
+//   .sched-item .lbl{font-size:10px;font-weight:900;letter-spacing:0.04em;
+//                    text-transform:uppercase;color:var(--muted-foreground);
+//                    display:flex;align-items:center;gap:4px}
+//   .sched-item .lbl svg{width:11px;height:11px}
+//   .sched-item .stop{font-size:13px;font-weight:800;margin-top:4px}
+//   .sched-item .time{font-size:14px;font-weight:900;font-variant-numeric:tabular-nums;
+//                     color:var(--foreground)}
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
@@ -38,17 +39,20 @@ export function IdleTripCard(props: IdleCardProps) {
   const directionLabel = DIRECTION_LABEL[props.direction];
 
   return (
-    <div className="bg-muted rounded-md p-3">
-      <div className="text-muted-foreground inline-flex items-center gap-1 text-[10px] font-black tracking-[0.04em] uppercase">
-        <Icon className="h-3 w-3" />
+    <div className="bg-muted rounded-[10px] p-[10px]">
+      {/* refac .sched-item .lbl: 10px font-900 caps tracking-0.04em, svg 11px */}
+      <div className="text-muted-foreground flex items-center gap-1 text-[10px] font-black uppercase tracking-[0.04em]">
+        <Icon className="h-[11px] w-[11px]" strokeWidth={2.25} />
         {directionLabel}
       </div>
       {props.kind === "scheduled" ? (
         <>
+          {/* .sched-item .stop: 13px font-800 mt-4px */}
           <p className="mt-1 truncate text-[13px] font-extrabold">
             {props.childStopName}
           </p>
-          <p className="mt-0.5 text-sm font-black tabular-nums">
+          {/* .sched-item .time: 14px font-900 tabular-nums */}
+          <p className="text-foreground text-[14px] font-black tabular-nums">
             {props.scheduledFirstAt ?? "—"} 도착
           </p>
         </>
@@ -58,16 +62,14 @@ export function IdleTripCard(props: IdleCardProps) {
           <p className="mt-1 truncate text-[13px] font-extrabold">
             {props.childStopName}
           </p>
-          <p className="text-success mt-0.5 text-sm font-black tabular-nums">
+          <p className="text-success text-[14px] font-black tabular-nums">
             {props.endedAtKstHHmm} 종료
           </p>
         </>
       ) : null}
       {props.kind === "none" ? (
         <p className="text-muted-foreground mt-1 text-[12px] font-bold">
-          {props.reason === "no_route"
-            ? "노선 미배정"
-            : "오늘 운행 없음"}
+          {props.reason === "no_route" ? "노선 미배정" : "오늘 운행 없음"}
         </p>
       ) : null}
     </div>

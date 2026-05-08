@@ -202,6 +202,7 @@ export function TripLiveShell({
         />
       </div>
 
+      {/* refac .live-sheet { gap: 12px } — BottomSheet가 flex-col gap-[12px] 처리 */}
       <BottomSheet>
         <EtaHeadline
           childName={childStudent.name}
@@ -212,24 +213,17 @@ export function TripLiveShell({
           childStopScheduledAt={childStopScheduledAt}
           stopsAhead={stopsAhead}
         />
-
-        <div className="mt-3">
-          <LiveActions driverPhone={driverPhone} />
-        </div>
-
-        <div className="mt-3">
-          <TripInfoCard
-            driverName={driverName}
-            helperName={helperName}
-            vehiclePlate={vehicle.plate}
-            vehicleMode={vehicle.mode}
-            distanceKm={distanceKm}
-            elapsedMinutes={elapsedMin}
-            boardedCount={boardedCount}
-            totalAssigned={totalAssigned}
-          />
-        </div>
-
+        <LiveActions driverPhone={driverPhone} />
+        <TripInfoCard
+          driverName={driverName}
+          helperName={helperName}
+          vehiclePlate={vehicle.plate}
+          vehicleMode={vehicle.mode}
+          distanceKm={distanceKm}
+          elapsedMinutes={elapsedMin}
+          boardedCount={boardedCount}
+          totalAssigned={totalAssigned}
+        />
         {childEtaSlot}
       </BottomSheet>
 

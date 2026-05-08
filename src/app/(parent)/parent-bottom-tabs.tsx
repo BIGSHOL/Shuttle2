@@ -2,23 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Bell,
-  Home,
-  MapPin,
-  User,
-  type LucideIcon,
-} from "lucide-react";
+import { Bell, Home, MapPin, User, type LucideIcon } from "lucide-react";
 
-// W24-D Phase 1: refac data/refac/design-files/Parent App.html 의 .bottom-nav
-// 4탭 idiom. 홈·실시간·알림·내 정보. 결석·정류장 변경은 home의 "빠른 처리"
-// 또는 내 정보 페이지 list로 진입.
+// W24-D Phase 1: refac Parent App.html .bottom-nav 4탭 idiom.
+// 픽셀 단위 align — refac CSS:
 //
-// trip-live 풀스크린(fixed inset-0 z-50)는 이 탭바를 가려도 OK — z-30 < z-50.
+//   .bottom-nav{position:absolute;bottom:0;background:rgba(255,255,255,0.94);
+//               backdrop-filter:blur(12px);border-top:1px solid var(--border);
+//               display:grid;grid-template-columns:repeat(4,1fr);padding:8px 8px 18px}
+//   .bn{display:flex;flex-direction:column;align-items:center;gap:2px;
+//       font-size:10px;font-weight:800;color:var(--muted-foreground);padding:6px 4px}
+//   .bn.on{color:var(--bus-foreground)}
+//   .bn svg{width:20px;height:20px;stroke-width:2.25}
+//   .bn.on svg{color:var(--bus-foreground);fill:var(--bus-soft)}
 
 type TabDef = {
   href: string;
-  // 정확 매칭 + 자식 path까지 active로 칠 prefix들
   matchPrefixes: string[];
   label: string;
   Icon: LucideIcon;
@@ -54,7 +53,8 @@ export function ParentBottomTabs({ unreadCount }: { unreadCount: number }) {
   return (
     <nav
       aria-label="주 탐색"
-      className="bg-background/95 supports-backdrop-filter:backdrop-blur sticky bottom-0 z-30 mx-auto flex w-full max-w-md border-t pb-[env(safe-area-inset-bottom)]"
+      className="border-border sticky bottom-0 z-30 mx-auto grid w-full max-w-md grid-cols-4 border-t bg-white/95 px-2 pt-2 pb-[18px] backdrop-blur-md"
+      style={{ paddingBottom: "max(18px, env(safe-area-inset-bottom))" }}
     >
       {tabs.map(({ href, matchPrefixes, label, Icon, badge }) => {
         const isActive = matchPrefixes.some(
@@ -66,25 +66,22 @@ export function ParentBottomTabs({ unreadCount }: { unreadCount: number }) {
             href={href}
             aria-current={isActive ? "page" : undefined}
             aria-label={badge ? `${label} (${badge}건 안 읽음)` : label}
-            className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-extrabold tracking-wide ${
-              isActive ? "text-bus" : "text-muted-foreground"
+            className={`relative flex flex-col items-center gap-0.5 px-1 py-1.5 text-[10px] font-extrabold ${
+              isActive ? "text-bus-foreground" : "text-muted-foreground"
             }`}
           >
             <span className="relative">
-              <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+              {/* refac .bn.on svg{fill:var(--bus-soft)} — 활성 탭 아이콘 안쪽이 노란 soft fill */}
+              <Icon
+                className="h-5 w-5"
+                strokeWidth={2.25}
+                fill={isActive ? "var(--bus-soft)" : "none"}
+              />
               {badge && badge > 0 ? (
-                <span className="bg-destructive text-destructive-foreground absolute -top-1 -right-2 inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] leading-none">
-                  {badge > 99 ? "99+" : badge}
-                </span>
+                <span className="bg-destructive border-card absolute -top-0.5 -right-1.5 inline-flex h-[7px] min-w-[7px] items-center justify-center rounded-full border-[1.5px]" />
               ) : null}
             </span>
             <span>{label}</span>
-            {isActive ? (
-              <span
-                aria-hidden
-                className="bg-bus absolute -top-px left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full"
-              />
-            ) : null}
           </Link>
         );
       })}

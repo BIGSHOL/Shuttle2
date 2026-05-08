@@ -1,18 +1,30 @@
 import Link from "next/link";
 import {
+  AlertTriangle,
   Bell,
   Bus,
-  Check,
   CalendarOff,
-  AlertTriangle,
+  Check,
   MapPinOff,
 } from "lucide-react";
 
 // W24-D Phase 1 home: refac Parent App.html "최근 알림" 섹션.
-// `<div class="card" style="padding:4px 14px">` + dashed border-bottom 구분 list.
-// 각 row: 34x34 rounded-full ico(success/bus tone) + body(title+desc) + time
+// 픽셀 단위 align — refac CSS:
 //
-// 데이터: Notification 모델 최근 3건. fetch는 page에서 server-side로.
+//   .card{background:var(--card);border:1px solid var(--border);
+//         border-radius:14px;padding:14px}
+//   .notif{display:flex;gap:10px;padding:10px 0;border-bottom:1px dashed var(--border);
+//          align-items:flex-start}
+//   .notif:last-child{border-bottom:0}
+//   .notif-ico{width:34px;height:34px;border-radius:999px;display:grid;place-items:center;
+//              flex-shrink:0}
+//   .notif-ico.success{background:var(--success-soft);color:var(--success)}
+//   .notif-ico.bus{background:var(--bus-soft);color:var(--bus-foreground)}
+//   .notif-ico svg{width:16px;height:16px}
+//   .notif-title{font-size:13px;font-weight:800}
+//   .notif-desc{font-size:11px;color:var(--muted-foreground);font-weight:600;
+//               margin-top:2px;line-height:1.4}
+//   .notif-time{font-size:10px;color:var(--muted-foreground);font-weight:800}
 
 export type NotifRow = {
   id: string;
@@ -23,10 +35,7 @@ export type NotifRow = {
   createdAtISO: string;
 };
 
-const ICON_MAP: Record<
-  string,
-  { Icon: typeof Bell; toneClass: string }
-> = {
+const ICON_MAP: Record<string, { Icon: typeof Bell; toneClass: string }> = {
   TRIP_STARTED: { Icon: Bus, toneClass: "bg-bus-soft text-bus-foreground" },
   STUDENT_BOARDED: { Icon: Check, toneClass: "bg-success-soft text-success" },
   STUDENT_DROPPED_OFF: {
@@ -69,7 +78,7 @@ const ICON_MAP: Record<
 };
 
 function fmtAgoKst(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
+  const diffMs = new Date().getTime() - new Date(iso).getTime();
   const min = Math.floor(diffMs / 60000);
   if (min < 1) return "방금";
   if (min < 60) return `${min}분 전`;
@@ -90,8 +99,8 @@ export function RecentNotifications({ items }: { items: NotifRow[] }) {
 
   return (
     <section className="px-4">
-      <div className="mb-2 flex items-end justify-between gap-2">
-        <h2 className="text-[13px] font-black tracking-tight">최근 알림</h2>
+      <div className="mt-[18px] flex items-center justify-between">
+        <h3 className="text-[13px] font-black tracking-[-0.01em]">최근 알림</h3>
         <Link
           href="/notifications"
           className="text-info text-[12px] font-extrabold"
@@ -99,33 +108,37 @@ export function RecentNotifications({ items }: { items: NotifRow[] }) {
           모두 보기
         </Link>
       </div>
-      <div className="bg-card rounded-lg border px-3.5 shadow-sm">
+      {/* refac .card: 14px radius + 14px padding (수직은 row가 padding:10px 0이라 외곽 padding 줄여 4px 14px) */}
+      <div className="bg-card border-border mt-2 rounded-[14px] border px-[14px]">
         {items.map((n, i) => {
           const meta = ICON_MAP[n.category] ?? {
             Icon: Bell,
             toneClass: "bg-muted text-muted-foreground",
           };
           const { Icon, toneClass } = meta;
+          const isLast = i === items.length - 1;
           return (
             <div
               key={n.id}
-              className={`flex items-start gap-2.5 py-2.5 ${
-                i < items.length - 1 ? "border-b border-dashed" : ""
+              className={`flex items-start gap-[10px] py-[10px] ${
+                isLast ? "" : "border-border border-b border-dashed"
               }`}
             >
+              {/* refac .notif-ico: 34x34 round, svg 16px */}
               <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${toneClass}`}
+                className={`grid h-[34px] w-[34px] shrink-0 place-items-center rounded-full ${toneClass}`}
               >
                 <Icon className="h-4 w-4" />
               </span>
               <div className="min-w-0 flex-1">
-                <p className="text-[13px] font-extrabold tracking-tight">
-                  {n.title}
-                </p>
-                <p className="text-muted-foreground mt-0.5 text-[11px] font-semibold leading-snug">
+                {/* refac .notif-title: 13px font-800 */}
+                <p className="text-[13px] font-extrabold">{n.title}</p>
+                {/* refac .notif-desc: 11px font-600 mt-2px line-height-1.4 */}
+                <p className="text-muted-foreground mt-0.5 text-[11px] font-semibold leading-[1.4]">
                   {n.body}
                 </p>
               </div>
+              {/* refac .notif-time: 10px font-800 muted */}
               <span className="text-muted-foreground shrink-0 text-[10px] font-extrabold tabular-nums">
                 {fmtAgoKst(n.createdAtISO)}
               </span>

@@ -10,18 +10,35 @@ import {
   type CreateAbsenceState,
 } from "../actions";
 
-// W24-D Phase 1: data/refac/screenshots/parent-app.jpg "03 · /absences/new"
-// 풀세트 reproduce. refac 영역 순서:
-//   form-back ("결석 신청")
-//   - 아이 선택 (opt-list radio cards)
-//   - 기간 선택 (chip-row: 하루/연속/반복) + cal grid
-//   - 결석 유형 (opt-list 3개)
-//   - 사유 (textarea + hint)
-//   - summary card (info-soft, "신청 요약")
-//   bottom-cta (meta + bus-yellow CTA)
+// W24-D Phase 1: refac Parent App.html "03 · /absences/new" 픽셀 단위 align.
+// 모든 px 값은 refac CSS 그대로:
 //
-// 기간 chip "연속"·"반복" 은 베타 backlog — schema에 endDate·recurring 필드 없음.
-// 이번 turn은 visual chip만 두고 "하루"만 functional. action도 single date.
+//   .form-content{padding:8px 16px 100px}
+//   .form-section-title{font-size:11px;font-weight:900;letter-spacing:0.06em;
+//     text-transform:uppercase;color:var(--muted-foreground);margin:18px 0 8px}
+//   .form-section-title:first-child{margin-top:8px}
+//   .opt-list{display:flex;flex-direction:column;gap:8px}
+//   .opt{padding:14px;background:var(--card);border:1.5px solid var(--border);
+//     border-radius:12px;display:flex;gap:12px;align-items:center}
+//   .opt.on{border-color:var(--bus);background:var(--bus-soft)}
+//   .opt-radio{width:20px;height:20px;border-radius:999px;border:2px solid var(--border);background:#fff}
+//   .opt.on .opt-radio{border-color:var(--bus-foreground)}
+//   .opt.on .opt-radio::after{width:10px;height:10px;border-radius:999px;background:var(--bus-foreground)}
+//   .opt-name{font-size:14px;font-weight:900}
+//   .opt-desc{font-size:11px;color:var(--muted-foreground);font-weight:700;margin-top:3px}
+//   .chip-row{display:flex;gap:6px;flex-wrap:wrap}
+//   .chip{padding:8px 12px;border:1.5px solid var(--border);border-radius:999px;
+//     background:var(--card);font-size:12px;font-weight:800}
+//   .chip.on{background:var(--bus);border-color:var(--bus);color:var(--bus-foreground)}
+//   .cal{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px}
+//   .cal-grid{grid-cols-7;gap:2px;text-align:center}
+//   .cal-grid .day{font-size:13px;font-weight:700;padding:8px 0;border-radius:8px}
+//   .cal-grid .day.sel{background:var(--bus);color:var(--bus-foreground);font-weight:900}
+//   .cal-grid .day.today{outline:2px solid var(--info);outline-offset:-2px}
+//   .summary{background:var(--info-soft);border:1px solid color-mix(info 25%);
+//     border-radius:12px;padding:12px;margin-top:14px}
+//   .bottom-cta{position:absolute;bottom:0;background:var(--card);border-top:1px solid var(--border);padding:12px 16px 24px}
+//   .bottom-cta button{height:48px;background:var(--bus);border-radius:12px;font-size:15px;font-weight:900}
 
 type FormStudent = {
   id: string;
@@ -57,9 +74,9 @@ const TYPE_LABEL_MAP = {
 
 const WEEKDAY_LABELS = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
-// KST 기준 오늘 00:00 (UTC offset shift 후 0시 자르기)
 function todayKstParts(): { y: number; m: number; d: number; weekday: number } {
-  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const now = new Date();
+  const kst = new Date(now.getTime() + 9 * 60 * 60 * 1000);
   return {
     y: kst.getUTCFullYear(),
     m: kst.getUTCMonth() + 1,
@@ -73,12 +90,9 @@ function fmtMonthKey(y: number, m: number, d: number): string {
 }
 
 function buildMonthGrid(year: number, month: number) {
-  // month: 1-indexed
   const first = new Date(Date.UTC(year, month - 1, 1));
-  const firstWeekday = first.getUTCDay(); // 0=일 ~ 6=토
+  const firstWeekday = first.getUTCDay();
   const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
-
-  // dim 처리할 prev month 날짜 수 = firstWeekday
   const prevMonthDays = new Date(Date.UTC(year, month - 1, 0)).getUTCDate();
   const cells: { y: number; m: number; d: number; dim: boolean }[] = [];
   for (let i = firstWeekday - 1; i >= 0; i--) {
@@ -92,7 +106,6 @@ function buildMonthGrid(year: number, month: number) {
   for (let d = 1; d <= daysInMonth; d++) {
     cells.push({ y: year, m: month, d, dim: false });
   }
-  // next month padding to 6 weeks (42 cells) — refac은 6주 grid
   let nextD = 1;
   while (cells.length < 42) {
     cells.push({
@@ -155,20 +168,18 @@ export function AbsenceForm({ students }: { students: FormStudent[] }) {
     <>
       <FormBackHeader title="결석 신청" href="/my-absences" />
 
-      <form
-        action={formAction}
-        className="flex min-h-[calc(100dvh-3rem)] flex-col"
-      >
-        {/* hidden inputs — selected state → server action */}
+      <form action={formAction} className="relative">
+        {/* hidden inputs */}
         <input type="hidden" name="studentId" value={studentId} />
         <input type="hidden" name="date" value={selectedDate} />
         <input type="hidden" name="type" value={absenceType} />
         <input type="hidden" name="reason" value={reason} />
 
-        <div className="flex-1 px-4 pt-2 pb-28">
-          {/* 아이 선택 */}
-          <SectionTitle>아이 선택</SectionTitle>
-          <div className="space-y-2">
+        {/* refac .form-content { padding: 8px 16px 100px } */}
+        <div className="px-4 pt-2 pb-[100px]">
+          {/* refac .form-section-title:first-child { margin-top: 8px } */}
+          <SectionTitle first>아이 선택</SectionTitle>
+          <OptList>
             {students.length === 0 ? (
               <p className="text-muted-foreground text-sm">
                 연결된 자녀가 없어요. 학원·기관에 보호자 초대를 요청해 주세요.
@@ -180,30 +191,30 @@ export function AbsenceForm({ students }: { students: FormStudent[] }) {
                   selected={studentId === s.id}
                   onSelect={() => setStudentId(s.id)}
                 >
-                  <p className="text-sm font-black tracking-tight">
+                  <p className="text-[14px] font-black">
                     {s.name}
-                    <span className="bg-muted text-muted-foreground ml-1.5 inline-flex items-center rounded-full px-1.5 py-0.5 text-[10px] font-extrabold tracking-tight">
+                    <span className="bg-muted text-muted-foreground ml-1.5 inline-flex items-center rounded-[4px] px-[7px] py-[2px] align-middle text-[10px] font-black uppercase tracking-[0.04em]">
                       {s.age}세 · {s.orgName}
                     </span>
                   </p>
                   {s.sub ? (
-                    <p className="text-muted-foreground mt-0.5 text-[11px] font-bold">
+                    <p className="text-muted-foreground mt-[3px] text-[11px] font-bold">
                       {s.sub}
                     </p>
                   ) : null}
                 </OptCard>
               ))
             )}
-          </div>
+          </OptList>
           {state.fieldErrors?.studentId ? (
             <p className="text-destructive mt-1.5 text-xs font-bold">
               {state.fieldErrors.studentId[0]}
             </p>
           ) : null}
 
-          {/* 기간 선택 */}
           <SectionTitle>기간 선택</SectionTitle>
-          <div className="mb-2.5 flex flex-wrap gap-1.5">
+          {/* refac .chip-row { gap: 6px; flex-wrap: wrap; margin-bottom: 10px } */}
+          <div className="mb-[10px] flex flex-wrap gap-[6px]">
             <Chip
               selected={periodMode === "DAY"}
               onSelect={() => setPeriodMode("DAY")}
@@ -226,34 +237,35 @@ export function AbsenceForm({ students }: { students: FormStudent[] }) {
             </Chip>
           </div>
 
-          {/* calendar */}
-          <div className="bg-card rounded-md border p-3">
-            <div className="mb-2.5 flex items-center justify-between">
+          {/* refac .cal: bg-card, border, rounded-12px, padding 12px */}
+          <div className="bg-card border-border rounded-[12px] border p-[12px]">
+            <div className="mb-[10px] flex items-center justify-between">
               <button
                 type="button"
                 onClick={monthPrev}
-                className="text-muted-foreground flex h-7 w-7 items-center justify-center"
+                className="text-muted-foreground grid h-7 w-7 place-items-center"
                 aria-label="이전 달"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
-              <p className="text-[13px] font-black tracking-tight">
+              <p className="text-[13px] font-black">
                 {calYear}년 {calMonth}월
               </p>
               <button
                 type="button"
                 onClick={monthNext}
-                className="text-muted-foreground flex h-7 w-7 items-center justify-center"
+                className="text-muted-foreground grid h-7 w-7 place-items-center"
                 aria-label="다음 달"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             </div>
-            <div className="grid grid-cols-7 gap-0.5 text-center">
+            {/* refac .cal-grid { grid-cols-7, gap-2px, text-center } */}
+            <div className="grid grid-cols-7 gap-[2px] text-center">
               {WEEKDAY_LABELS.map((dow) => (
                 <p
                   key={dow}
-                  className="text-muted-foreground py-1.5 text-[10px] font-black"
+                  className="text-muted-foreground py-[6px] text-[10px] font-black"
                 >
                   {dow}
                 </p>
@@ -272,14 +284,14 @@ export function AbsenceForm({ students }: { students: FormStudent[] }) {
                       setSelectedDate(key);
                     }}
                     disabled={c.dim || isPast}
-                    className={`tabular-nums rounded-md py-2 text-[13px] font-bold transition-colors ${
+                    className={`rounded-[8px] py-[8px] text-[13px] tabular-nums ${
                       isSel
                         ? "bg-bus text-bus-foreground font-black"
                         : c.dim || isPast
-                          ? "text-muted-foreground/40"
+                          ? "text-muted-foreground/50 font-bold"
                           : isToday
-                            ? "outline-info -outline-offset-2 outline-2"
-                            : "hover:bg-muted/50"
+                            ? "outline-info -outline-offset-2 outline-2 font-bold"
+                            : "font-bold"
                     }`}
                     aria-label={`${c.m}월 ${c.d}일`}
                   >
@@ -295,55 +307,54 @@ export function AbsenceForm({ students }: { students: FormStudent[] }) {
             </p>
           ) : null}
 
-          {/* 결석 유형 */}
           <SectionTitle>결석 유형</SectionTitle>
-          <div className="space-y-2">
+          <OptList>
             {ABSENCE_TYPES.map((t) => (
               <OptCard
                 key={t.value}
                 selected={absenceType === t.value}
                 onSelect={() => setAbsenceType(t.value)}
               >
-                <p className="text-sm font-black tracking-tight">{t.name}</p>
-                <p className="text-muted-foreground mt-0.5 text-[11px] font-bold">
+                <p className="text-[14px] font-black">{t.name}</p>
+                <p className="text-muted-foreground mt-[3px] text-[11px] font-bold">
                   {t.desc}
                 </p>
               </OptCard>
             ))}
-          </div>
+          </OptList>
           {state.fieldErrors?.type ? (
             <p className="text-destructive mt-1.5 text-xs font-bold">
               {state.fieldErrors.type[0]}
             </p>
           ) : null}
 
-          {/* 사유 (선택) */}
           <SectionTitle>사유 (선택)</SectionTitle>
-          <div className="space-y-1.5">
+          {/* refac .field { display: flex; flex-direction: column; gap: 6px } */}
+          <div className="flex flex-col gap-1.5">
             <textarea
               value={reason}
               onChange={(e) => setReason(e.target.value.slice(0, 200))}
               placeholder="병원 진료 · 가족 행사 등 (학원장에게만 보입니다)"
-              className="bg-card w-full rounded-md border px-3 py-2.5 text-sm font-medium focus:outline-2 focus:outline-bus"
-              rows={3}
+              className="bg-card border-border focus:border-bus focus:outline-bus min-h-[80px] w-full resize-y rounded-[10px] border px-[13px] py-[12px] text-[14px] font-semibold focus:outline-2"
             />
-            <p className="text-muted-foreground text-[11px] font-bold">
+            {/* refac .hint: 11px font-600 muted line-height-1.4 */}
+            <p className="text-muted-foreground text-[11px] font-semibold leading-[1.4]">
               사유를 적어두면 학원장 확인이 빨라집니다.
             </p>
           </div>
 
-          {/* summary */}
+          {/* refac .summary: bg-info-soft border-info-25%, rounded-12px padding-12px, mt-14px */}
           {selectedStudent ? (
-            <div className="bg-info-soft border-info/25 mt-4 rounded-md border p-3">
-              <p className="text-info text-[11px] font-black tracking-[0.04em] uppercase">
+            <div className="bg-info-soft border-info/25 mt-[14px] rounded-[12px] border p-[12px]">
+              <h4 className="text-info text-[12px] font-black uppercase tracking-[0.04em]">
                 신청 요약
-              </p>
-              <p className="mt-1.5 text-[13px] font-bold leading-relaxed">
-                <span className="font-black">{selectedStudent.name}</span> ·{" "}
+              </h4>
+              <p className="mt-1.5 text-[13px] font-bold leading-[1.5]">
+                <strong className="font-black">{selectedStudent.name}</strong> ·{" "}
                 {selectedDateLabel}{" "}
-                <span className="font-black">
+                <strong className="font-black">
                   {TYPE_LABEL_MAP[absenceType]}
-                </span>
+                </strong>
               </p>
               <p className="text-info mt-1 text-[11px] font-extrabold">
                 기사·학원장에게 자동 알림됩니다
@@ -361,15 +372,20 @@ export function AbsenceForm({ students }: { students: FormStudent[] }) {
           ) : null}
         </div>
 
-        {/* bottom-cta — refac sticky bottom */}
-        <div className="bg-card sticky bottom-0 border-t px-4 pt-3 pb-6">
-          <p className="text-muted-foreground mb-2 text-center text-[11px] font-bold">
+        {/* refac .bottom-cta: position-absolute bottom-0, bg-card, border-top, padding 12px 16px 24px */}
+        <div
+          className="bg-card border-border sticky bottom-0 left-0 right-0 border-t px-[16px] pt-[12px]"
+          style={{ paddingBottom: "max(24px, env(safe-area-inset-bottom))" }}
+        >
+          {/* refac .bottom-cta .meta: 11px font-700 muted mb-8px text-center */}
+          <p className="text-muted-foreground mb-[8px] text-center text-[11px] font-bold">
             기사님과 학원장에게 자동 알림됩니다
           </p>
+          {/* refac .bottom-cta button: 48px height, bg-bus, rounded-12px, 15px font-900 */}
           <button
             type="submit"
             disabled={pending || !studentId}
-            className="bg-bus text-bus-foreground h-12 w-full rounded-md text-[15px] font-black disabled:opacity-50"
+            className="bg-bus text-bus-foreground h-[48px] w-full rounded-[12px] text-[15px] font-black disabled:opacity-50"
           >
             {pending ? "신청 중..." : "결석 신청"}
           </button>
@@ -379,14 +395,34 @@ export function AbsenceForm({ students }: { students: FormStudent[] }) {
   );
 }
 
-function SectionTitle({ children }: { children: React.ReactNode }) {
+// refac .form-section-title: 11px font-900 caps tracking-0.06em muted, margin 18px 0 8px
+function SectionTitle({
+  children,
+  first,
+}: {
+  children: React.ReactNode;
+  first?: boolean;
+}) {
   return (
-    <p className="text-muted-foreground mt-4 mb-2 text-[11px] font-black tracking-[0.06em] uppercase first:mt-2">
+    <p
+      className={`text-muted-foreground mb-[8px] text-[11px] font-black uppercase tracking-[0.06em] ${
+        first ? "mt-[8px]" : "mt-[18px]"
+      }`}
+    >
       {children}
     </p>
   );
 }
 
+// refac .opt-list: flex flex-col gap-8px
+function OptList({ children }: { children: React.ReactNode }) {
+  return <div className="flex flex-col gap-[8px]">{children}</div>;
+}
+
+// refac .opt: padding 14px, bg-card, border 1.5px solid border, rounded-12px, gap 12px
+// refac .opt.on: border-bus + bg-bus-soft
+// refac .opt-radio: 20x20 round, border 2px solid border, bg-white
+// refac .opt.on .opt-radio::after: 10x10 round bg-bus-foreground
 function OptCard({
   selected,
   onSelect,
@@ -400,18 +436,18 @@ function OptCard({
     <button
       type="button"
       onClick={onSelect}
-      className={`flex w-full items-center gap-3 rounded-md border-[1.5px] p-3.5 text-left transition-colors ${
+      className={`flex w-full items-center gap-[12px] rounded-[12px] border-[1.5px] p-[14px] text-left transition-colors ${
         selected ? "border-bus bg-bus-soft" : "border-border bg-card"
       }`}
     >
       <span
-        className={`relative flex h-5 w-5 shrink-0 items-center justify-center rounded-full border-2 ${
-          selected ? "border-bus-foreground" : "border-border bg-card"
+        className={`grid h-[20px] w-[20px] shrink-0 place-items-center rounded-full border-2 bg-white ${
+          selected ? "border-bus-foreground" : "border-border"
         }`}
         aria-hidden
       >
         {selected ? (
-          <span className="bg-bus-foreground h-2.5 w-2.5 rounded-full" />
+          <span className="bg-bus-foreground h-[10px] w-[10px] rounded-full" />
         ) : null}
       </span>
       <span className="min-w-0 flex-1">{children}</span>
@@ -419,6 +455,8 @@ function OptCard({
   );
 }
 
+// refac .chip: padding 8px 12px, border 1.5px solid border, rounded-full, bg-card, 12px font-800
+// refac .chip.on: bg-bus, border-bus, text-bus-foreground
 function Chip({
   selected,
   onSelect,
@@ -435,7 +473,7 @@ function Chip({
       type="button"
       onClick={() => !disabled && onSelect()}
       disabled={disabled}
-      className={`rounded-full border-[1.5px] px-3 py-2 text-xs font-extrabold tracking-tight transition-colors ${
+      className={`rounded-full border-[1.5px] px-[12px] py-[8px] text-[12px] font-extrabold transition-colors ${
         selected
           ? "bg-bus border-bus text-bus-foreground"
           : disabled
