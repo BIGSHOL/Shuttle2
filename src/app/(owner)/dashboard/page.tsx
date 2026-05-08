@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { Suspense } from "react";
 import {
   AlertTriangle,
@@ -19,10 +18,12 @@ import { StaffNotificationToggle } from "../notifications/staff-notification-tog
 
 import { DriverAppShareCard } from "./_components/driver-app-share-card";
 import { ExpiringVehicleAlert } from "./_components/expiring-vehicle-alert";
+import { KpiGrid, type KpiCard } from "./_components/kpi-grid";
 import {
   MultiTripLiveServer,
   MultiTripLiveSkeleton,
 } from "./_components/multi-trip-live-server";
+import { QuickLinks, type QuickLinkItem } from "./_components/quick-links";
 import { RepeatNoShowAlert } from "./_components/repeat-no-show-alert";
 import {
   TodayTripsMonitor,
@@ -110,6 +111,57 @@ export default async function DashboardPage() {
     todayTripsTotal - runningTripsCount - finishedTripsCount;
   const studentLabel = user.org.type === "ACADEMY" ? "학생" : "원아";
 
+  const kpiItems: KpiCard[] = [
+    {
+      label: "오늘 운행",
+      value: todayTripsTotal,
+      subtext:
+        todayTripsTotal > 0
+          ? `진행 ${runningTripsCount} · 예정 ${scheduledTripsCount} · 완료 ${finishedTripsCount}`
+          : "운행 없음",
+      Icon: Bus,
+      tone: "info",
+    },
+    {
+      label: "오늘 미탑승·미하차",
+      value: todayNoShowCount,
+      subtext:
+        todayNoShowCount > 0
+          ? "학생이 정류장에 안 나옴·셔틀에서 안 내림"
+          : "이상 없음",
+      Icon: AlertTriangle,
+      tone: todayNoShowCount > 0 ? "destructive" : "muted",
+      pulse: todayNoShowCount > 0,
+    },
+    {
+      label: "대기 요청",
+      value: pendingAbsenceCount + pendingStopChangeCount,
+      subtext: `결석 ${pendingAbsenceCount}건 / 정류장 ${pendingStopChangeCount}건`,
+      Icon: ShieldAlert,
+      tone:
+        pendingAbsenceCount + pendingStopChangeCount > 0 ? "warning" : "muted",
+    },
+    {
+      label: "등록 자원",
+      value: studentCount,
+      subtext: `${studentLabel} · 차량 ${vehicleCount} · 노선 ${routeCount}`,
+      Icon: Users,
+      tone: "muted",
+    },
+  ];
+
+  const quickLinkItems: QuickLinkItem[] = [
+    { href: "/vehicles", label: "차량", value: vehicleCount, Icon: Bus },
+    { href: "/stops", label: "정류장", value: stopCount, Icon: MapPin },
+    { href: "/routes", label: "노선", value: routeCount, Icon: Route },
+    {
+      href: "/students",
+      label: studentLabel,
+      value: studentCount,
+      Icon: Users,
+    },
+  ];
+
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-6">
       <OrgDashboardRefresher orgId={orgId} />
@@ -149,49 +201,7 @@ export default async function DashboardPage() {
         <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
           오늘 한눈에
         </p>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <KpiCard
-          label="오늘 운행"
-          value={todayTripsTotal}
-          subtext={
-            todayTripsTotal > 0
-              ? `진행 ${runningTripsCount} · 예정 ${scheduledTripsCount} · 완료 ${finishedTripsCount}`
-              : "운행 없음"
-          }
-          Icon={Bus}
-          tone="info"
-        />
-        <KpiCard
-          label="오늘 미탑승·미하차"
-          value={todayNoShowCount}
-          subtext={
-            todayNoShowCount > 0
-              ? "학생이 정류장에 안 나옴·셔틀에서 안 내림"
-              : "이상 없음"
-          }
-          Icon={AlertTriangle}
-          tone={todayNoShowCount > 0 ? "destructive" : "muted"}
-          pulse={todayNoShowCount > 0}
-        />
-        <KpiCard
-          label="대기 요청"
-          value={pendingAbsenceCount + pendingStopChangeCount}
-          subtext={`결석 ${pendingAbsenceCount}건 / 정류장 ${pendingStopChangeCount}건`}
-          Icon={ShieldAlert}
-          tone={
-            pendingAbsenceCount + pendingStopChangeCount > 0
-              ? "warning"
-              : "muted"
-          }
-        />
-        <KpiCard
-          label="등록 자원"
-          value={studentCount}
-          subtext={`${studentLabel} · 차량 ${vehicleCount} · 노선 ${routeCount}`}
-          Icon={Users}
-          tone="muted"
-        />
-        </div>
+        <KpiGrid items={kpiItems} />
       </section>
 
       {/* 오늘 운행 모니터 — Suspense (todayTrips with includes + boarding stats) */}
@@ -238,125 +248,8 @@ export default async function DashboardPage() {
         <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
           빠른 이동
         </p>
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <QuickLink
-            href="/vehicles"
-            label="차량"
-            value={vehicleCount}
-            Icon={Bus}
-          />
-          <QuickLink
-            href="/stops"
-            label="정류장"
-            value={stopCount}
-            Icon={MapPin}
-          />
-          <QuickLink
-            href="/routes"
-            label="노선"
-            value={routeCount}
-            Icon={Route}
-          />
-          <QuickLink
-            href="/students"
-            label={studentLabel}
-            value={studentCount}
-            Icon={Users}
-          />
-        </div>
+        <QuickLinks items={quickLinkItems} />
       </section>
     </main>
-  );
-}
-
-// ────────────────────────────────────────────────────────────────────
-// Helpers (sub-components)
-// ────────────────────────────────────────────────────────────────────
-
-type Tone = "info" | "bus" | "warning" | "destructive" | "muted";
-
-const TONE_CLS: Record<Tone, { bg: string; text: string }> = {
-  info: { bg: "bg-info-soft", text: "text-info" },
-  bus: { bg: "bg-bus-soft", text: "text-bus-foreground" },
-  warning: { bg: "bg-warning-soft", text: "text-warning" },
-  destructive: { bg: "bg-destructive/10", text: "text-destructive" },
-  muted: { bg: "bg-muted", text: "text-muted-foreground" },
-};
-
-function KpiCard({
-  label,
-  value,
-  subtext,
-  Icon,
-  tone,
-  pulse,
-}: {
-  label: string;
-  value: number;
-  subtext: string;
-  Icon: React.ComponentType<{ className?: string }>;
-  tone: Tone;
-  pulse?: boolean;
-}) {
-  const t = TONE_CLS[tone];
-  return (
-    <div className="bg-card rounded-2xl border p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden">
-      {pulse ? (
-        <div className="from-destructive/8 pointer-events-none absolute -top-8 -right-8 h-24 w-24 rounded-full bg-gradient-to-br to-transparent blur-2xl" />
-      ) : null}
-      <div className="flex items-start gap-2 relative">
-        <span
-          className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${t.bg} ${t.text} border-2 border-current/15`}
-        >
-          <Icon className="h-5 w-5" />
-        </span>
-        <p className="text-muted-foreground min-w-0 flex-1 pt-1.5 text-[11px] font-black tracking-[0.08em] uppercase leading-tight">
-          {label}
-        </p>
-        {pulse ? (
-          <span className="relative mt-2 inline-flex h-2 w-2 shrink-0">
-            <span className="bg-destructive absolute inline-flex h-full w-full animate-ping rounded-full opacity-75" />
-            <span className="bg-destructive relative inline-flex h-2 w-2 rounded-full" />
-          </span>
-        ) : null}
-      </div>
-      <p className="mt-4 text-4xl font-black tracking-tighter tabular-nums leading-none">
-        {value}
-      </p>
-      <p className="text-muted-foreground mt-2 text-[11px] font-semibold leading-relaxed">
-        {subtext}
-      </p>
-    </div>
-  );
-}
-
-function QuickLink({
-  href,
-  label,
-  value,
-  Icon,
-}: {
-  href: string;
-  label: string;
-  value: number;
-  Icon: React.ComponentType<{ className?: string }>;
-}) {
-  return (
-    <Link
-      href={href}
-      className="bg-card hover:border-foreground/30 hover:bg-muted/40 flex items-center justify-between rounded-2xl border p-5 shadow-sm transition-all"
-    >
-      <div>
-        <p className="text-muted-foreground text-[11px] font-black tracking-[0.08em] uppercase">
-          {label}
-        </p>
-        <p className="mt-1.5 text-3xl font-black tracking-tighter tabular-nums leading-none">
-          {value}
-        </p>
-      </div>
-      <div className="bg-muted/60 flex h-10 w-10 items-center justify-center rounded-xl">
-        <Icon className="text-muted-foreground h-5 w-5" />
-      </div>
-    </Link>
   );
 }
