@@ -374,6 +374,37 @@ vercel deploy --prod --yes  # 프로덕션 배포
     - `pnpm db:migrate deploy` (admin_system 마이그레이션)
     - Vercel production env에 `SHUTTLEE_ADMIN_EMAILS` + `IMPERSONATE_COOKIE_SECRET` 등록
       (`openssl rand -hex 32`로 secret 생성)
+- **W24-D: data/refac hi-fi reproduce wave** (2026-05-08) — `data/refac/screenshots/*.jpg`
+  + `data/refac/design-files/*.html` ground truth와 어긋나던 화면을 풀 align.
+  - **Phase 1** (학부모 PWA 4 화면 풀세트):
+    - `/home`: ParentHeader 숨김 + GreetingSection NEW + LiveTripCard 재작성 (bg-bus
+      hero + "{name}이 X분 후 도착" 상대 ETA + 3-info row 현재 위치/탑승 X/Y) +
+      "오늘 일정" 2-card grid + OurChildrenSection NEW + HomeActionsGrid + RecentNotifications
+      NEW + 4탭 BottomTabBar(홈/실시간/알림/내 정보) + `/me` 페이지 신규.
+    - `/trip-live/[tripId]`: TripHeader 재작성 ("실시간 위치" + LIVE pill + phone CTA) +
+      EtaHeadline 빅 카드 ("{name}이 정류장 도착까지" + "X분" 36px) + LiveActions NEW
+      (기사님·결석 2-button) + TripInfoCard NEW (compact 운행 정보).
+    - `/my-absences/new`: FormBackHeader NEW shared + 아이 선택 opt-list + 기간 chip-row
+      + 캘린더 6주 grid + 결석 유형 + 사유 + 신청 요약 + sticky bottom CTA.
+    - `/my-stop-changes/new`: 아이·방향 opt-list + 변경 유형 chip + 날짜 + 현재/변경할
+      정류장 picker (터미널 disabled) + 변경 요약 warning + sticky CTA.
+      opt-card key collision fix (routeStudentId 기반).
+  - **Phase 2** (기사 trip-live):
+    - NextStopCard NEW: "다음 정류장 X번째/N" + big-name + big "X분" ETA (haversine/25km/h
+      + GPS fix 있을 때) + "도착 HH:mm · 대기 N명". 다크 그라디언트 헤더 위에 stack.
+  - **Phase 3** (학원장 list topbar):
+    - dashboard·routes·students·vehicles 네 페이지 모두 큰 H1 (3xl/4xl font-black) +
+      카운트 sub + 우측 bus-yellow CTA "+ 새 X" 패턴으로 통일.
+  - **Phase 4** (마케팅 hero):
+    - pill "도로교통법 어린이통학버스 의무 충족" + headline "학원 셔틀, 이제 안 보이는
+      게 가장 큰 문제다." (안 보이는 highlight) + sub 3개 시점 + CTAs "무료로 시작하기 / 15초 데모 보기".
+  - **베타 backlog (다음 세션)**:
+    - Phase 3 v2: routes/[id], dashboard/trip/[tripId], pending, safety-report, billing,
+      settings/policies (구조 자체 다름)
+    - Phase 2 v2: pre-trip dedicated checklist screen + post-trip arrival 녹색 banner +
+      학생 row 컴팩트 (refac stu-action button + boarded/absent/no-show variant)
+    - Phase 4 v2: trusted-by org pills + Pain 3 카드 카피 + Features dark bg 학원장/기사/학부모
+      tabs + "월요일 시작" 4-step + Pricing 3-tier + FAQ accordion
 
 ### 알려진 미해결 (다음 세션)
 

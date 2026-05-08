@@ -1780,6 +1780,93 @@ bg-violet-*  → bg-primary/10 + text-primary
 bg-zinc-100/200 → bg-muted + text-muted-foreground
 ```
 
+## W24-D data/refac hi-fi reproduce wave (2026-05-08)
+
+`data/refac/screenshots/*.jpg` + `data/refac/design-files/*.html` ground truth와
+프로덕션 화면이 시각 idiom 정반대인 영역이 다수 — 본 wave에서 **15 화면 reproduce**
+중 핵심 화면 **Phase 1 풀 + Phase 2/3/4 핵심 영역** 완료.
+
+원칙: README §0 "한 번에 한 화면씩". 각 화면 turn 진입 시 screenshots/.jpg +
+HTML markup + 우리 production 코드 모두 직접 Read해서 visual ground truth로 작업.
+임의 색상 금지 + `rounded-lg/md/full` 스케일 유지 + `orgId` 필터 + RLS 보존.
+
+**Phase 1 — 학부모 PWA 풀세트 (4 화면)**
+
+1. `(parent)/home` — 풀 reproduce (commit `70deeb7`, `22e6ed4`)
+   - ParentHeader 숨김 (`pathname === "/home"` early return). page hero가 헤더 역할.
+   - GreetingSection (NEW): "안녕하세요, {name}님" + 날짜 + bell with red dot.
+   - LiveTripCard 재작성: bg-bus + "{name}이 X분 후 도착" 상대 ETA 타이틀 +
+     3-info row (예상 도착 / 현재 위치 N정류장 전 / 탑승 학생 X/Y) + 검정 CTA.
+   - "오늘 일정" 2-card grid (등원·하원 IdleTripCard).
+   - OurChildrenSection (NEW): "우리 아이" + 자녀 list + "아이 추가" link.
+   - HomeActionsGrid: "빠른 처리" 2-card (결석·정류장).
+   - RecentNotifications (NEW): 최근 3건 inline list.
+   - parent-bottom-tabs: 4탭 (홈/실시간/알림/내 정보).
+   - `/me` 페이지 신규 (PWA banner + notification toggle + 결석/정류장 link).
+   - today-trips.ts에 boardedCount/totalAssigned/stopsAheadOfChild 보강.
+
+2. `(parent)/trip-live/[tripId]` — hi-fi 02 frame (commit `20e9fc5`)
+   - TripHeader 재작성: "실시간 위치" + sub "{routeName} · {direction} · LIVE pill" + 우측 phone 버튼.
+   - EtaHeadline 재작성: "{name}이 정류장 도착까지" + "X분" 36px + "예상 도착 HH:mm · N정류장 남음".
+   - LiveActions (NEW): 2-button row "기사님" tel: + "결석" /my-absences/new.
+   - TripInfoCard (NEW): "운행 정보 [Xkm · X분 경과]" + "{driver}님 + 동승 {helper}님 · {plate} · 어린이통학버스 · X/Y 탑승 중".
+   - StopRailTimeline 제거 (refac live-sheet에 없음).
+
+3. `(parent)/my-absences/new` — hi-fi 03 frame (commit `e62e07c`)
+   - FormBackHeader (NEW shared component): chevron-left + title.
+   - 아이 선택 opt-list + 기간 선택 chip-row + 캘린더 6주 grid + 결석 유형 opt-list +
+     사유 textarea + 신청 요약 info-soft card + sticky bottom bus CTA.
+   - 기간 chip "연속/반복" 베타 backlog (schema endDate·recurring 미지원).
+
+4. `(parent)/my-stop-changes/new` — hi-fi 04 frame (commit `52e6f9c`, `4e988e7`)
+   - 아이·방향 opt-list + 변경 유형 chip-row + 날짜 input + 현재 정류장 info-soft card +
+     변경할 정류장 list (현재·터미널 disabled, 일반 stop scheduledAt + 시간 표기) +
+     사유 textarea + 변경 요약 warning-soft card + sticky bottom CTA.
+   - opt-card key collision fix: studentId__fromStopId → routeStudentId (multi-route 안전).
+
+**Phase 2 — 기사 RN/PWA 핵심 (commit `ff12112`)**
+
+5. `(driver)/trip/[id]` — "다음 정류장" hero card 추가
+   - NextStopCard (NEW): "다음 정류장" small caps + "{order}번째 / {total}" +
+     big-name 28px + big "X분" 34px text-bus + "도착 HH:mm · 대기 N명".
+   - ETA 추정 = haversine 거리 / 25km/h, GPS fix 있을 때만.
+   - waitingCount = 다음 stop 학생 중 ACK 결석/체크/이슈 아닌 학생 수.
+   - 다크 그라디언트 헤더는 그대로, 새 hero 카드 위에 stack.
+   - 베타 backlog: pre-trip dedicated checklist screen / post-trip arrival banner.
+
+**Phase 3 — 학원장 PC 핵심 list pages**
+
+6. `(owner)/dashboard` topbar (commit `f9d6f3c`)
+   - "오늘 운행 현황" h1 + "{date} · {orgName} · orgType pill · plan pill" sub +
+     운행 리포트 outline + "+ 새 {studentLabel} 등록" bus CTA + 푸시 토글 같은 row.
+   - 본문 sections (multi-trip live · KPI · today-trips monitor · alerts · quick links)는 유지.
+
+7-8. `(owner)/routes`, `(owner)/students`, `(owner)/vehicles` topbars (commit `5409467`)
+   - 큰 H1 (3xl/4xl font-black) + 카운트 sub (전체·활성·운행 중 / KIDS·일반 등) +
+     우측 bus-yellow "+ 새 X" CTA. 표/카드 본문은 유지.
+
+**Phase 4 — 마케팅 hero (commit `72612dc`)**
+
+9. `(marketing)/` hero
+   - pill: "도로교통법 어린이통학버스 의무 충족"
+   - headline: "학원 셔틀, 이제 안 보이는 게 가장 큰 문제다." (안 보이는 highlight)
+   - sub: 학원·교습소·어린이집·유치원 셔틀 운영 자동화 + 3개 시점 (학부모/기사/학원장).
+   - CTAs: "무료로 시작하기" /signup + "15초 데모 보기" #features.
+
+**검증** (Chrome MCP, 모바일 420×900):
+- /home: bg-bus LIVE + 4 sections + 4탭 BottomTabBar — hi-fi 01 frame match.
+- /trip-live: 헤더·LIVE pill·sheet 3 영역 (EtaHeadline · LiveActions · TripInfoCard) — hi-fi 02 match.
+- /my-absences/new: 아이 선택 + 캘린더 + 결석 유형 + 신청 요약 — hi-fi 03 match.
+- /my-stop-changes/new: 아이·방향 + 정류장 picker + 변경 요약 — hi-fi 04 match.
+
+**다음 세션 backlog (Phase 3 owner detail + Phase 4 marketing 본문)**:
+- (owner)/routes/[id], /dashboard/trip/[tripId], /pending, /safety-report, /billing,
+  /settings/policies — visual idiom보다 구조 자체가 다르고 명세 차이 큼.
+- (driver) pre-trip dedicated safety checklist screen + post-trip arrival 녹색 banner
+  + 학생 row 컴팩트 (refac stu-action button + boarded/absent/no-show variant).
+- (marketing) trusted-by org pills row + Pain 3 카드 카피 align + Features dark bg +
+  "월요일 시작" 4-step + Pricing 3-tier (스타터·스탠다드·엔터프라이즈) + FAQ accordion.
+
 ## 주요 라우트
 
 | 그룹        | 라우트                                                                                                                                                                               | 설명             |
