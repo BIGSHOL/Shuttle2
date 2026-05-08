@@ -89,8 +89,12 @@ export function ParentBottomTabs({ unreadCount }: { unreadCount: number }) {
                 strokeWidth={2.25}
                 fill={isActive ? "var(--bus-soft)" : "none"}
               />
+              {/* iOS 스타일 카운트 배지 — 흰 글씨/빨강 배경/흰 border로 아이콘과 분리.
+                  16px 높이, 10px 글자, 1자리는 동그라미·2자리+ 는 알약 모양. */}
               {badge && badge > 0 ? (
-                <span className="bg-destructive border-card absolute -top-0.5 -right-1.5 inline-flex h-[7px] min-w-[7px] items-center justify-center rounded-full border-[1.5px]" />
+                <span className="bg-destructive border-card absolute -top-1.5 -right-2 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full border-2 px-1 text-[10px] font-black leading-none text-white tabular-nums">
+                  {badge > 99 ? "99+" : badge}
+                </span>
               ) : null}
             </span>
             <span>{label}</span>

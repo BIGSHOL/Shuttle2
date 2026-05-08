@@ -62,10 +62,12 @@ export function GreetingSection({
         className="bg-card border-border relative grid h-9 w-9 shrink-0 place-items-center rounded-full border"
       >
         <Bell className="h-4 w-4" strokeWidth={2.25} />
+        {/* refac .icon-btn .dot-r: 7x7 destructive + 1.5px card border.
+            아이콘과 분리 위해 흰 border로 halo 효과 — 작아도 또렷하게 보임. */}
         {unreadCount > 0 ? (
           <span
             aria-hidden
-            className="bg-destructive border-card absolute top-[7px] right-[8px] inline-block h-[7px] w-[7px] rounded-full border-[1.5px]"
+            className="bg-destructive border-card absolute top-[6px] right-[6px] inline-block h-[8px] w-[8px] rounded-full border-2"
           />
         ) : null}
       </Link>
