@@ -44,6 +44,10 @@ export function DriverBottomTabs({
   const pathname = usePathname();
   const [pending, startTransition] = useTransition();
 
+  // W24-D Phase 2: refac Driver Run.html "02·03"은 풀스크린 자체 bottom action.
+  // /trip/[id], /helper-trip/[id]에서는 BottomTabs 숨김.
+  if (/^\/(?:helper-)?trip\/[^/]+/.test(pathname)) return null;
+
   // 홈/알림/도움말 — 일반 link 탭
   const linkTabs: TabDef[] = [
     {
@@ -92,25 +96,23 @@ export function DriverBottomTabs({
             href={href}
             aria-current={isActive ? "page" : undefined}
             aria-label={badge ? `${label} (${badge}건 안 읽음)` : label}
-            className={`relative flex flex-1 flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-extrabold tracking-wide ${
-              isActive ? "text-bus" : "text-muted-foreground"
+            className={`relative flex flex-1 flex-col items-center gap-0.5 px-1 py-1.5 text-[10px] font-extrabold ${
+              isActive ? "text-bus-foreground" : "text-muted-foreground"
             }`}
           >
             <span className="relative">
-              <Icon className="h-5 w-5" strokeWidth={isActive ? 2.5 : 2} />
+              <Icon
+                className="h-5 w-5"
+                strokeWidth={2.25}
+                fill={isActive ? "var(--bus-soft)" : "none"}
+              />
               {badge && badge > 0 ? (
-                <span className="bg-destructive text-destructive-foreground absolute -top-1 -right-2 inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] leading-none">
+                <span className="bg-destructive border-card absolute -top-1.5 -right-2 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full border-2 px-1 text-[10px] font-black leading-none text-white tabular-nums">
                   {badge > 99 ? "99+" : badge}
                 </span>
               ) : null}
             </span>
             <span>{label}</span>
-            {isActive ? (
-              <span
-                aria-hidden
-                className="bg-bus absolute -top-px left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full"
-              />
-            ) : null}
           </Link>
         );
       })}

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Bell, HelpCircle } from "lucide-react";
 import { useTransition } from "react";
 
@@ -22,6 +23,8 @@ const ROLE_LABEL = {
 } as const;
 
 // 기사용 모바일 헤더. parent-header와 동일 스타일. 알림 벨 unread 배지.
+// W24-D Phase 2: refac Driver Run.html "02·03"은 자체 run-top·arrived-banner를
+// 가지므로 /trip/[id]에서는 DriverHeader 숨김.
 export function DriverHeader({
   orgName,
   role,
@@ -36,6 +39,10 @@ export function DriverHeader({
   unreadCount: number;
 }) {
   const [pending, startTransition] = useTransition();
+  const pathname = usePathname();
+
+  // /trip/[id], /helper-trip/[id]에서 숨김 — 자체 run-top이 헤더 역할
+  if (/^\/(?:helper-)?trip\/[^/]+/.test(pathname)) return null;
 
   return (
     <header className="bg-background sticky top-0 z-30 border-b">

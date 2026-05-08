@@ -1,10 +1,8 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   AlertTriangle,
-  ArrowLeft,
   Check,
   CircleAlert,
   Clock,
@@ -40,9 +38,8 @@ import {
   type UnprocessedItem,
 } from "./_components/end-trip-modal";
 import { NextStopCard } from "./_components/next-stop-card";
+import { RunTop } from "./_components/run-top";
 import { useGpsTracker } from "./gps-tracker";
-
-const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
 type StopRow = {
   id: string;
@@ -87,7 +84,6 @@ export function TripRunningView({
   safetyCheck,
   boardedStudentIds,
   alightedStudentIds,
-  driver,
   helper,
   helperCandidates,
   isDriver,
@@ -264,168 +260,72 @@ export function TripRunningView({
     doEndTrip();
   }
 
+  // refac .run-top: top status strip — 백 버튼 + 노선·방향·진행도 + 시작·경과 + 알림·긴급
+  const passedCount = new Set([...gps.passed, ...manualPassed]).size;
+  // KIDS 모드 동승자 미배정 + 학생 1명 이상이면 §53⑦ 위반 — 별도 알림 띠
+  const helperMissing =
+    isKidsMode &&
+    !helper &&
+    stops.reduce((acc, s) => acc + s.students.length, 0) >= 1;
+
   return (
-    <main className="space-y-4 px-4 pt-4 pb-6">
-      {/* 상단 뒤로가기 — 운행 화면에서 다른 페이지로 빠져나갈 때 사용 */}
-      <div className="flex items-center gap-2">
-        <Link
-          href={backHref}
-          className="bg-card hover:bg-muted/40 active:bg-muted/40 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
-          aria-label="운행 목록으로"
-        >
-          <ArrowLeft className="h-4 w-4" />
-        </Link>
-        <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
-          {DIRECTION_LABEL[route.direction]} 운행
-        </p>
-      </div>
+    <main className="bg-background flex min-h-[100dvh] flex-col">
+      {/* refac .run-top */}
+      <RunTop
+        backHref={backHref}
+        routeName={route.name}
+        direction={route.direction}
+        vehicleMode={vehicle.mode}
+        passedCount={passedCount}
+        totalStops={stops.length}
+        startedHHmm={
+          startedAtISO
+            ? new Date(
+                new Date(startedAtISO).getTime() + 9 * 60 * 60 * 1000,
+              )
+                .toISOString()
+                .slice(11, 16)
+            : null
+        }
+        elapsed={elapsed}
+        notificationsHref="/run/notifications"
+      />
 
-      {/* Wake Lock 미지원 — sticky 경고 */}
+      {/* Wake Lock·KIDS·GPS 경고는 RunTop 아래 한 줄 작은 배너로 노출 */}
       {!wakeLock.supported ? (
-        <div className="border-warning bg-warning-soft text-warning-foreground rounded-lg border p-3 text-xs font-medium">
-          <p className="text-warning inline-flex items-center gap-1.5 text-sm font-extrabold">
-            <AlertTriangle className="h-4 w-4" />
-            화면 자동 꺼짐 방지가 지원되지 않습니다
+        <div className="border-warning bg-warning-soft text-warning border-b px-4 py-2 text-[11px] font-bold">
+          <span className="inline-flex items-center gap-1.5">
+            <AlertTriangle className="h-3.5 w-3.5" />
+            아이폰 사파리는 화면 자동 꺼짐 방지가 안 되니, 화면을 켠 채 운행하세요.
+          </span>
+        </div>
+      ) : null}
+      {helperMissing ? (
+        <div className="border-destructive bg-destructive/10 text-destructive border-b px-4 py-2 text-[11px] font-extrabold">
+          <span className="inline-flex items-center gap-1.5">
+            <CircleAlert className="h-3.5 w-3.5" />
+            동승보호자가 지정되지 않았어요 (§53⑦)
+          </span>
+        </div>
+      ) : null}
+      {gps.error ? (
+        <div className="border-destructive bg-destructive-soft text-destructive border-b px-4 py-2">
+          <p className="inline-flex items-center gap-1.5 text-[11px] font-extrabold">
+            <MapPin className="h-3.5 w-3.5" />
+            GPS 신호 없음 — {gps.error}
           </p>
-          <p className="mt-1">
-            아이폰 사파리 브라우저는 화면 잠금 방지가 동작하지 않습니다.
-            안드로이드 폰을 거치대에 두고 화면을 켜둔 채 운행하세요.
-          </p>
+          <button
+            type="button"
+            onClick={gps.retry}
+            className="bg-destructive mt-1 inline-flex items-center rounded-[6px] px-2 py-1 text-[10px] font-black uppercase tracking-[0.04em] text-white"
+          >
+            다시 시도
+          </button>
         </div>
       ) : null}
 
-      {/* KIDS 모드 동승자 미선택 — 도로교통법 §53⑦ */}
-      {isKidsMode &&
-      !helper &&
-      stops.reduce((acc, s) => acc + s.students.length, 0) >= 1 ? (
-        <div className="border-destructive bg-destructive/10 rounded-lg border p-3">
-          <p className="text-destructive inline-flex items-center gap-1.5 text-sm font-extrabold">
-            <CircleAlert className="h-4 w-4" />
-            동승보호자가 지정되지 않았어요
-          </p>
-          <p className="text-foreground/80 mt-1 text-xs font-medium">
-            어린이통학버스 운행에는 법령에 따라 동승보호자가 함께 타야
-            합니다. 아래에서 동승자를 지정한 후 운행을 진행해 주세요.
-          </p>
-        </div>
-      ) : null}
-
-      {/* 운행 헤드 — dark gradient + 노란 accent stripe */}
-      <div
-        className="relative overflow-hidden rounded-lg p-4 text-white shadow-md"
-        style={{
-          background: "linear-gradient(155deg, #1a1c22, #0f1014)",
-        }}
-      >
-        <div className="bg-bus absolute inset-x-0 top-0 h-[3px]" />
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-1.5">
-              <span
-                className={`rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide uppercase ${
-                  route.direction === "PICKUP"
-                    ? "bg-success-soft text-success"
-                    : "bg-info-soft text-info"
-                }`}
-              >
-                {DIRECTION_LABEL[route.direction]}
-              </span>
-              {isKidsMode ? (
-                <span className="bg-bus text-bus-foreground inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
-                  <span className="bg-bus-foreground inline-block h-1.5 w-1.5 animate-pulse rounded-full" />
-                  어린이용
-                </span>
-              ) : (
-                <span className="bg-white/15 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
-                  일반용
-                </span>
-              )}
-            </div>
-            <p className="mt-1.5 truncate text-lg font-extrabold tracking-tight">
-              {route.name}
-            </p>
-            <p className="mt-0.5 text-xs font-medium opacity-70">
-              {vehicle.plate}
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-extrabold tracking-wide uppercase opacity-60">
-              경과
-            </p>
-            <p className="font-mono text-3xl font-extrabold tracking-tight">
-              {elapsed}
-            </p>
-          </div>
-        </div>
-        {/* 상태 칩 */}
-        <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[11px] font-medium">
-          <span
-            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold ${
-              wakeLock.active
-                ? "bg-success/20 text-success"
-                : "bg-white/10 text-white/70"
-            }`}
-          >
-            <span
-              className={`inline-block h-1.5 w-1.5 rounded-full ${
-                wakeLock.active ? "bg-success animate-pulse" : "bg-white/40"
-              }`}
-            />
-            화면잠금 {wakeLock.active ? "켜짐" : "꺼짐"}
-          </span>
-          <span
-            className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold ${
-              gps.fix
-                ? "bg-success/20 text-success"
-                : gps.error
-                  ? "bg-destructive/20 text-destructive"
-                  : "bg-white/10 text-white/70"
-            }`}
-          >
-            <MapPin className="h-3 w-3" />
-            위치{" "}
-            {gps.fix
-              ? `±${Math.round(gps.fix.accuracy)}m`
-              : gps.error
-                ? "오류"
-                : "수신중"}
-          </span>
-          {isDriver ? (
-            <span className="bg-white/10 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold opacity-90">
-              기사 · {driver.name}
-            </span>
-          ) : null}
-          {helper ? (
-            <span className="bg-white/10 inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 font-bold opacity-90">
-              동승 · {helper.name}
-            </span>
-          ) : null}
-        </div>
-        {wakeLock.error ? (
-          <p className="text-destructive mt-2 text-xs">{wakeLock.error}</p>
-        ) : null}
-        {gps.error ? (
-          <div className="border-destructive/40 bg-destructive/5 mt-2 rounded-md border p-2.5">
-            <p className="text-destructive text-xs font-bold">
-              GPS 신호 없음
-            </p>
-            <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-              {gps.error}
-            </p>
-            <p className="text-muted-foreground mt-1 text-[11px] font-medium">
-              지하 주차장·터널일 수 있어요. 야외로 나오거나, 위치 권한이 막혔다면
-              브라우저 자물쇠 → 위치 → 허용으로 변경.
-            </p>
-            <button
-              type="button"
-              onClick={gps.retry}
-              className="bg-destructive text-destructive-foreground mt-2 inline-flex items-center justify-center rounded-md px-3 py-1.5 text-xs font-bold hover:opacity-90"
-            >
-              GPS 다시 시도
-            </button>
-          </div>
-        ) : null}
-      </div>
+      {/* 본문은 px-4 컨테이너 — RunTop은 px-18로 자체 padding */}
+      <div className="space-y-4 px-4 pt-4 pb-6">
 
       {/* W24-D Phase 2: refac driver-run.jpg "02 · 운행 중" .next-stop hero card.
           다음 정류장(=첫 미통과 stop)을 운전 중 한눈에 노출. ETA는 GPS 거리/30km/h
@@ -705,6 +605,7 @@ export function TripRunningView({
           }}
         />
       ) : null}
+      </div>
     </main>
   );
 }
