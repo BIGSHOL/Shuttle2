@@ -84,6 +84,19 @@ export async function approveStopChangeAction(
       },
     });
 
+    // W24-B C7: 모든 stop-change 결정을 StopChangeLedger에 기록 (audit-log 페이지 source)
+    await tx.stopChangeLedger.create({
+      data: {
+        orgId,
+        requestId,
+        studentId: reqRow.studentId,
+        fromStopId: reqRow.fromStopId,
+        toStopId: newStop.id,
+        appliedById: me.staff.id,
+        permanent: true,
+      },
+    });
+
     return { newStopId: newStop.id, newStopName: newStop.name };
   });
 
