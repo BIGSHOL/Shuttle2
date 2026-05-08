@@ -1,6 +1,7 @@
 import {
   BarChart3,
   Bus,
+  CreditCard,
   FileCheck,
   GraduationCap,
   IdCard,
@@ -61,5 +62,6 @@ export function buildOwnerNav(
     { href: "/training", label: "안전교육", Icon: GraduationCap },
     { href: "/dashboard/analytics", label: "분석", Icon: BarChart3 },
     { href: "/safety-report", label: "안전기록", Icon: FileCheck },
+    { href: "/billing", label: "결제", Icon: CreditCard },
   ];
 }
