@@ -35,6 +35,7 @@ export default async function ParentHomePage() {
     pendingAbsenceCount,
     pendingStopChangeCount,
     recentNotifs,
+    unreadCount,
   ] = await Promise.all([
     db.student.findMany({
       where: { id: { in: studentIds } },
@@ -71,6 +72,9 @@ export default async function ParentHomePage() {
         createdAt: true,
       },
     }),
+    db.notification.count({
+      where: { userId: me.authUserId, readAt: null },
+    }),
   ]);
 
   const ourChildren = studentRows.map((s) => ({
@@ -85,7 +89,10 @@ export default async function ParentHomePage() {
 
   return (
     <main className="space-y-4 pb-6">
-      <GreetingSection guardianName={me.guardian.name} />
+      <GreetingSection
+        guardianName={me.guardian.name}
+        unreadCount={unreadCount}
+      />
 
       <Suspense fallback={<TodayTripsSectionSkeleton />}>
         <TodayTripsSection

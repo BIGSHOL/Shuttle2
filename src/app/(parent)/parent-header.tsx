@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Bell, HelpCircle } from "lucide-react";
 import { useTransition } from "react";
 
@@ -28,6 +29,13 @@ export function ParentHeader({
   unreadCount: number;
 }) {
   const [pending, startTransition] = useTransition();
+  const pathname = usePathname();
+
+  // W24-D Phase 1 home: refac data/refac/design-files/Parent App.html "01 · /home"
+  // 에서 셔틀이 로고·dropdown 헤더 없음 — page hero(GreetingSection)가 헤더 역할.
+  // 다른 parent 화면(/notifications, /my-absences 등)은 자체 페이지에 뒤로가기
+  // 헤더가 있으므로 ParentHeader 자체를 home에서 숨겨도 안전.
+  if (pathname === "/home") return null;
 
   return (
     <header className="bg-background sticky top-0 z-30 border-b">
