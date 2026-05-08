@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -38,20 +38,35 @@ export default async function VehiclesPage() {
     orderBy: [{ mode: "asc" }, { plate: "asc" }],
   });
 
+  // refac topbar sub: KIDS·GENERAL 분포
+  const kidsCount = vehicles.filter((v) => v.mode === "KIDS").length;
+  const generalCount = vehicles.length - kidsCount;
+
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">차량</h2>
-          <p className="text-muted-foreground text-sm">
-            셔틀버스 차량을 등록하고 어린이용·일반용 모드를 관리합니다. 카드를
-            누르면 30일 운행 통계·배정 노선·안전점검 이슈를 확인합니다.
+      {/* W24-D Phase 3 #11 vehicles topbar: refac owner-vehicles.jpg */}
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-black tracking-tight lg:text-4xl leading-tight">
+            차량
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm font-bold">
+            전체 {vehicles.length}대 · 어린이용 {kidsCount} · 일반용{" "}
+            {generalCount}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/vehicles/new">+ 새 차량</Link>
-        </Button>
-      </div>
+        <div className="flex items-center gap-2">
+          <Button
+            asChild
+            size="sm"
+            className="bg-bus hover:bg-bus/90 text-bus-foreground font-extrabold"
+          >
+            <Link href="/vehicles/new">
+              <Plus className="mr-1 h-4 w-4" />새 차량
+            </Link>
+          </Button>
+        </div>
+      </section>
 
       {vehicles.length === 0 ? (
         <Card>

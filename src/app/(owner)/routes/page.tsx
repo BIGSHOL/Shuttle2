@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -18,36 +19,66 @@ import {
 } from "@/components/ui/table";
 import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/auth/session";
+import { todayUtcDateKst } from "@/lib/date/today";
 
 import { DeleteRouteButton } from "./_components/delete-route-button";
 import { formatDirection, formatWeekdays } from "./_lib/weekdays";
 
 export default async function RoutesPage() {
   const orgId = await getOrgId();
+  const todayDate = todayUtcDateKst();
 
   // Route → Vehicle → orgId 체인으로 본 기관 노선만.
-  const routes = await db.route.findMany({
-    where: { vehicle: { orgId } },
-    orderBy: [{ direction: "asc" }, { name: "asc" }],
-    include: {
-      vehicle: { select: { plate: true, mode: true } },
-      _count: { select: { stops: true, students: true } },
-    },
-  });
+  const [routes, runningTripsCount] = await Promise.all([
+    db.route.findMany({
+      where: { vehicle: { orgId } },
+      orderBy: [{ direction: "asc" }, { name: "asc" }],
+      include: {
+        vehicle: { select: { plate: true, mode: true } },
+        _count: { select: { stops: true, students: true } },
+      },
+    }),
+    db.trip.count({
+      where: {
+        vehicle: { orgId },
+        date: todayDate,
+        startedAt: { not: null },
+        endedAt: null,
+      },
+    }),
+  ]);
+
+  // refac topbar sub: "전체 4개 노선 · 활성 4 · 운행 중 2"
+  const totalRoutes = routes.length;
+  // 활성 = 정류장 1개 이상 + 차량 배정. 우리는 모두 vehicle 보유라 stops>0를 기준.
+  const activeRoutes = routes.filter((r) => r._count.stops > 0).length;
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">노선</h2>
-          <p className="text-muted-foreground text-sm">
-            등원·하원 노선을 차량에 묶고, 정류장 순서·시각을 관리합니다.
+      {/* W24-D Phase 3 #7 routes topbar: refac owner-routes-list.jpg.
+          "노선" h1 + count sub + 우측 액션 group. */}
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-black tracking-tight lg:text-4xl leading-tight">
+            노선
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm font-bold">
+            전체 {totalRoutes}개 노선 · 활성 {activeRoutes} · 운행 중{" "}
+            {runningTripsCount}
           </p>
         </div>
-        <Button asChild>
-          <Link href="/routes/new">+ 새 노선</Link>
-        </Button>
-      </div>
+        <div className="flex items-center gap-2">
+          <Button
+            asChild
+            size="sm"
+            className="bg-bus hover:bg-bus/90 text-bus-foreground font-extrabold"
+          >
+            <Link href="/routes/new">
+              <Plus className="mr-1 h-4 w-4" />새 노선
+            </Link>
+          </Button>
+        </div>
+      </section>
 
       {routes.length === 0 ? (
         <Card>

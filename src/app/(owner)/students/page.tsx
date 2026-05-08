@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Plus } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -43,18 +44,29 @@ export default async function StudentsPage({
 
   return (
     <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-semibold">{term}</h2>
-          <p className="text-muted-foreground text-sm">
-            {term}을 등록하고 노선·정류장을 배정합니다. 만 13세 미만은 어린이용
-            모드 안전점검 대상입니다.
+      {/* W24-D Phase 3 #9 students topbar: refac owner-students.jpg.
+          큰 H1 + 카운트 sub + 우측 액션 버튼 group. */}
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-black tracking-tight lg:text-4xl leading-tight">
+            {term}
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm font-bold">
+            전체 {total}명 · {term}을 등록하고 노선·정류장을 배정해요
           </p>
         </div>
-        <Button asChild>
-          <Link href="/students/new">+ 새 {term}</Link>
-        </Button>
-      </div>
+        <div className="flex items-center gap-2">
+          <Button
+            asChild
+            size="sm"
+            className="bg-bus hover:bg-bus/90 text-bus-foreground font-extrabold"
+          >
+            <Link href="/students/new">
+              <Plus className="mr-1 h-4 w-4" />새 {term}
+            </Link>
+          </Button>
+        </div>
+      </section>
 
       <StudentsToolbar
         schools={schools}
