@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Bus, Calendar, MapPin } from "lucide-react";
 
+import { EmptyState } from "@/components/empty-state";
 import { Skeleton } from "@/components/ui/skeleton";
 import { db } from "@/lib/db";
 
@@ -63,13 +64,11 @@ export async function TodayTripsMonitor({
 
   if (todayTrips.length === 0) {
     return (
-      <div className="bg-card rounded-lg border p-6 text-center shadow-sm">
-        <Bus className="text-muted-foreground mx-auto h-8 w-8" />
-        <p className="mt-3 text-base font-bold">오늘 운행이 없어요</p>
-        <p className="text-muted-foreground mt-1 text-xs font-medium">
-          오늘 요일에 운행하는 노선이 없거나 기사가 운행을 시작하지 않았습니다.
-        </p>
-      </div>
+      <EmptyState
+        icon={Bus}
+        title="오늘 운행이 없어요"
+        description="오늘 요일에 운행하는 노선이 없거나 기사가 운행을 시작하지 않았습니다."
+      />
     );
   }
 

@@ -12,6 +12,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 
+import { EmptyState } from "@/components/empty-state";
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 
@@ -187,9 +188,12 @@ export default async function PendingPage({
         ))}
 
         {absences.length === 0 && stopChanges.length === 0 ? (
-          <li className="bg-card text-muted-foreground rounded-lg border p-8 text-center text-sm font-bold">
-            <MapPinned className="mx-auto mb-2 h-8 w-8 opacity-40" />
-            처리할 대기 요청이 없습니다.
+          <li>
+            <EmptyState
+              icon={MapPinned}
+              title="처리할 대기 요청이 없습니다"
+              description="새 결석 신청이나 정류장 변경 요청이 들어오면 여기 표시돼요."
+            />
           </li>
         ) : null}
       </ul>

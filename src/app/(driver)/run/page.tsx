@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ArrowRight, Bus, CheckCircle2, Clock, MapPin } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { EmptyState } from "@/components/empty-state";
 import { db } from "@/lib/db";
 import { requireDriver } from "@/lib/auth/session";
 import { todayBitKst, todayUtcDateKst } from "@/lib/date/today";
@@ -143,17 +144,11 @@ export default async function RunPage() {
       <RunChecklistCard />
 
       {todaysRoutes.length === 0 ? (
-        <div className="bg-card rounded-2xl border-2 border-dashed p-8 text-center shadow-sm">
-          <div className="bg-muted/60 mx-auto flex h-14 w-14 items-center justify-center rounded-2xl">
-            <Bus className="text-muted-foreground h-7 w-7" />
-          </div>
-          <p className="mt-4 text-base font-extrabold tracking-tight">
-            오늘 배정된 노선이 없어요
-          </p>
-          <p className="text-muted-foreground mt-1.5 text-xs font-semibold leading-relaxed">
-            학원장·원장님이 새 노선을 추가하면 여기 표시됩니다.
-          </p>
-        </div>
+        <EmptyState
+          icon={Bus}
+          title="오늘 배정된 노선이 없어요"
+          description="학원장·원장님이 새 노선을 추가하면 여기 표시됩니다."
+        />
       ) : (
         <>
           {/* 운행 예정 */}
