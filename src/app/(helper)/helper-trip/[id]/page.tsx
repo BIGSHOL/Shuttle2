@@ -8,5 +8,5 @@ export default async function HelperTripPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  return <TripScreen tripId={id} />;
+  return <TripScreen tripId={id} backHref="/helper-run" />;
 }

@@ -1,5 +1,6 @@
+import Link from "next/link";
 import { notFound } from "next/navigation";
-import { Check } from "lucide-react";
+import { ArrowLeft, Check } from "lucide-react";
 
 import { TripRealtimeRefresher } from "@/components/trip-realtime-refresher";
 import { db } from "@/lib/db";
@@ -13,7 +14,14 @@ import { TripRunningView } from "./trip-running-view";
 
 // driver와 helper 양쪽 trip page에서 공유.
 // (driver)/trip/[id]/page.tsx와 (helper)/trip/[id]/page.tsx가 둘 다 이걸 호출.
-export async function TripScreen({ tripId }: { tripId: string }) {
+export async function TripScreen({
+  tripId,
+  backHref = "/run",
+}: {
+  tripId: string;
+  // 헤더 좌측 ← 버튼 목적지. driver는 /run, helper는 /helper-run.
+  backHref?: string;
+}) {
   const access = await requireTripAccess(tripId);
 
   const trip = await db.trip.findUnique({
@@ -68,6 +76,18 @@ export async function TripScreen({ tripId }: { tripId: string }) {
     const sc = trip.safetyCheck;
     return (
       <main className="space-y-4 px-4 pt-4 pb-6">
+        <div className="flex items-center gap-2">
+          <Link
+            href={backHref}
+            className="bg-card hover:bg-muted/40 active:bg-muted/40 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
+            aria-label="운행 목록으로"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Link>
+          <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+            운행 상세
+          </p>
+        </div>
         <div className="bg-card rounded-lg border p-5 shadow-sm">
           <div className="flex items-center gap-3">
             <span className="bg-success-soft text-success flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
@@ -253,6 +273,7 @@ export async function TripScreen({ tripId }: { tripId: string }) {
       <TripRealtimeRefresher tripId={trip.id} />
       <TripRunningView
         tripId={trip.id}
+        backHref={backHref}
         route={{ name: trip.route.name, direction: trip.route.direction }}
         vehicle={trip.vehicle}
         stops={trip.route.stops.map((rs) => ({

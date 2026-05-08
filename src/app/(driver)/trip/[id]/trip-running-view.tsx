@@ -1,8 +1,10 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import {
   AlertTriangle,
+  ArrowLeft,
   Check,
   CircleAlert,
   Clock,
@@ -75,6 +77,7 @@ type StaffRef = { id: string; name: string };
 
 export function TripRunningView({
   tripId,
+  backHref,
   route,
   vehicle,
   stops,
@@ -90,6 +93,8 @@ export function TripRunningView({
   isHelper,
 }: {
   tripId: string;
+  // 상단 ← 버튼 목적지 (driver=/run, helper=/helper-run)
+  backHref: string;
   route: { name: string; direction: "PICKUP" | "DROPOFF" };
   vehicle: { plate: string; mode: "KIDS" | "GENERAL" };
   stops: StopRow[];
@@ -260,6 +265,20 @@ export function TripRunningView({
 
   return (
     <main className="space-y-4 px-4 pt-4 pb-6">
+      {/* 상단 뒤로가기 — 운행 화면에서 다른 페이지로 빠져나갈 때 사용 */}
+      <div className="flex items-center gap-2">
+        <Link
+          href={backHref}
+          className="bg-card hover:bg-muted/40 active:bg-muted/40 flex h-9 w-9 items-center justify-center rounded-full border shadow-sm transition-colors"
+          aria-label="운행 목록으로"
+        >
+          <ArrowLeft className="h-4 w-4" />
+        </Link>
+        <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
+          {DIRECTION_LABEL[route.direction]} 운행
+        </p>
+      </div>
+
       {/* Wake Lock 미지원 — sticky 경고 */}
       {!wakeLock.supported ? (
         <div className="border-warning bg-warning-soft text-warning-foreground rounded-lg border p-3 text-xs font-medium">
