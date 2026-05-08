@@ -70,9 +70,9 @@ export function OwnerHeader({
                   href={href}
                   aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-tight transition-colors",
+                    "relative flex flex-col items-center justify-center gap-0.5 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-tight transition-colors",
                     active
-                      ? "bg-primary/10 text-primary font-extrabold"
+                      ? "bg-bus-soft text-bus-foreground font-extrabold"
                       : "text-muted-foreground hover:bg-muted hover:text-foreground",
                   )}
                 >
@@ -81,6 +81,12 @@ export function OwnerHeader({
                     strokeWidth={active ? 2.5 : 2}
                   />
                   <span>{label}</span>
+                  {active ? (
+                    <span
+                      aria-hidden
+                      className="bg-bus absolute -bottom-px left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full"
+                    />
+                  ) : null}
                 </Link>
               );
             })}

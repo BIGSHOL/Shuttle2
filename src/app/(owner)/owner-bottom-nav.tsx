@@ -59,14 +59,20 @@ export function OwnerBottomNav({
               href={href}
               aria-current={active ? "page" : undefined}
               className={cn(
-                "flex shrink-0 flex-col items-center justify-center gap-1 rounded-md px-3 py-1.5 text-[10px] font-bold tracking-tight transition-colors",
+                "relative flex shrink-0 flex-col items-center justify-center gap-1 rounded-md px-3 py-1.5 text-[10px] font-bold tracking-tight transition-colors",
                 active
-                  ? "bg-primary/10 text-primary font-extrabold"
+                  ? "bg-bus-soft text-bus-foreground font-extrabold"
                   : "text-muted-foreground hover:bg-muted",
               )}
             >
               <Icon className="h-5 w-5" strokeWidth={active ? 2.5 : 2} />
               <span>{label}</span>
+              {active ? (
+                <span
+                  aria-hidden
+                  className="bg-bus absolute -top-px left-1/2 h-0.5 w-8 -translate-x-1/2 rounded-full"
+                />
+              ) : null}
             </Link>
           );
         })}
