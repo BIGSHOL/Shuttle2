@@ -446,24 +446,57 @@ export function TripRunningView({
 
       {/* 정류장 진행도 + 학생 탑승·하차 토글 */}
       <section className="bg-card rounded-lg border p-4 shadow-sm">
-        <div className="mb-3 flex items-end justify-between gap-3">
-          <div>
-            <h3 className="text-base font-extrabold tracking-tight">
-              정류장·{eventType === "BOARD" ? "탑승" : "하차"} 체크
-            </h3>
-            <p className="text-muted-foreground mt-0.5 text-xs font-medium">
-              {stops.length}개 중 통과 {gps.passed.size}개
-            </p>
-          </div>
-          <div className="text-right">
-            <p className="text-[10px] font-extrabold tracking-wide uppercase text-muted-foreground">
-              진행
-            </p>
-            <p className="font-mono text-lg font-extrabold tracking-tight">
-              {gps.passed.size}/{stops.length}
-            </p>
-          </div>
-        </div>
+        {(() => {
+          const passedCount = Math.min(
+            stops.length,
+            new Set([...gps.passed, ...manualPassed]).size,
+          );
+          const pct =
+            stops.length > 0 ? Math.round((passedCount / stops.length) * 100) : 0;
+          const done = stops.length > 0 && passedCount === stops.length;
+          return (
+            <>
+              <div className="mb-3 flex items-end justify-between gap-3">
+                <div>
+                  <h3 className="text-base font-extrabold tracking-tight">
+                    정류장·{eventType === "BOARD" ? "탑승" : "하차"} 체크
+                  </h3>
+                  <p className="text-muted-foreground mt-0.5 text-xs font-medium">
+                    {stops.length}개 중 통과 {passedCount}개
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] font-extrabold tracking-wide uppercase text-muted-foreground">
+                    진행
+                  </p>
+                  <p className="font-mono text-lg font-extrabold tracking-tight">
+                    {passedCount}/{stops.length}
+                  </p>
+                </div>
+              </div>
+              {/* W24-A: 정류장 진행 progress bar — 한눈에 보이는 시각 진행도 */}
+              {stops.length > 0 ? (
+                <div
+                  className="bg-muted mb-3 h-2 overflow-hidden rounded-full"
+                  role="progressbar"
+                  aria-valuenow={passedCount}
+                  aria-valuemin={0}
+                  aria-valuemax={stops.length}
+                  aria-label={`정류장 ${passedCount}개 / ${stops.length}개 통과`}
+                >
+                  <div
+                    className={`h-full rounded-full transition-all duration-500 ${
+                      done
+                        ? "bg-success shadow-[0_0_8px_var(--success)]"
+                        : "bg-bus"
+                    }`}
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              ) : null}
+            </>
+          );
+        })()}
         <ol className="space-y-3">
           {stops.map((s) => {
             const isPassed = gps.passed.has(s.id) || manualPassed.has(s.id);
