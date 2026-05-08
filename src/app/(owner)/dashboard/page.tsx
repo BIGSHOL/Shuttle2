@@ -1,14 +1,18 @@
 import { Suspense } from "react";
+import Link from "next/link";
 import {
   AlertTriangle,
   Bus,
+  Download,
   MapPin,
+  Plus,
   Route,
   ShieldAlert,
   Users,
 } from "lucide-react";
 
 import { OrgDashboardRefresher } from "@/components/org-dashboard-refresher";
+import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { todayUtcDateKst } from "@/lib/date/today";
@@ -162,39 +166,65 @@ export default async function DashboardPage() {
     },
   ];
 
+  // KST 오늘 날짜 한국어 표기 — refac topbar sub "2026년 5월 7일 (목) · 해솔초등학교 통학버스"
+  // React 19 react-hooks/purity는 Date.now() 직접 호출 금지 — new Date()는 OK.
+  const nowMs = new Date().getTime();
+  const kstNow = new Date(nowMs + 9 * 60 * 60 * 1000);
+  const todayKstLabel = `${kstNow.getUTCFullYear()}년 ${
+    kstNow.getUTCMonth() + 1
+  }월 ${kstNow.getUTCDate()}일 (${
+    ["일", "월", "화", "수", "목", "금", "토"][kstNow.getUTCDay()]
+  })`;
+
   return (
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-6">
       <OrgDashboardRefresher orgId={orgId} />
+
+      {/* W24-D Phase 3 dashboard: refac owner-dashboard.jpg topbar idiom.
+          "오늘 운행 현황" + date sub + "운행 리포트" outline + "+ 새 학생 등록" bus CTA. */}
+      <section className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-black tracking-tight lg:text-4xl leading-tight">
+            오늘 운행 현황
+          </h1>
+          <p className="text-muted-foreground mt-1.5 text-sm font-bold">
+            {todayKstLabel} · {user.org.name}
+            <span className="bg-muted text-muted-foreground ml-2 inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-extrabold align-middle">
+              {ORG_TYPE_LABEL[user.org.type]}
+            </span>
+            <span className="bg-bus-soft text-bus-foreground ml-1 inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-extrabold align-middle">
+              {org ? PLAN_LABEL[org.plan] : "-"} 요금제
+            </span>
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
+            <StaffNotificationToggle
+              vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+            />
+          ) : null}
+          <Button asChild variant="outline" size="sm">
+            <Link href="/safety-report">
+              <Download className="mr-1 h-4 w-4" />
+              운행 리포트
+            </Link>
+          </Button>
+          <Button
+            asChild
+            size="sm"
+            className="bg-bus hover:bg-bus/90 text-bus-foreground font-extrabold"
+          >
+            <Link href="/students/new">
+              <Plus className="mr-1 h-4 w-4" />새 {studentLabel} 등록
+            </Link>
+          </Button>
+        </div>
+      </section>
 
       {/* 운행 중 셔틀 멀티 라이브 지도 — 별도 fetch (Suspense) */}
       <Suspense fallback={<MultiTripLiveSkeleton />}>
         <MultiTripLiveServer orgId={orgId} todayDate={todayDate} />
       </Suspense>
-
-      {/* 인사 + 푸시 토글 — 즉시 */}
-      <section className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
-            원장 대시보드
-          </p>
-          <h2 className="mt-1 text-3xl font-black tracking-tight lg:text-4xl leading-tight">
-            {user.org.name}
-          </h2>
-          <div className="mt-2 flex items-center gap-2">
-            <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-[11px] font-extrabold">
-              {ORG_TYPE_LABEL[user.org.type]}
-            </span>
-            <span className="bg-bus-soft text-bus-foreground rounded-md px-2 py-0.5 text-[11px] font-extrabold">
-              {org ? PLAN_LABEL[org.plan] : "-"} 요금제
-            </span>
-          </div>
-        </div>
-        {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
-          <StaffNotificationToggle
-            vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
-          />
-        ) : null}
-      </section>
 
       {/* KPI 4 cards — 즉시 */}
       <section className="space-y-3">
