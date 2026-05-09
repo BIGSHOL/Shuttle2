@@ -49,7 +49,7 @@ export function TripStatsCard({
           )}
         </div>
         <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-          GPS LocationPing 기반 — 30초 간격 + 정류장 통과·시작·종료 시점.
+          GPS 위치 기록 기반 — 30초 간격 + 정류장 통과·시작·종료 시점.
           {isRunning ? " 운행 종료 시 최종값 갱신." : ""}
         </p>
       </div>

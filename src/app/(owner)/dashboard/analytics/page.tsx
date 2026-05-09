@@ -57,7 +57,7 @@ export default async function AnalyticsPage({
         <div>
           <h2 className="text-2xl font-semibold">운행 분석</h2>
           <p className="text-muted-foreground text-sm">
-            노선별·기사별 평균 운행 시간과 속도. GPS LocationPing 기반.
+            노선별·기사별 평균 운행 시간과 속도. GPS 위치 기록 기반.
           </p>
         </div>
         <nav

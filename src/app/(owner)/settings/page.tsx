@@ -32,6 +32,12 @@ const ORG_TYPE_LABEL: Record<"ACADEMY" | "DAYCARE" | "KINDERGARTEN", string> = {
   KINDERGARTEN: "유치원",
 };
 
+const PLAN_LABEL: Record<"TRIAL" | "BASIC" | "PRO", string> = {
+  TRIAL: "체험판",
+  BASIC: "기본",
+  PRO: "프로",
+};
+
 const SETTING_GROUPS = [
   {
     group: "학원",
@@ -345,7 +351,7 @@ export default async function SettingsPage() {
               <Integration
                 name="카카오맵 JS SDK"
                 status="connected"
-                detail="학부모 trip-live · 정류장 등록 지도"
+                detail="학부모 실시간 위치 · 정류장 등록 지도"
               />
               <Integration
                 name="Web Push (VAPID)"
@@ -360,7 +366,7 @@ export default async function SettingsPage() {
               <Integration
                 name="Supabase Auth + Realtime"
                 status="connected"
-                detail="로그인 + GPS 5초 broadcast"
+                detail="로그인 + GPS 5초 실시간 전송"
               />
               <Integration
                 name="SMS (NHN Cloud)"
@@ -379,7 +385,7 @@ export default async function SettingsPage() {
               <p className="text-sm font-semibold">
                 현재 플랜:{" "}
                 <span className="text-bus-foreground bg-bus-soft rounded-md px-2 py-0.5 text-xs font-extrabold">
-                  {org?.plan ?? "TRIAL"}
+                  {PLAN_LABEL[org?.plan ?? "TRIAL"]}
                 </span>
               </p>
               <Button asChild variant="outline" size="sm">
