@@ -354,7 +354,7 @@ export default async function SafetyReportPage() {
             일별 운행량 (최근 7일)
           </CardTitle>
           <CardDescription>
-            등원·하원 운행 건수. 회색 bar 위 노란 strip = 등원, 파랑 = 하원.
+            등원·하원 운행 건수. 노란색 = 등원, 파랑 = 하원.
           </CardDescription>
         </CardHeader>
         <CardContent>
