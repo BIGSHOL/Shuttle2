@@ -245,13 +245,23 @@ export default async function DashboardPage() {
       </section>
 
       {/* W25 P1-A: ground truth Owner Dashboard.html grid `[1fr_400px]` —
-          좌측 multi-trip 지도 + 우측 오늘 운행 list 풀세트 (12개) */}
-      <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]">
-        <div className="min-w-0">
-          <Suspense fallback={<MultiTripLiveSkeleton />}>
-            <MultiTripLiveServer orgId={orgId} todayDate={todayDate} />
-          </Suspense>
-        </div>
+          좌측 multi-trip 지도 + 우측 오늘 운행 list. 단, 운행 중인 셔틀이 0이면
+          좌측 지도가 빈 placeholder만 차지해 grid 비대칭이 어색해서, 그때는
+          단일 column으로 fallback (운행 list 풀 width). */}
+      <section
+        className={
+          runningTripsCount > 0
+            ? "grid gap-4 lg:grid-cols-[minmax(0,1fr)_420px]"
+            : "space-y-3"
+        }
+      >
+        {runningTripsCount > 0 ? (
+          <div className="min-w-0">
+            <Suspense fallback={<MultiTripLiveSkeleton />}>
+              <MultiTripLiveServer orgId={orgId} todayDate={todayDate} />
+            </Suspense>
+          </div>
+        ) : null}
         <aside className="space-y-2">
           <div className="flex items-end justify-between gap-3">
             <div>
@@ -259,12 +269,26 @@ export default async function DashboardPage() {
                 실시간 모니터링
               </p>
               <h3 className="mt-0.5 text-base font-black tracking-tight">
-                오늘 운행
+                오늘 운행 모니터
               </h3>
+              {runningTripsCount === 0 ? (
+                <p className="text-muted-foreground mt-0.5 text-xs font-semibold">
+                  진행 중인 운행이 시작되면 좌측에 실시간 셔틀 위치 지도가
+                  나타나요.
+                </p>
+              ) : null}
             </div>
           </div>
-          <Suspense fallback={<TodayTripsMonitorSkeleton />}>
-            <TodayTripsMonitor orgId={orgId} todayDate={todayDate} dense />
+          <Suspense
+            fallback={
+              <TodayTripsMonitorSkeleton dense={runningTripsCount > 0} />
+            }
+          >
+            <TodayTripsMonitor
+              orgId={orgId}
+              todayDate={todayDate}
+              dense={runningTripsCount > 0}
+            />
           </Suspense>
         </aside>
       </section>
