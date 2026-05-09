@@ -23,7 +23,8 @@ export function OwnerBottomNav({
   orgType: "ACADEMY" | "DAYCARE" | "KINDERGARTEN";
 }) {
   const pathname = usePathname();
-  const nav = buildOwnerNav(orgType);
+  // footer 그룹(요금·설정)은 모바일 하단 nav에서 제외 — 사용자 dropdown으로 접근.
+  const nav = buildOwnerNav(orgType).filter((item) => item.group !== "footer");
   // 가장 긴 prefix match 1개만 active — sub-route 진입 시 부모도 active 되는 버그 방지.
   const activeHref = findActiveNavHref(pathname, nav);
   const scrollRef = useRef<HTMLDivElement>(null);

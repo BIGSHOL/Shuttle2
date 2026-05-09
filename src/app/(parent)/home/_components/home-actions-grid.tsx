@@ -1,75 +1,37 @@
 import Link from "next/link";
-import { Calendar, ChevronRight, MapPin, X } from "lucide-react";
+import { MapPinOff, UserX } from "lucide-react";
 
-export function HomeActionsGrid({
-  pendingAbsenceCount,
-  pendingStopChangeCount,
-}: {
-  pendingAbsenceCount: number;
-  pendingStopChangeCount: number;
-}) {
+// W25 P0-A: ground truth Parent App.html .quick 패턴 — 2-grid 빠른 처리.
+// 결석 신청 (warning icon) + 정류장 변경 (info icon).
+// 내 신청 현황은 AbsencesPreview에 별도 표시.
+export function HomeActionsGrid() {
   return (
-    <section className="space-y-2.5 px-4 pt-2">
-      <p className="text-muted-foreground text-[11px] font-extrabold tracking-[0.1em] uppercase">
-        빠른 신청
-      </p>
+    <section className="space-y-2 px-4 pt-2">
+      <h3 className="text-sm font-black tracking-tight">빠른 처리</h3>
       <div className="grid grid-cols-2 gap-2.5">
         <Link
           href="/my-absences/new"
-          className="bg-card hover:border-foreground/30 hover:bg-muted/30 flex h-14 items-center justify-center gap-2 rounded-xl border text-sm font-extrabold tracking-tight shadow-sm transition-all"
+          className="bg-card hover:bg-muted/40 flex flex-col gap-1.5 rounded-lg border p-3.5 transition-colors"
         >
-          <div className="bg-warning-soft text-warning flex h-7 w-7 items-center justify-center rounded-lg">
-            <X className="h-3.5 w-3.5" />
-          </div>
-          결석 신청
+          <span className="bg-warning-soft text-warning flex h-8 w-8 items-center justify-center rounded-md">
+            <UserX className="h-4 w-4" />
+          </span>
+          <p className="text-[13px] font-black tracking-tight">결석 신청</p>
+          <p className="text-muted-foreground text-[11px] leading-snug font-bold">
+            오늘 또는 이후 날짜 결석 등록
+          </p>
         </Link>
         <Link
           href="/my-stop-changes/new"
-          className="bg-card hover:border-foreground/30 hover:bg-muted/30 flex h-14 items-center justify-center gap-2 rounded-xl border text-sm font-extrabold tracking-tight shadow-sm transition-all"
+          className="bg-card hover:bg-muted/40 flex flex-col gap-1.5 rounded-lg border p-3.5 transition-colors"
         >
-          <div className="bg-info-soft text-info flex h-7 w-7 items-center justify-center rounded-lg">
-            <MapPin className="h-3.5 w-3.5" />
-          </div>
-          정류장 변경
-        </Link>
-      </div>
-      <p className="text-muted-foreground pt-1 text-[11px] font-extrabold tracking-[0.1em] uppercase">
-        내 신청 현황
-      </p>
-      <div className="grid grid-cols-2 gap-2.5">
-        <Link
-          href="/my-absences"
-          className="bg-muted/30 hover:bg-muted/60 flex h-12 items-center justify-between gap-2 rounded-xl border border-transparent px-3.5 text-sm transition-all"
-        >
-          <span className="inline-flex items-center gap-2 font-semibold whitespace-nowrap">
-            <Calendar className="h-3.5 w-3.5" />
-            내 결석 신청
+          <span className="bg-info-soft text-info flex h-8 w-8 items-center justify-center rounded-md">
+            <MapPinOff className="h-4 w-4" />
           </span>
-          <span className="inline-flex items-center gap-1">
-            {pendingAbsenceCount > 0 ? (
-              <span className="bg-warning text-warning-foreground rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wide">
-                대기 {pendingAbsenceCount}
-              </span>
-            ) : null}
-            <ChevronRight className="text-muted-foreground h-3.5 w-3.5" />
-          </span>
-        </Link>
-        <Link
-          href="/my-stop-changes"
-          className="bg-muted/30 hover:bg-muted/60 flex h-12 items-center justify-between gap-2 rounded-xl border border-transparent px-3.5 text-sm transition-all"
-        >
-          <span className="inline-flex items-center gap-2 font-semibold whitespace-nowrap">
-            <MapPin className="h-3.5 w-3.5" />
-            내 정류장 변경
-          </span>
-          <span className="inline-flex items-center gap-1">
-            {pendingStopChangeCount > 0 ? (
-              <span className="bg-warning text-warning-foreground rounded-full px-2 py-0.5 text-[10px] font-extrabold tracking-wide">
-                대기 {pendingStopChangeCount}
-              </span>
-            ) : null}
-            <ChevronRight className="text-muted-foreground h-3.5 w-3.5" />
-          </span>
+          <p className="text-[13px] font-black tracking-tight">정류장 변경</p>
+          <p className="text-muted-foreground text-[11px] leading-snug font-bold">
+            평소와 다른 정류장 신청
+          </p>
         </Link>
       </div>
     </section>

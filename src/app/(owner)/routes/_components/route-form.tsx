@@ -194,7 +194,7 @@ export function RouteForm({
 
       <CardFooter className="flex justify-end gap-2">
         <Button asChild type="button" variant="outline">
-          <a href="/routes">취소</a>
+          <Link href="/routes">취소</Link>
         </Button>
         <Button type="submit" disabled={pending || vehicles.length === 0}>
           {pending ? "저장 중..." : submitLabel}

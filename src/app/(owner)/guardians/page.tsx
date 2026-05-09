@@ -1,6 +1,13 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import {
+  CheckCircle2,
+  ChevronRight,
+  Clock,
+  ShieldCheck,
+  ShieldOff,
+} from "lucide-react";
 
+import { KpiStrip, KpiStripCell } from "@/components/kpi-card";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -101,13 +108,19 @@ export default async function GuardiansPage() {
     orderBy: { createdAt: "desc" },
   });
 
+  const registeredCount = guardians.length;
+  const linkedCount = guardians.filter((g) => g.userId).length;
+  const notLinkedCount = registeredCount - linkedCount;
+
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <main className="mx-auto max-w-7xl space-y-5 p-4 lg:p-6">
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold">보호자</h2>
-          <p className="text-muted-foreground text-sm">
-            학부모·보호자를 자녀와 연결합니다. 보호자 이름을 누르면 30일 결석·정류장
+          <h2 className="text-2xl font-black tracking-tight lg:text-3xl">
+            보호자
+          </h2>
+          <p className="text-muted-foreground mt-1 text-xs font-semibold lg:text-sm">
+            학부모·보호자를 자녀와 연결합니다. 이름을 누르면 30일 결석·정류장
             변경 history와 푸시 디바이스 상태를 확인합니다.
           </p>
         </div>
@@ -115,6 +128,46 @@ export default async function GuardiansPage() {
           <Link href="/guardians/invite">+ 새 초대</Link>
         </Button>
       </div>
+
+      {/* KPI strip 4 */}
+      <KpiStrip cols={4}>
+        <KpiStripCell
+          label="총 보호자"
+          value={registeredCount}
+          subtext="자녀와 연결된 인원"
+          Icon={ShieldCheck}
+          tone="info"
+        />
+        <KpiStripCell
+          label="가입 완료"
+          value={linkedCount}
+          subtext={
+            registeredCount > 0
+              ? `${Math.round((linkedCount / registeredCount) * 100)}% 활성`
+              : "-"
+          }
+          Icon={CheckCircle2}
+          tone={linkedCount > 0 ? "success" : "muted"}
+        />
+        <KpiStripCell
+          label="미가입"
+          value={notLinkedCount}
+          subtext={notLinkedCount > 0 ? "초대 재전송 필요" : "전원 가입 완료"}
+          Icon={ShieldOff}
+          tone={notLinkedCount > 0 ? "warning" : "success"}
+        />
+        <KpiStripCell
+          label="대기 초대"
+          value={invites.length}
+          subtext={
+            invites.length > 0
+              ? "수락 대기 중"
+              : "발송된 초대 없음"
+          }
+          Icon={Clock}
+          tone={invites.length > 0 ? "warning" : "muted"}
+        />
+      </KpiStrip>
 
       {/* 등록된 보호자 */}
       <Card>

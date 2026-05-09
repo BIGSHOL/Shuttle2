@@ -15,20 +15,18 @@ import {
   TodayTripsSectionSkeleton,
 } from "./_components/today-trips-section";
 
-// C안 Suspense 스트리밍: studentRows + upcomingAbsences + 2 counts (가벼움)는
-// 즉시 렌더, getTodayChildTrips (자녀 N명 × 노선 × 오늘 운행 nested fetch — 무거움)는
-// Suspense로 분리. 첫 paint 100~250ms 빨라지고 trip 카드만 늦게 stream.
+// W25 P0-A: ground truth Parent App.html §1번 frame 풀 매칭.
+// 1. GreetingSection — "안녕하세요, {보호자}님" + 날짜
+// 2. TodayTripsSection (Suspense) — 노란 hero + 우리 아이 + 오늘 일정 mini grid
+// 3. HomeActionsGrid — 빠른 처리 (결석·정류장 변경)
+// 4. AbsencesPreview — 내 신청 현황 (W20-D 유지)
+// 5. PwaInstallBanner + NotificationToggle — 보조 정보 (하단)
 export default async function ParentHomePage() {
   const me = await requireGuardian();
   const studentIds = me.students.map((s) => s.id);
   const today = todayUtcDateKst();
 
-  const [
-    studentRows,
-    upcomingAbsences,
-    pendingAbsenceCount,
-    pendingStopChangeCount,
-  ] = await Promise.all([
+  const [studentRows, upcomingAbsences] = await Promise.all([
     db.student.findMany({
       where: { id: { in: studentIds } },
       select: {
@@ -47,34 +45,12 @@ export default async function ParentHomePage() {
       take: 5,
       include: { student: { select: { id: true, name: true } } },
     }),
-    db.absenceRequest.count({
-      where: {
-        createdBy: me.guardian.id,
-        status: { in: ["PENDING", "NOTIFIED_DRIVER"] },
-      },
-    }),
-    db.stopChangeRequest.count({
-      where: {
-        createdBy: me.guardian.id,
-        status: "PENDING",
-      },
-    }),
   ]);
   const studentInfo = new Map(studentRows.map((s) => [s.id, s] as const));
 
   return (
     <main className="space-y-4 pb-6">
-      <GreetingSection />
-
-      <PwaInstallBanner />
-
-      {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
-        <div className="px-4 pt-2">
-          <GuardianNotificationToggle
-            vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
-          />
-        </div>
-      ) : null}
+      <GreetingSection guardianName={me.guardian.name} />
 
       <Suspense fallback={<TodayTripsSectionSkeleton />}>
         <TodayTripsSection
@@ -83,10 +59,7 @@ export default async function ParentHomePage() {
         />
       </Suspense>
 
-      <HomeActionsGrid
-        pendingAbsenceCount={pendingAbsenceCount}
-        pendingStopChangeCount={pendingStopChangeCount}
-      />
+      <HomeActionsGrid />
 
       <AbsencesPreview
         items={upcomingAbsences.map((a) => ({
@@ -97,6 +70,16 @@ export default async function ParentHomePage() {
           status: a.status,
         }))}
       />
+
+      {/* 하단 보조 — PWA 설치·알림 권한 */}
+      <PwaInstallBanner />
+      {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
+        <div className="px-4 pt-2">
+          <GuardianNotificationToggle
+            vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+          />
+        </div>
+      ) : null}
     </main>
   );
 }

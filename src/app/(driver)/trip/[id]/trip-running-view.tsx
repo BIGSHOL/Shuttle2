@@ -402,6 +402,41 @@ export function TripRunningView({
         ) : null}
       </div>
 
+      {/* W25 P0-B: ground truth Driver Run.html §02 frame — 다음 정류장 hero +
+          풀폭 노란 "📍 정류장 도착" CTA. 작은 list 안의 도착 버튼은 fallback. */}
+      {isDriver ? (
+        <NextStopHero
+          tripId={tripId}
+          stops={stops}
+          passed={gps.passed}
+          manualPassed={manualPassed}
+          stopPassPending={stopPassPending}
+          onArrive={(s) => {
+            setStopPassPending((p) => new Set(p).add(s.id));
+            setManualPassed((p) => new Set(p).add(s.id));
+            void markStopPassedAction(tripId, s.id)
+              .then(() => toast.success(`${s.name} 도착으로 기록했어요`))
+              .catch((err) => {
+                setManualPassed((p) => {
+                  const n = new Set(p);
+                  n.delete(s.id);
+                  return n;
+                });
+                toast.error(
+                  err instanceof Error ? err.message : "도착 마킹에 실패했어요",
+                );
+              })
+              .finally(() => {
+                setStopPassPending((p) => {
+                  const n = new Set(p);
+                  n.delete(s.id);
+                  return n;
+                });
+              });
+          }}
+        />
+      ) : null}
+
       {/* Helper picker — driver만 */}
       {isDriver ? (
         <HelperPicker
@@ -1112,6 +1147,75 @@ function HelperPicker({
           {error}
         </p>
       ) : null}
+    </section>
+  );
+}
+
+// W25 P0-B: ground truth Driver Run.html §02 frame — 다음 정류장 hero +
+// 풀폭 검정 "📍 정류장 도착" CTA. dark gradient 헤더 직하단에 sticky로 둘 수도
+// 있지만, 우선 inline section으로. 모든 정류장 통과 시 render 안 함.
+function NextStopHero({
+  tripId,
+  stops,
+  passed,
+  manualPassed,
+  stopPassPending,
+  onArrive,
+}: {
+  tripId: string;
+  stops: StopRow[];
+  passed: Set<string>;
+  manualPassed: Set<string>;
+  stopPassPending: Set<string>;
+  onArrive: (stop: StopRow) => void;
+}) {
+  void tripId; // 인터페이스 일관성 — 추후 logging·analytics용
+  const next = stops.find(
+    (s) => !passed.has(s.id) && !manualPassed.has(s.id),
+  );
+  if (!next) {
+    // 모든 정류장 통과
+    return (
+      <section className="bg-success-soft text-success border-success/30 rounded-lg border-2 px-4 py-3 text-center">
+        <p className="text-sm font-black tracking-tight">
+          ✓ 모든 정류장 통과
+        </p>
+        <p className="mt-0.5 text-[11px] font-bold opacity-80">
+          운행을 종료해 주세요.
+        </p>
+      </section>
+    );
+  }
+
+  const remaining = stops.length - passed.size - manualPassed.size;
+  const isPending = stopPassPending.has(next.id);
+
+  return (
+    <section className="bg-bus relative overflow-hidden rounded-2xl px-4 py-4 shadow-[var(--shadow-live)]">
+      {/* decorative 우상단 검정 5% 원 */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute -top-8 -right-8 h-32 w-32 rounded-full bg-black/5"
+      />
+      <p className="text-bus-foreground/85 relative text-[10px] font-black tracking-wide uppercase">
+        다음 정류장
+      </p>
+      <h2 className="text-bus-foreground relative mt-1 text-2xl leading-tight font-black tracking-tighter">
+        {next.name}
+      </h2>
+      <p className="text-bus-foreground/80 relative mt-1 text-xs font-bold tabular-nums">
+        {next.order}번째 / {stops.length} · 남은 정류장 {remaining}개 ·{" "}
+        {next.scheduledAt} 예정
+      </p>
+      <button
+        type="button"
+        disabled={isPending}
+        onClick={() => onArrive(next)}
+        className="text-bus relative mt-3 flex h-12 w-full items-center justify-center gap-1.5 rounded-md bg-black/85 text-base font-black tracking-tight transition-colors active:bg-black/95 disabled:opacity-60"
+      >
+        <MapPin className="h-4 w-4" />
+        {isPending ? "기록 중..." : "정류장 도착"}
+      </button>
     </section>
   );
 }

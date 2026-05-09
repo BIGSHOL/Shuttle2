@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
 import { Bell, HelpCircle } from "lucide-react";
 import { useTransition } from "react";
 
@@ -15,9 +14,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
-
-import { buildOwnerNav, findActiveNavHref } from "./_owner-nav";
 
 const ORG_TYPE_LABEL: Record<"ACADEMY" | "DAYCARE" | "KINDERGARTEN", string> = {
   ACADEMY: "학원·교습소",
@@ -37,54 +33,26 @@ export function OwnerHeader({
   unreadCount: number;
 }) {
   const [pending, startTransition] = useTransition();
-  const pathname = usePathname();
-  const nav = buildOwnerNav(orgType);
-  // 가장 긴 prefix match 1개만 active — sub-route 진입 시 부모도 active 되는 버그 방지.
-  const activeHref = findActiveNavHref(pathname, nav);
 
+  // 모바일/태블릿(<lg) 전용 헤더. 데스크톱은 OwnerSidebar가 모든 nav·사용자
+  // 메뉴를 담당해서 헤더 자체를 숨김(lg:hidden). 모바일에서는 sticky top에
+  // 학원명 + 알림 종 + 도움말 + 사용자 메뉴만 노출. 좌측 위에 OwnerBottomNav
+  // (lg:hidden)가 메인 nav 항목을 담당.
   return (
-    <header className="bg-background sticky top-0 z-30 border-b">
-      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 lg:px-6">
-        <div className="flex min-w-0 items-center gap-4 lg:gap-6">
+    <header className="bg-background sticky top-0 z-30 border-b lg:hidden">
+      <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3">
+        <div className="flex min-w-0 items-center gap-4">
           <Link
             href="/dashboard"
             className="block shrink-0 transition-opacity hover:opacity-80"
           >
-            <h1 className="truncate text-base font-extrabold tracking-tight lg:text-lg">
+            <h1 className="truncate text-base font-extrabold tracking-tight">
               {orgName}
             </h1>
-            <p className="text-muted-foreground text-[10px] font-medium lg:text-xs">
+            <p className="text-muted-foreground text-[10px] font-medium">
               {ORG_TYPE_LABEL[orgType]} · 셔틀이
             </p>
           </Link>
-          {/* 데스크톱 — 아이콘 + 라벨 (라벨 아래에 위치) */}
-          <nav
-            aria-label="주 탐색"
-            className="hidden items-stretch gap-0.5 lg:flex"
-          >
-            {nav.map(({ href, label, Icon }) => {
-              const active = href === activeHref;
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex flex-col items-center justify-center gap-0.5 rounded-md px-2.5 py-1 text-[11px] font-bold tracking-tight transition-colors",
-                    active
-                      ? "bg-primary/10 text-primary font-extrabold"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground",
-                  )}
-                >
-                  <Icon
-                    className="h-4 w-4"
-                    strokeWidth={active ? 2.5 : 2}
-                  />
-                  <span>{label}</span>
-                </Link>
-              );
-            })}
-          </nav>
         </div>
 
         <div className="flex items-center gap-1">
@@ -141,7 +109,6 @@ export function OwnerHeader({
           </DropdownMenu>
         </div>
       </div>
-      {/* 모바일/태블릿 nav는 OwnerBottomNav (layout에서 fixed bottom으로 마운트) */}
     </header>
   );
 }

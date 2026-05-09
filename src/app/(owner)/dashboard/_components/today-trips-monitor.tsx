@@ -15,9 +15,12 @@ function fmtKstHHmm(d: Date): string {
 export async function TodayTripsMonitor({
   orgId,
   todayDate,
+  dense,
 }: {
   orgId: string;
   todayDate: Date;
+  // W25 P1-A: dashboard 우측 sidebar에 들어갈 때는 항상 1-col list. 기본은 2-col.
+  dense?: boolean;
 }) {
   const todayTrips = await db.trip.findMany({
     where: { vehicle: { orgId }, date: todayDate },
@@ -74,7 +77,7 @@ export async function TodayTripsMonitor({
   }
 
   return (
-    <ul className="grid gap-3 lg:grid-cols-2">
+    <ul className={dense ? "space-y-2.5" : "grid gap-3 lg:grid-cols-2"}>
       {[
         ...runningTrips,
         ...todayTrips.filter((t) => t.startedAt === null),
@@ -110,9 +113,11 @@ export async function TodayTripsMonitor({
   );
 }
 
-export function TodayTripsMonitorSkeleton() {
+export function TodayTripsMonitorSkeleton({
+  dense,
+}: { dense?: boolean } = {}) {
   return (
-    <ul className="grid gap-3 lg:grid-cols-2">
+    <ul className={dense ? "space-y-2.5" : "grid gap-3 lg:grid-cols-2"}>
       {Array.from({ length: 2 }).map((_, i) => (
         <li
           key={i}
