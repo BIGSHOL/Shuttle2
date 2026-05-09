@@ -1,14 +1,18 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import {
   AlertTriangle,
   Bus,
+  FileText,
   GraduationCap,
+  Plus,
   ShieldAlert,
   Users,
 } from "lucide-react";
 
 import { KpiCard } from "@/components/kpi-card";
 import { OrgDashboardRefresher } from "@/components/org-dashboard-refresher";
+import { Button } from "@/components/ui/button";
 import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { todayUtcDateKst } from "@/lib/date/today";
@@ -145,7 +149,7 @@ export default async function DashboardPage() {
     <main className="mx-auto max-w-7xl space-y-6 px-4 py-6 lg:px-8">
       <OrgDashboardRefresher orgId={orgId} />
 
-      {/* 페이지 헤더 — "오늘 운행 현황" + 날짜·조직 + 액션 */}
+      {/* 페이지 헤더 — "오늘 운행 현황" + 날짜·조직 + 액션 (ground truth Owner Dashboard.html) */}
       <section className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="text-2xl font-black tracking-tight lg:text-3xl">
@@ -160,11 +164,25 @@ export default async function DashboardPage() {
             </span>
           </div>
         </div>
-        {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
-          <StaffNotificationToggle
-            vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
-          />
-        ) : null}
+        <div className="flex flex-wrap items-center gap-2">
+          {env.NEXT_PUBLIC_VAPID_PUBLIC_KEY ? (
+            <StaffNotificationToggle
+              vapidPublicKey={env.NEXT_PUBLIC_VAPID_PUBLIC_KEY}
+              compact
+            />
+          ) : null}
+          <Button asChild variant="outline" size="sm">
+            <Link href="/safety-report" className="flex items-center gap-1.5">
+              <FileText className="h-3.5 w-3.5" />
+              운행 리포트
+            </Link>
+          </Button>
+          <Button asChild size="sm">
+            <Link href="/students/new" className="flex items-center gap-1.5">
+              <Plus className="h-3.5 w-3.5" />새 {studentLabel} 등록
+            </Link>
+          </Button>
+        </div>
       </section>
 
       {/* KPI 5 cards — 즉시 (모바일 2-col / 데스크톱 5-col) */}

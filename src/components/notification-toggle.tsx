@@ -43,12 +43,16 @@ export function NotificationToggle({
   removeAction,
   label = "알림 받기",
   helpText,
+  compact = false,
 }: {
   vapidPublicKey: string;
   saveAction: SubscribeAction;
   removeAction: RemoveAction;
   label?: string;
   helpText?: string;
+  // W26: header 인라인용 작은 pill — subscribed/unsubscribed 상태에서 단일 줄
+  // outline 버튼. 자세한 설명·아이콘 큰 카드는 default(false).
+  compact?: boolean;
 }) {
   const [status, setStatus] = useState<Status>({ kind: "loading" });
   const [pending, startTransition] = useTransition();
@@ -207,6 +211,27 @@ export function NotificationToggle({
   }
 
   if (status.kind === "subscribed") {
+    if (compact) {
+      // header 인라인용 — 단일 줄 outline pill
+      return (
+        <div className="border-success/40 bg-success-soft/60 inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1.5">
+          <Check className="text-success h-3.5 w-3.5" />
+          <span className="text-success text-[11px] font-extrabold">
+            알림 받는 중
+          </span>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="text-success hover:bg-success/10 -mr-1.5 h-5 px-1.5 text-[10px] font-bold"
+            onClick={unsubscribe}
+            disabled={pending}
+          >
+            {pending ? "..." : "해제"}
+          </Button>
+        </div>
+      );
+    }
     return (
       <div className="border-success/30 bg-success-soft/40 flex items-start gap-3 rounded-lg border p-3.5 shadow-sm">
         <span className="bg-success text-success-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
@@ -237,6 +262,22 @@ export function NotificationToggle({
   }
 
   // unsubscribed (또는 error)
+  if (compact) {
+    // header 인라인용 — 단일 줄 노란 outline pill
+    return (
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        className="border-bus/40 text-bus-foreground bg-bus-soft hover:bg-bus/20 h-8 gap-1.5 px-2.5 text-[11px] font-extrabold"
+        onClick={subscribe}
+        disabled={pending}
+      >
+        <Bell className="h-3.5 w-3.5" />
+        {pending ? "구독 중..." : "알림 켜기"}
+      </Button>
+    );
+  }
   return (
     <div className="border-bus/40 bg-bus-soft/40 flex items-start gap-3 rounded-lg border p-3.5 shadow-sm">
       <span className="bg-bus text-bus-foreground flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
