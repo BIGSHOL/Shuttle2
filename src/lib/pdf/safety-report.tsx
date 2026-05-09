@@ -196,8 +196,8 @@ function Row({ row, alt }: { row: SafetyReportRow; alt: boolean }) {
         {check(row.allAlightedOk)}
       </Text>
       <Text style={[styles.td, styles.colNotes]}>
-        {row.gpsDistanceKm !== null && row.gpsPingCount !== null
-          ? `${row.gpsDistanceKm.toFixed(1)}km · ${row.gpsPingCount}회 ping`
+        {row.gpsDistanceKm !== null && row.gpsDistanceKm > 0
+          ? `${row.gpsDistanceKm.toFixed(1)}km`
           : (row.notes ?? "")}
       </Text>
     </View>
