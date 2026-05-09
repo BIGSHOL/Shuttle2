@@ -128,18 +128,21 @@ export default async function SettingsPage() {
   });
 
   return (
-    <main className="mx-auto max-w-7xl space-y-5 p-4 lg:p-6">
-      {/* 헤더 */}
-      <div>
+    <main className="mx-auto max-w-7xl">
+      {/* 헤더 — sticky top: 좌측 sub-nav가 길어서 스크롤 시 헤더 함께 사라지면
+          현재 위치 인지가 어려움. 페이지 상단에 고정. */}
+      <div className="bg-muted/40 supports-backdrop-filter:bg-muted/30 sticky top-0 z-20 border-b px-4 py-4 backdrop-blur-sm lg:px-6 lg:py-5">
         <h2 className="text-2xl font-black tracking-tight lg:text-3xl">설정</h2>
         <p className="text-muted-foreground mt-1 text-xs font-semibold lg:text-sm">
           학원 정보 · 운영 정책 · 알림 · 사용자 권한 · 외부 연동 관리.
         </p>
       </div>
 
+      <div className="space-y-5 p-4 lg:p-6">
+
       <div className="grid gap-5 lg:grid-cols-[200px_1fr]">
         {/* 좌측 sub-nav (sticky) */}
-        <aside className="lg:sticky lg:top-4 lg:self-start">
+        <aside className="lg:sticky lg:top-28 lg:self-start">
           <nav aria-label="설정 메뉴" className="space-y-4">
             {SETTING_GROUPS.map((g) => (
               <div key={g.group}>
@@ -403,6 +406,7 @@ export default async function SettingsPage() {
           </Section>
         </div>
       </div>
+      </div>
     </main>
   );
 }
@@ -424,7 +428,7 @@ function Section({
     <Card
       id={id}
       className={cn(
-        "scroll-mt-6",
+        "scroll-mt-28",
         tone === "destructive" && "border-destructive/40",
       )}
     >
