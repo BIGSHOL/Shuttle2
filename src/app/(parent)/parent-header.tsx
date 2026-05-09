@@ -76,8 +76,10 @@ export function ParentHeader({
           >
             <Link href="/notifications">
               <Bell className="h-4 w-4" />
+              {/* 하단 BottomTabs 알림 배지와 동일 스타일 — 빨간 원 + 흰 halo +
+                  뚜렷한 숫자. h-[16px] min-w-[16px] (1자리 동그라미·2자리+ 알약). */}
               {unreadCount > 0 ? (
-                <span className="bg-destructive text-destructive-foreground absolute top-1.5 right-1.5 inline-flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-bold leading-none">
+                <span className="bg-destructive border-card absolute -top-0.5 -right-0.5 inline-flex h-[16px] min-w-[16px] items-center justify-center rounded-full border-2 px-1 text-[10px] leading-none font-black text-white tabular-nums">
                   {unreadCount > 99 ? "99+" : unreadCount}
                 </span>
               ) : null}
