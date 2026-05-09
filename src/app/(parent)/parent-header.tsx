@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Bell, HelpCircle } from "lucide-react";
 import { useTransition } from "react";
 
@@ -28,6 +29,23 @@ export function ParentHeader({
   unreadCount: number;
 }) {
   const [pending, startTransition] = useTransition();
+  const pathname = usePathname();
+
+  // W24-D Phase 1: refac Parent App.html에서 home/form pages는 ParentHeader 없음.
+  //   01·home: app-bar(GreetingSection)가 헤더 역할
+  //   03·absences/new + 04·stop-change/new: form-back만 있음
+  //   02·trip-live: 자체 fullscreen 헤더
+  // 따라서 다음 경로에서 ParentHeader 숨김:
+  const HIDE_ON: (string | RegExp)[] = [
+    "/home",
+    "/my-absences/new",
+    "/my-stop-changes/new",
+    /^\/trip-live(\/|$)/,
+  ];
+  const hide = HIDE_ON.some((p) =>
+    typeof p === "string" ? pathname === p : p.test(pathname),
+  );
+  if (hide) return null;
 
   return (
     <header className="bg-background sticky top-0 z-30 border-b">

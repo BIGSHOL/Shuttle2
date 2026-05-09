@@ -29,42 +29,62 @@ export default async function TripLivePage({
   const { tripId } = await params;
   const access = await requireGuardianTripAccess(tripId);
 
-  const trip = await db.trip.findUnique({
-    where: { id: tripId },
-    include: {
-      route: {
-        include: {
-          stops: {
-            orderBy: { order: "asc" },
-            include: {
-              stop: {
-                select: {
-                  id: true,
-                  name: true,
-                  lat: true,
-                  lng: true,
+  const [trip, boardedCount, totalAssigned] = await Promise.all([
+    db.trip.findUnique({
+      where: { id: tripId },
+      include: {
+        route: {
+          include: {
+            stops: {
+              orderBy: { order: "asc" },
+              include: {
+                stop: {
+                  select: {
+                    id: true,
+                    name: true,
+                    lat: true,
+                    lng: true,
+                  },
                 },
               },
             },
           },
         },
+        vehicle: { select: { plate: true, mode: true } },
+        driver: { select: { name: true, phone: true } },
+        helper: { select: { name: true } },
+        pings: {
+          orderBy: { recordedAt: "asc" },
+          select: {
+            id: true,
+            lat: true,
+            lng: true,
+            recordedAt: true,
+            source: true,
+          },
+        },
       },
-      vehicle: { select: { plate: true, mode: true } },
-      driver: { select: { name: true, phone: true } },
-      helper: { select: { name: true } },
-      pings: {
-        where: { source: "STOP_PASS" },
-        orderBy: { recordedAt: "asc" },
-        select: { id: true, lat: true, lng: true, recordedAt: true },
-      },
-    },
-  });
+    }),
+    db.boardingEvent.count({
+      where: { tripId, type: "BOARD" },
+    }),
+    // Trip은 routeId join까지 비싸므로 별도 lookup으로
+    (async () => {
+      const tr = await db.trip.findUnique({
+        where: { id: tripId },
+        select: { routeId: true },
+      });
+      if (!tr) return 0;
+      return db.routeStudent.count({ where: { routeId: tr.routeId } });
+    })(),
+  ]);
 
   if (!trip) notFound();
 
   // STOP_PASS ping의 좌표를 RouteStop과 매칭 (가장 가까운 stop = 통과)
+  const stopPassPings = trip.pings.filter((p) => p.source === "STOP_PASS");
   const passedStopIds = new Set<string>();
-  for (const ping of trip.pings) {
+  for (const ping of stopPassPings) {
     let bestStopId: string | null = null;
     let bestDistSq = Infinity;
     for (const rs of trip.route.stops) {
@@ -140,6 +160,33 @@ export default async function TripLivePage({
     </Suspense>
   ) : null;
 
+  // 자녀 stop 예정 시각 — refac live-eta sub "예상 도착 08:00"
+  const childRouteStop = trip.route.stops.find(
+    (rs) => rs.stop.id === access.childStudent.stopId,
+  );
+  const childStopScheduledAt = childRouteStop?.scheduledAt ?? null;
+
+  // 거리 누적 — INTERVAL+STOP_PASS 모두 포함, recordedAt 오름차순으로 haversine.
+  // server에서 거리만 계산해 client로 전달 (client는 ping을 모름).
+  const distanceKm = (() => {
+    if (trip.pings.length < 2) return 0;
+    let dist = 0;
+    for (let i = 1; i < trip.pings.length; i++) {
+      const a = trip.pings[i - 1];
+      const b = trip.pings[i];
+      const R = 6_371_000;
+      const dLat = ((b.lat - a.lat) * Math.PI) / 180;
+      const dLng = ((b.lng - a.lng) * Math.PI) / 180;
+      const lat1 = (a.lat * Math.PI) / 180;
+      const lat2 = (b.lat * Math.PI) / 180;
+      const h =
+        Math.sin(dLat / 2) ** 2 +
+        Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+      dist += 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+    return +(dist / 1000).toFixed(2);
+  })();
+
   // 진행 중·예정 trip — 풀스크린 shell
   return (
     <TripLiveShell
@@ -165,6 +212,10 @@ export default async function TripLivePage({
       passedStopIds={Array.from(passedStopIds)}
       startedAtISO={trip.startedAt?.toISOString() ?? null}
       childEtaSlot={childEtaSlot}
+      childStopScheduledAt={childStopScheduledAt}
+      boardedCount={boardedCount}
+      totalAssigned={totalAssigned}
+      distanceKm={distanceKm}
     />
   );
 }

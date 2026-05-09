@@ -9,8 +9,9 @@ import { TripLiveMap } from "@/lib/map/trip-live-map";
 
 import { BottomSheet } from "./bottom-sheet";
 import { EtaHeadline } from "./eta-headline";
-import { StopRailTimeline } from "./stop-rail-timeline";
+import { LiveActions } from "./live-actions";
 import { TripHeader } from "./trip-header";
+import { TripInfoCard } from "./trip-info-card";
 
 type Stop = {
   id: string;
@@ -22,12 +23,16 @@ type Stop = {
   scheduledAt: string;
 };
 
-// 학부모 trip-live 풀스크린 shell. parent layout의 sticky header 위에
-// fixed inset-0 z-50으로 띄워 모바일 풀스크린 효과.
-// 내부:
-//   <TripHeader />          (z-10, 상단)
-//   <TripLiveMap height/>    (절대 중앙, 풀스크린)
-//   <BottomSheet>          (z-30, 하단 sheet — ETA + rail timeline)
+// W24-D Phase 1 trip-live: data/refac/screenshots/parent-app.jpg "02 · /trip-live"
+// 풀스크린 shell. parent layout의 sticky header 위에 fixed inset-0 z-50으로 띄움.
+// 영역(refac):
+//   <TripHeader />          — 뒤로가기·실시간 위치 title·LIVE pill·기사 통화
+//   <TripLiveMap />          — 지도 (flex-1)
+//   <BottomSheet>           — live-eta 카드 + 2-button 액션 + 운행 정보
+//
+// W24-D 변경: refac에는 BottomSheet 안의 stop rail timeline이 없음.
+// 하단 sheet는 [ETA 큰 카드 + 2-button + 운행 정보] 3개로 단순화 (지도가
+// 정류장 진행도를 마커로 표시).
 export function TripLiveShell({
   tripId,
   childStudent,
@@ -40,6 +45,10 @@ export function TripLiveShell({
   passedStopIds,
   startedAtISO,
   childEtaSlot,
+  childStopScheduledAt,
+  boardedCount,
+  totalAssigned,
+  distanceKm,
 }: {
   tripId: string;
   childStudent: { id: string; name: string; stopId: string };
@@ -54,6 +63,10 @@ export function TripLiveShell({
   // server-side fetch가 들어가는 server component를 Suspense로 감싸 page에서
   // 넘기는 슬롯. trip-live-shell은 client component이므로 자체 fetch 불가.
   childEtaSlot: ReactNode;
+  childStopScheduledAt: string | null; // "HH:mm"
+  boardedCount: number;
+  totalAssigned: number;
+  distanceKm: number;
 }) {
   const ping = useTripBroadcast(tripId);
   const passedSet = useMemo(() => new Set(passedStopIds), [passedStopIds]);
@@ -124,6 +137,17 @@ export function TripLiveShell({
     ? passedSet.has(childRouteStop.id)
     : false;
 
+  // 자녀 stop까지 남은 정류장 수 — 정렬된 stops에서 자녀 stop의 index부터 nextStop의 index 사이.
+  const stopsAhead = useMemo(() => {
+    if (!childRouteStop || childPassed) return 0;
+    const childIdx = sortedStops.findIndex((s) => s.id === childRouteStop.id);
+    if (childIdx < 0) return null;
+    if (!nextStop) return childIdx; // 아직 어떤 stop도 통과 안 함
+    const nextIdx = sortedStops.findIndex((s) => s.id === nextStop.id);
+    if (nextIdx < 0) return null;
+    return Math.max(0, childIdx - nextIdx);
+  }, [sortedStops, childRouteStop, childPassed, nextStop]);
+
   // 지도 마커용 변환
   const mapStops = stops.map((s) => ({
     id: s.id,
@@ -136,38 +160,29 @@ export function TripLiveShell({
     isPassed: passedSet.has(s.id),
   }));
 
-  // rail timeline용 변환
-  const railItems = sortedStops.map((s) => {
-    const isPassed = passedSet.has(s.id);
-    const isNext = nextStop?.id === s.id;
-    return {
-      id: s.id,
-      order: s.order,
-      name: s.name,
-      scheduledAt: s.scheduledAt,
-      status: isPassed
-        ? ("done" as const)
-        : isNext
-          ? ("next" as const)
-          : ("pending" as const),
-      isChildStop: s.stopId === childStudent.stopId,
-    };
+  // 운행 시간(분) — startedAt 이후 경과. 1초마다 갱신해 sheet에 라이브 반영.
+  const [elapsedMin, setElapsedMin] = useState<number | null>(() => {
+    if (!startedAtISO) return null;
+    return Math.max(
+      0,
+      Math.floor((Date.now() - new Date(startedAtISO).getTime()) / 60_000),
+    );
   });
-
-  // 시작 시각 KST HH:mm
-  const startedHHmm = startedAtISO
-    ? new Date(new Date(startedAtISO).getTime() + 9 * 60 * 60 * 1000)
-        .toISOString()
-        .slice(11, 16)
-    : null;
+  useEffect(() => {
+    if (!startedAtISO) return;
+    const startedMs = new Date(startedAtISO).getTime();
+    const interval = setInterval(() => {
+      setElapsedMin(Math.max(0, Math.floor((Date.now() - startedMs) / 60_000)));
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [startedAtISO]);
 
   return (
     <div className="bg-background fixed inset-0 z-50 mx-auto flex max-w-md flex-col">
       <TripHeader
-        childName={childStudent.name}
         direction={route.direction}
         routeName={route.name}
-        driverName={driverName}
+        driverPhone={driverPhone}
         isLive={ping !== null}
       />
 
@@ -187,61 +202,29 @@ export function TripLiveShell({
         />
       </div>
 
+      {/* refac .live-sheet { gap: 12px } — BottomSheet가 flex-col gap-[12px] 처리 */}
       <BottomSheet>
         <EtaHeadline
+          childName={childStudent.name}
           childPassed={childPassed}
-          nextStopName={nextStop?.name ?? null}
           etaMin={etaMin}
           etaSource={etaSource}
           hasPing={ping !== null}
+          childStopScheduledAt={childStopScheduledAt}
+          stopsAhead={stopsAhead}
         />
-
+        <LiveActions driverPhone={driverPhone} />
+        <TripInfoCard
+          driverName={driverName}
+          helperName={helperName}
+          vehiclePlate={vehicle.plate}
+          vehicleMode={vehicle.mode}
+          distanceKm={distanceKm}
+          elapsedMinutes={elapsedMin}
+          boardedCount={boardedCount}
+          totalAssigned={totalAssigned}
+        />
         {childEtaSlot}
-
-        <div className="bg-muted/40 mt-4 rounded-md px-3.5 py-2.5">
-          <p className="text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-            운행 정보
-          </p>
-          <p className="mt-1 text-xs font-semibold">
-            {route.name} · {vehicle.plate}
-            {vehicle.mode === "KIDS" ? " · 어린이통학버스" : ""}
-          </p>
-          <p className="text-muted-foreground mt-0.5 text-[11px] font-medium">
-            기사 {driverName}
-            {helperName ? ` · 동승 ${helperName}` : ""}
-            {startedHHmm ? ` · 시작 ${startedHHmm}` : ""}
-          </p>
-          {/* W20-C2: 긴급 시 기사 직접 통화 */}
-          {driverPhone ? (
-            <a
-              href={`tel:${driverPhone}`}
-              className="bg-success-soft text-success mt-2 inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-[11px] font-extrabold tracking-tight transition-opacity hover:opacity-80"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2.5"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                className="h-3 w-3"
-              >
-                <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" />
-              </svg>
-              기사 {driverPhone}
-            </a>
-          ) : null}
-        </div>
-
-        <div className="mt-5">
-          <p className="text-muted-foreground text-[11px] font-extrabold tracking-wide uppercase">
-            정류장 진행 상황
-          </p>
-          <div className="mt-3">
-            <StopRailTimeline items={railItems} />
-          </div>
-        </div>
       </BottomSheet>
 
       {/* sheet height 보정 placeholder (지도와 sheet 사이 빈 공간 방지) */}
@@ -249,4 +232,3 @@ export function TripLiveShell({
     </div>
   );
 }
-

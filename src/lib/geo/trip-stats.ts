@@ -168,3 +168,26 @@ export function formatDuration(sec: number): string {
   const ss = s.toString().padStart(2, "0");
   return h > 0 ? `${h}:${mm}:${ss}` : `${mm}:${ss}`;
 }
+
+/** Date → KST "HH:MM". 학원장·기사 양쪽 정류장 도착 시각 표기 공유. */
+export function formatKstHHmm(d: Date): string {
+  return new Date(d.getTime() + 9 * 60 * 60 * 1000).toISOString().slice(11, 16);
+}
+
+/**
+ * 정류장 구간 소요 (초) → 한국어 풀어쓰기 ("4분 55초", "52초", "1시간 7분").
+ * 콜론 형식(`04:55`)이 도착 시각(`hh:mm`)과 헷갈려 사용자 혼동을 줘서
+ * 명시 단위 표기로 통일.
+ */
+export function formatSegment(sec: number): string {
+  if (!Number.isFinite(sec) || sec < 0) return "—";
+  if (sec < 60) return `${Math.round(sec)}초`;
+  const m = Math.floor(sec / 60);
+  const s = Math.round(sec % 60);
+  if (m >= 60) {
+    const h = Math.floor(m / 60);
+    const rm = m % 60;
+    return rm > 0 ? `${h}시간 ${rm}분` : `${h}시간`;
+  }
+  return s > 0 ? `${m}분 ${s}초` : `${m}분`;
+}

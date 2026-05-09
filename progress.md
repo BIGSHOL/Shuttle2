@@ -1783,6 +1783,320 @@ bg-violet-*  → bg-primary/10 + text-primary
 bg-zinc-100/200 → bg-muted + text-muted-foreground
 ```
 
+## W24-D data/refac 픽셀 단위 hi-fi reproduce wave (2026-05-08)
+
+`data/refac/screenshots/*.jpg` + `data/refac/design-files/*.html` ground truth로
+parent 4 화면 + driver 3 phase 풀세트를 **모든 px / radius / color / spacing
+까지 1:1 매핑**해 재작성. 사용자 피드백 반복 반영("디자인 그대로 가져와라",
+"뭔가 다른데", "픽셀 단위로 다시", "drive run.html 참고했어?").
+
+**원칙**: README §0 "한 번에 한 화면씩". 각 화면 turn 진입 시 screenshots/.jpg +
+HTML markup + 우리 production 코드 모두 직접 Read. 사용자 hi-fi reproduce 우선
+정책에 따라 CLAUDE.md "rounded-2xl/xl 금지" 가드레일 완화 — Tailwind arbitrary
+값 `rounded-[14px]`, `rounded-[18px]`, `rounded-[20px]` 등 refac CSS와 1:1.
+임의 색상 금지·`orgId` 필터·RLS 보존은 그대로.
+
+### 검증 인프라
+- **dev 서버 검증** (Vercel 배포 대기 X): `pnpm dev` (port 3000 명시).
+  port 충돌 시 `Get-NetTCPConnection -LocalPort 3000 | Stop-Process -Force` 후
+  재실행. Chrome MCP `localhost:3000` 모바일 420×900 viewport.
+- demo 계정: `demo_parent1` / `demo_driver` / `demo1234!`
+- 임시 시드: 운행 중 trip + RouteStudent 매핑은 verify 시점만 추가 후 복구
+  (parent 검증용 trip id `cmowd92fq000004l5p6fnxodp`,
+   tmp RouteStudent `cmowpgd2s0000mcvdpbza1w29`).
+
+### Phase 1 — 학부모 PWA 풀세트 (4 화면, 픽셀 정밀)
+
+각 컴포넌트 모든 px 값이 refac CSS와 1:1. 외곽 14/18px radius, 내부 12/10/8/6px,
+font 24/18/16/14/13/12/11/10/9px, padding 18/14/12/10/8px 모두 arbitrary 값.
+
+1. **`(parent)/home`** (commit `70deeb7` → `22e6ed4` → `c6ec239` → `cdf8196` → `653ce48`):
+   - **ParentHeader 숨김**: `/home`, `/my-absences/new`, `/my-stop-changes/new`,
+     `/trip-live/*` — 모두 자체 헤더 보유.
+   - **GreetingSection** NEW: app-bar 8/16/12 padding + h1 18px font-900
+     tracking-(-0.025em) + 13px greeting + 36x36 icon-btn rounded-full + 7x7
+     destructive dot (border-2 흰 halo로 가독성).
+   - **LiveTripCard** 재작성: hero 18px radius + 18px padding + ::after 검정
+     원 deco (rgba 0,0,0, 0.05, -30px right/top, 140x140) + 24px h2 + 13px sub
+     + flex(not grid) 14px gap row + 18px val + 44px h-cta + 10px radius + 검정
+     CTA `bg-black/85 text-bus`.
+     - 데이터 보강: `today-trips.ts`에 `boardedCount` (BoardingEvent BOARD count)
+       + `totalAssigned` (RouteStudent count) + `stopsAheadOfChild` (학생→
+       routeStudent.stopId→RouteStop.order로 max visited order 도출).
+     - 타이틀: `relativeMinutesUntil(childStopScheduledAt)` 기준 "{name}이 X분
+       후 도착" / "곧 도착" / fallback "{name} 운행 중".
+   - **IdleTripCard** sched-item: 10px radius + 10px padding + 11px Sunrise/
+     Sunset svg + 13px stop + 14px font-900 time.
+   - **OurChildrenSection** NEW: card 14px radius + 14px padding + child-ava
+     42x42 round bg-info-soft text-info border-info/30 + 14px name + 11px
+     meta. orgType label 제거 (orgName이 이미 종류 식별).
+   - **HomeActionsGrid** quick-btn: 12px radius + 14px padding + 32x32 ico
+     8px radius bg-{warning|info}-soft + 13px name + 11px desc line-1.4.
+   - **RecentNotifications** NEW: card 14px + dashed border-bottom rows + 34x34
+     round ico + 13px font-800 title + 11px font-600 desc + 10px font-800 time.
+   - **today-trips-section**: hero mt-12px + sec mt-18px + sched mt-8px.
+   - **ParentBottomTabs**: bg-white/95 backdrop-blur + grid-4-cols + 8/8/18
+     padding + 20px svg `strokeWidth=2.25` + active fill-bus-soft +
+     text-bus-foreground (검정, refac CSS와 일치). 알림 배지 16x16
+     min-width + border-2 흰 halo + bg-destructive + text-white 10px font-black
+     tabular-nums (iOS 스타일, 1자리는 원형).
+   - **/me 페이지** 신규: 알림 권한 + 앱 설치 안내 + 결석/정류장 변경 링크 + 로그아웃.
+
+2. **`(parent)/trip-live/[tripId]`** (commit `20e9fc5` → `c6ec239`):
+   - **TripHeader** 재작성: chevron-left h-9 w-9 rounded-full + 16px h1
+     "실시간 위치" + 11px sub `{routeName} · {direction}` + warning-soft "Live"
+     pill / muted "대기" pill + 우측 phone 버튼 9x9 rounded-full bg-card
+     border shadow-sm.
+   - **EtaHeadline** 재작성 (.live-eta): 14px radius + 16px padding + center
+     align + 11px caps lbl + 36px val + 18px unit + 12px sub + childPassed/
+     hasPing/etaMin null 분기 fallback 보존.
+   - **LiveActions** NEW (.live-actions): 2-button grid 8px gap + 44px h
+     + 10px radius + bg-card + 13px font-800 + 16px svg. 기사님 tel:driverPhone
+     + 결석 → /my-absences/new.
+   - **TripInfoCard** NEW: 14px radius + 14/10 padding + 12px title + 10px caps
+     muted pill (`{distanceKm}km · {elapsedMin}분 경과`) + 12px font-bold body
+     line-1.5 + foreground font-extrabold strong.
+   - **BottomSheet** (.live-sheet): bg-background + 18/16/20 padding + flex-col
+     gap-12px + max-h-60dvh overflow.
+   - StopRailTimeline 제거 (refac live-sheet에 없음).
+
+3. **`(parent)/my-absences/new`** (commit `e62e07c` → `c6ec239`):
+   - **FormBackHeader** NEW shared (`src/components/shuttlee/`): refac .form-back
+     8/8/0 padding + transparent icon-btn (no bg/border) + 16px font-900 h1.
+   - 풀 hi-fi 03 frame: form-content 8/16/100 padding (100px bottom for sticky CTA)
+     + form-section-title 11px caps tracking-0.06em mt-18px (first mt-8px) +
+     opt-list flex-col gap-8px + opt 12px radius + 14px padding + 1.5px border
+     + opt.on bus + bus-soft + opt-radio 20px round + 10px inner dot
+     bus-foreground + chip rounded-full + 1.5px border + 8/12 padding +
+     12px font-800 + chip.on bus + bus-foreground + cal 12px radius + 12px
+     padding + 7-col grid 2px gap + day 8px radius + 13px font-700 (sel: bus +
+     900, today: outline-2 -outline-offset-2 info, dim/past: opacity-0.5
+     muted) + summary 12px radius + 12px padding + bg-info-soft + border-info/25
+     + 12px h4 caps info + 13px p line-1.5 + bottom-cta sticky bottom-0 + 12/16/24
+     padding + button h-48px + 12px radius + bg-bus + 15px font-900.
+   - 기간 chip "연속/반복" 베타 backlog (schema endDate·recurring 미지원, disabled).
+
+4. **`(parent)/my-stop-changes/new`** (commit `52e6f9c` → `4e988e7` → `c6ec239`):
+   - 아이·방향 opt-list (driverName "{driver} 기사님" sub) + 변경 유형 chip-row
+     + 날짜 input 44px h + 10px radius + 현재 정류장 stop-pick.cur (info-soft +
+     border-info, 26x26 round bg-info white num + 13px font-800 + 11px meta +
+     check-circle2 18x18 info) + 변경할 정류장 list (.stop-list 6px gap, 12px
+     radius + 12/14 padding, num 26x26 round, on: bus + bus-soft, 일반 stop
+     scheduledAt + "도보 X분" meta, isTerminal disabled "선택 불가" muted pill,
+     현재 stop disabled "현재 사용 중") + 사유 textarea 500자 max + 변경 요약
+     summary (warning 강조 "30분 이내") + bottom-cta sticky.
+   - opt-card key collision fix: `studentId__fromStopId` → `routeStudentId`
+     (multi-route 안전).
+
+### Phase 2 — 기사 PWA 풀세트 (3 phase 픽셀 정밀)
+
+`data/refac/design-files/Driver Run.html` 모든 CSS 1:1 매핑. 3 phase는
+`trip-running-view.tsx`에서 데이터 상태로 분기:
+
+#### Phase 2-1: PreTripCheckScreen (refac 01 — 출발 전 안전점검)
+
+(commit `04ed30a` → `8e16b1d`)
+
+- **트리거**: `isKidsMode && isDriver && (!seatbeltAllOk || !helperPresent)` —
+  KIDS 트립 진입 시 안전점검 미완료면 dedicated 화면 노출 (도교법 §53 강제).
+- **레이아웃** (refac .check-screen):
+  - .check-head 8/24/18 padding + border-b
+    - crumb 11px font-800 caps tracking-0.04em mute "{routeName} · {direction} · 어린이용"
+    - h1 24px font-900 tracking-(-0.02em) line-1.15 "출발 전 안전점검"
+    - meta 11px font-700 mute + bus pill "필수 의무" (10px caps tracking-0.04em)
+      + "차량 {plate}" + "동승 {helperName}"
+  - .progress 14/24/0 padding + 6px h bar bg-muted + bus fill +
+    progress-meta 10px caps mute "{done}/{total} 완료" + "도교법 §53 의무 — 기사 {driverName}"
+  - .checks flex-1 overflow padding 14/18/16 + CheckItem 4개:
+    1. 안전벨트 작동 확인 (schema-backed `seatbeltAllOk`)
+    2. 비상등·후진경보음 (client useState placeholder)
+    3. 출입문 잠금장치 (client useState placeholder)
+    4. 좌석·통로 인원 제한 (client useState placeholder)
+  - helperPresent는 helper 배정 시 useEffect 자동 mark (별도 visual checklist
+    노출 X — refac도 helper는 meta line에서만 표기)
+  - .check-cta sticky bottom + BtnBig:
+    - allDone: variant="primary" "운행 시작"
+    - !allDone: variant="disabled" + Lock icon + "점검 완료 후 운행 시작"
+
+#### Phase 2-2: Running view (refac 02 — 운행 중 다음 정류장)
+
+(commit `ff12112` → `cb54990` → `d1fcb76` → `8e16b1d`)
+
+- **레이아웃**:
+  - **RunTop** (.run-top): 8/18/14 padding + border-b + flex justify-between
+    - run-top-left: 38x38 ArrowLeft icon-btn 12px radius + run-top-info column
+      - route 11px font-800 caps tracking-0.04em mute
+        "{routeName} · {direction} · {VEHICLE_MODE_LABEL} · {passed}/{total}"
+      - title 16px font-900 tracking-(-0.015em) "{startedHHmm} 출발 · {elapsed} 경과"
+    - run-top-right: 알림 38x38 + 긴급 38x38 (bg-destructive-soft + border-danger/40)
+  - 작은 banner들 (Wake Lock 미지원·KIDS helper 미배정·GPS error) — RunTop 아래
+    한 줄 띠로 변경, 풀카드 형태에서 줄임.
+  - **NextStopCard** (.next-stop): 18px padding + bg-card border-y +
+    flex-col gap-12px
+    - head: 11px caps text-bus "다음 정류장" + live-pulse + "{order}번째 / {total}" 우측
+    - body grid `1fr 130px` gap-16px:
+      - big-name 28px font-900 tracking-(-0.025em) line-1.1 break-keep
+      - eta column right border-l pl-16:
+        - eta-num 42px font-900 tracking-(-0.04em) line-none **color-bus** + 18px unit muted
+        - eta-meta 11px mute "도착 {scheduledAt} / 대기 {waitingCount}명" (strong foreground 800)
+    - ETA 추정 = haversine GPS→nextStop / 25km/h.
+  - **pickup-wrap** 그룹핑 (refac idiom — stop별이 아닌 status별):
+    - "{nextStop.name} — 탑승 예정" 13px font-900 caps tracking-0.06em mute +
+      `{boarded}/{total}` 11px (strong text-bus 900)
+    - 다음 stop 학생들 (StudentRow pending/processed 분기)
+    - mt-18: "이전 정류장 (완료)" + 모든 이전 stop 학생들
+  - **StudentRow** variants (refac .student CSS 1:1):
+    - container: 14px radius + 12/14 padding + 7px mb-7 + 12px gap + items-center
+    - **pending**: bg-card border + 36x36 muted avatar + 15px name + 11px meta
+      + bg-muted **회색** action (Check 11px svg + "탑승" 11px font-900 caps)
+    - **boarded**: bg-muted border-transparent opacity-70 + bg-success border
+      green check avatar + transparent action text-success "탑승됨"
+    - **absent**: bg-transparent border opacity-40 + line-through name + 결석 라벨
+    - **no-show**: bg-destructive-soft border-destructive/40 + 빨간 avatar +
+      destructive meta + bg-destructive 흰 글씨 phone icon "연락" 버튼
+  - **run-bottom** sticky bottom (refac):
+    - progress-mini: 11px font-800 mute + 5px h bar + count tabular-nums
+    - **BtnBig** (.btn-big 62px h + 18px radius + 17px font-900 + tracking-(-0.01em)
+      + box-shadow 0 8px 24px rgba):
+      - 다음 stop 있으면 primary "정류장 도착" (markStopPassedAction)
+      - 없으면 → PostTripCheckScreen 자동 전환
+
+#### Phase 2-3: PostTripCheckScreen (refac 03 — 도착 후 안전점검)
+
+(commit `06c9889` → `8e16b1d`)
+
+- **트리거**: `isKidsMode && isDriver && allStopsPassed` — 모든 stop 통과 +
+  KIDS면 자동 dedicated screen.
+- **레이아웃**:
+  - 작은 백 헤더: 38x38 icon-btn + "모든 정류장 통과 — 점검 후 종료" 11px caps mute.
+  - **ArrivedBanner** (.arrived-banner): margin-18px + 24/20 padding + 
+    `linear-gradient(135deg, var(--success) 0%, #1aa370 100%)` + **20px radius**
+    + text-white + box-shadow 0 12px 32px rgba(31,138,91,0.3) + center align.
+    - 54x54 round bg-white-25 check icon (28x28 svg stroke-2.8)
+    - h2 22px font-900 tracking-(-0.02em) "전원 하차 완료"
+    - p 13px font-700 opacity-85 "{finalStopName} · {endedHHmm} 도착"
+    - stats grid-cols-3 gap-2: 20px v + 9px caps l opacity-80 — 하차/운행/km
+  - **final-checks** flex-1 overflow padding 0/18:
+    - h3 13px font-900 caps mute "도착 후 점검 — {done} / {total}"
+    - **danger-note** (refac): bg-destructive-soft + border-destructive/30 +
+      12px radius + 12/14 padding + AlertTriangle icon + 12px font-700 line-1.5
+      "**차량 내부 학생 잔류 확인**은 도로교통법상 의무 항목입니다. 빠뜨리면 운행 종료 불가."
+    - CheckItem 4개:
+      1. 차량 내부 학생 잔류 확인 (schema `allAlightedOk`)
+      2. 차량 내부 잠금 (client placeholder)
+      3. 키 회수 (client placeholder)
+      4. 운영기록 확인 (client placeholder)
+  - .check-cta sticky bottom + BtnBig:
+    - allDone: variant="danger" "운행 종료"
+    - !allDone: variant="disabled" + Lock + "점검 완료 후 운행 종료"
+
+#### Phase 2 — 공통 building blocks
+
+`src/app/(driver)/trip/[id]/_components/`:
+- `run-top.tsx` (.run-top)
+- `next-stop-card.tsx` (.next-stop)
+- `student-row.tsx` (.student variants)
+- `arrived-banner.tsx` (.arrived-banner)
+- `check-item.tsx` (.check-item pending/active/done)
+- `btn-big.tsx` (.btn-big primary/danger/disabled)
+- `pre-trip-check-screen.tsx` (.check-screen NEW)
+- `post-trip-check-screen.tsx` (.arrived-screen + .final-checks NEW)
+
+#### Phase 2 — 정리
+
+- 기존 BoardingRow 함수 제거 (300+ 줄)
+- inline post safety card 제거 (refac 02에 없음)
+- DriverHeader / DriverBottomTabs `/trip/*` `/helper-trip/*`에서 자동 숨김
+- DriverBottomTabs 배지도 iOS 스타일 (16x16 + border-2 흰)
+
+#### Phase 2 — 검증 완료
+
+- demo_driver 로그인 → 매일 등원 (데모) 운행 시작 → PreTripCheckScreen (4 items, "필수 의무" pill, 0/4 progress, lock CTA)
+- 4개 모두 체크 → BtnBig "운행 시작" enabled → click → Running view 전환
+- Running view: RunTop (백+노선/시작/경과+알림/긴급) + NextStopCard (28px name + 42px ETA bus) + 동승보호자 picker + 학생 회색 액션 + sticky 정류장 도착 BtnBig
+- `markStopPassedAction` 4번 → 모든 stop 통과 → PostTripCheckScreen 자동 전환 (ArrivedBanner 녹색 + danger-note + 4 final-checks)
+
+### Phase 3 — 학원장 PC 핵심 list pages
+
+(commit `f9d6f3c` + `5409467`)
+
+- **dashboard** topbar: "오늘 운행 현황" h1 (3xl/4xl font-black) + "{date} ·
+  {orgName} · orgType pill · plan pill" sub + 운행 리포트 outline + "+ 새
+  {studentLabel} 등록" bus CTA + 푸시 토글 같은 row.
+- **routes / students / vehicles** 4 list pages: 큰 H1 + 카운트 sub
+  (전체·활성·운행 중 / KIDS·일반 등) + 우측 bus-yellow "+ 새 X" CTA.
+
+### Phase 4 — 마케팅 hero
+
+(commit `72612dc`)
+
+- pill: "도로교통법 어린이통학버스 의무 충족"
+- headline: "학원 셔틀, 이제 안 보이는 게 가장 큰 문제다." (안 보이는 highlight)
+- sub 학원·교습소·어린이집·유치원 자동화 + 3 시점 (학부모/기사/학원장)
+- CTAs: "무료로 시작하기" /signup + "15초 데모 보기" #features
+
+### W24-D commit 체인 (참고용)
+
+```
+70deeb7 fix(parent-header): hide on /home
+22e6ed4 W24-D Phase 1 home: LIVE card hi-fi 3-info row
+20e9fc5 W24-D Phase 1 trip-live: hi-fi 02 frame reproduce
+e62e07c W24-D Phase 1 absences/new: hi-fi 03 frame
+52e6f9c W24-D Phase 1 stop-change/new: hi-fi 04 frame
+4e988e7 fix(stop-change): routeStudentId key collision
+ff12112 W24-D Phase 2 driver: '다음 정류장' hero card 추가
+f9d6f3c W24-D Phase 3 #6 dashboard topbar
+5409467 W24-D Phase 3 #7/#9/#11 routes·students·vehicles topbar
+72612dc W24-D Phase 4 marketing hero
+c46bb86 docs: W24-D 1차 정리
+c6ec239 W24-D Phase 1 픽셀 단위 hi-fi reproduce — 모든 px·radius·color 1:1
+cdf8196 Parent ParentHeader/BottomTabs hide on form pages
+653ce48 fix(parent-bottom-tabs/greeting): 알림 배지 대비 향상
+cb54990 W24-D Phase 2 driver: refac 02 픽셀 align — RunTop + NextStopCard
+d1fcb76 W24-D Phase 2 driver: pickup-wrap + StudentRow + sticky btn-big
+06c9889 W24-D Phase 2 driver: post-trip view refac 03 align — ArrivedBanner
+04ed30a W24-D Phase 2 driver: refac 01 PreTripCheckScreen dedicated
+8e16b1d W24-D Phase 2 driver: 4-item pre-trip + 회색 stu-action + post-trip dedicated
+```
+
+### 다음 세션 backlog
+
+**우선순위 — 사용자가 다음 세션에 picking up할 영역**:
+1. **SafetyCheck schema 확장** — refac 01·03 9개 항목 모두 영구 저장:
+   `emergencyLightOk`, `doorLockOk`, `capacityOk`, `cabinLockOk`,
+   `keyReturnedOk`, `recordReviewedOk` 컬럼 + RLS 마이그레이션. 현재는 client
+   useState placeholder라 reload 시 0/4로 리셋.
+2. **Owner detail/sub pages 픽셀 align** (Phase 3 v2):
+   `(owner)/routes/[id]`, `/dashboard/trip/[tripId]`, `/pending`,
+   `/safety-report`, `/billing`, `/settings/policies` — 각 화면 hi-fi HTML
+   읽고 컴포넌트 1:1 align.
+3. **Marketing 본문 sections** (Phase 4 v2):
+   - trusted-by org type pills row (○○어린이집·행복유치원·…)
+   - Pain section 3 카드 카피 align
+   - Features section dark bg + 학원장/기사/학부모 tabs
+   - "월요일 시작" 4-step how-it-works
+   - Pricing 3-tier 카드 (스타터/스탠다드/엔터프라이즈)
+   - FAQ accordion
+
+**작업 환경 (다른 컴퓨터에서 이어가기)**:
+- `git pull origin main` (최신 commit `8e16b1d`)
+- `pnpm install`
+- `.env.local` 복사 (DATABASE_URL, DIRECT_URL, NEXT_PUBLIC_*, SUPABASE_*, IMPERSONATE_COOKIE_SECRET, etc.)
+- `pnpm dev` (port 3000 강제) — port 충돌 시 PowerShell:
+  `Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force }`
+- demo 계정: `demo_parent1` / `demo_driver` / `demo1234!`
+- Chrome MCP `localhost:3000` 모바일 420×900 검증
+
+**검증 시나리오 (3 phase 모두 hi-fi와 일치 확인)**:
+- `/home`: ParentHeader 숨김, LiveTripCard bg-bus 18px radius, 3-info row, 4탭 BottomTabBar
+- `/trip-live/[tripId]`: TripHeader + Map + EtaHeadline + LiveActions + TripInfoCard
+- `/my-absences/new`: FormBackHeader + 4 sections + cal grid + summary + sticky CTA
+- `/my-stop-changes/new`: 아이·방향 + 정류장 picker (cur·on·terminal variants) + summary
+- demo_driver `/run` → 운행 시작 → **PreTripCheckScreen** (4 items + lock CTA)
+- 4개 체크 → 자동 **Running view** 전환 (RunTop·NextStopCard·StudentRow gray)
+- 모든 stop 통과 → 자동 **PostTripCheckScreen** (ArrivedBanner 녹색 + danger-note + 4 final-checks)
+- 모든 final-checks 체크 → "운행 종료" danger BtnBig enabled → 종료 → finished view (ArrivedBanner read-only)
+
 ## 주요 라우트
 
 | 그룹        | 라우트                                                                                                                                                                               | 설명             |

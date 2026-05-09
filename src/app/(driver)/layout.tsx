@@ -8,6 +8,7 @@ import {
   homePathForRole,
 } from "@/lib/auth/session";
 
+import { DriverBottomTabs } from "./_components/driver-bottom-tabs";
 import { DriverHeader } from "./driver-header";
 
 // 기사 레이아웃. 모바일 우선 — 데스크톱에서도 max-w-md로 모바일 폭 고정.
@@ -49,6 +50,11 @@ export default async function DriverLayout({
       />
       <SwRegister />
       <div className="flex-1">{children}</div>
+      <DriverBottomTabs
+        unreadCount={unreadCount}
+        email={user.email}
+        staffName={user.staff.name}
+      />
     </div>
   );
 }

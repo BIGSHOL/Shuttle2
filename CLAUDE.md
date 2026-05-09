@@ -322,6 +322,23 @@ vercel deploy --prod --yes  # 프로덕션 배포
     `<DriverAppShareCard>` 학원장 dashboard 카드(다운로드+가이드 링크 클립보드 복사).
   - 베타 운영 약속: 안드로이드 기사만 RN 앱, iOS 기사는 PWA 화면 켠 채. 베타
     APK는 Supabase Storage `driver-apks` public bucket에서 서빙.
+- W23-C·D: 학생 list 페이지네이션·필터·정렬 (`e46e941`) + 학생 toolbar 한 줄·
+  차량 삭제 UX·404 home 경로 (`8bb8761`).
+- W23-E·F·G: 기사 RN APK 흰 화면 진단·해결 — 1.0.2 newArch off +
+  `<AppErrorBoundary>` + lazy task → 1.0.3 React duplication metro
+  `extraNodeModules` (무효) → **1.0.4** 결정적 해결, BlueStacks 로그인 화면
+  진입 검증 완료. logcat USB 직결 절차(`adb devices` → `adb logcat`) +
+  EXPO_TOKEN 1Password 보관 정책 확립.
+- W23-H: 디자인 풀세트 + 1.0.5/1.0.6 통합 빌드 — 사용자 `data/`
+  design_merge_patches Phase 0·1·2 적용 (shadow 토큰·학부모 home 6 컴포넌트·
+  trip-live 3 컴포넌트·driver `/run` 풀세트·owner KPI/QuickLink·marketing
+  hero/pain/features/pricing) + RN driver-rn 영문 한글화 + 9 컴포넌트
+  (Button·Card·ChildAvatar·Collapsible·DirectionBadge·Header·LivePulseDot·
+  ModeBadge·Icon) + 4 화면 재작성 + TripScreen dark gradient header +
+  RunListScreen `Promise.allSettled` resilience + `/api/driver/me` endpoint
+  신설. 1.0.5는 운영 검증 안 한 채 **1.0.6에 통합**(/admin/apk 단일 활성).
+  검증 시나리오: 로그인 한글 알림 / me endpoint 헤더 / RunListScreen 풀세트 /
+  TripScreen 다크 그라디언트(155° #1a1c22→#0f1014).
 - **W24: 셔틀이 플랫폼 매니저(어드민) 시스템** — 학원·정류장·차량을 총괄
   관리하는 `/admin/*` 풀세트. 베타 학원이 5곳 넘어가도 prisma studio·Supabase
   Studio 안 들어가고 UI에서 운영 가능.
@@ -357,6 +374,91 @@ vercel deploy --prod --yes  # 프로덕션 배포
     - `pnpm db:migrate deploy` (admin_system 마이그레이션)
     - Vercel production env에 `SHUTTLEE_ADMIN_EMAILS` + `IMPERSONATE_COOKIE_SECRET` 등록
       (`openssl rand -hex 32`로 secret 생성)
+- **W24-D: data/refac 픽셀 단위 hi-fi reproduce wave** (2026-05-08) —
+  `data/refac/screenshots/*.jpg` + `data/refac/design-files/*.html` ground truth로
+  parent 4 화면 + driver 3 phase **모든 px / radius / color / spacing 1:1 매핑**.
+  CLAUDE.md "rounded-2xl/xl 금지" 가드레일은 hi-fi reproduce 우선 정책에 따라
+  완화 — Tailwind arbitrary 값 `rounded-[14px]`/`rounded-[18px]`/`rounded-[20px]`
+  등 refac CSS 그대로. 임의 색상 금지·`orgId` 필터·RLS 보존은 그대로.
+  - **Phase 1 학부모 4 화면 풀세트** (commit `c6ec239` + `cdf8196` + `653ce48`):
+    - `/home`: ParentHeader 숨김 (`/home` `/my-absences/new` `/my-stop-changes/new`
+      `/trip-live/*`) + GreetingSection (18px h1 + 13px greeting + 36x36 bell with
+      8x8 dot border-2) + **LiveTripCard 18px radius** + 검정 ::after 원 deco +
+      24px h2 + flex(not grid) 14px gap row + 검정 CTA bg-black/85 text-bus +
+      OurChildrenSection (info-soft 42x42 avatar) + IdleTripCard sched 10px +
+      HomeActionsGrid quick-btn 12px + RecentNotifications dashed-border list +
+      4탭 BottomTabBar (active fill-bus-soft + text-bus-foreground) + iOS 스타일
+      배지 (16x16 + border-2 흰 halo). today-trips.ts boardedCount/totalAssigned/
+      stopsAheadOfChild 데이터 보강.
+    - `/trip-live/[tripId]`: TripHeader 16px h1 "실시간 위치" + LIVE/대기 pill +
+      EtaHeadline 14px radius live-eta (11px caps lbl + 36px val + 18px unit +
+      12px sub) + LiveActions 44x10px button + TripInfoCard 14px + 12px title +
+      10px caps muted pill + BottomSheet 18/16/20 padding gap-12px.
+    - `/my-absences/new`: FormBackHeader (8/8/0 padding + transparent icon-btn
+      + 16px h1) + opt-list 12px radius + 1.5px border + 20px radio + 10px inner
+      dot + chip rounded-full 1.5px border + cal 12px + 7-col grid 2px gap +
+      day 8px radius (sel: bus + 900, today: outline-2 info, dim/past: opacity-0.5)
+      + summary info-soft 12px + bottom-cta sticky h-48 button 12px radius bus.
+    - `/my-stop-changes/new`: 아이·방향 + 변경 유형 chip + 날짜 + 현재 정류장
+      stop-pick.cur (info-soft + 26px round bg-info white num) + 변경할 정류장
+      list (terminal disabled "선택 불가" muted pill, 현재 stop disabled "현재
+      사용 중") + summary warning + sticky CTA. opt-card key collision fix
+      (routeStudentId 기반).
+  - **Phase 2 기사 3 phase** (commit `cb54990` → `d1fcb76` → `06c9889` →
+    `04ed30a` → `8e16b1d`) — `data/refac/design-files/Driver Run.html` 1:1:
+    - **PreTripCheckScreen** (refac 01 — 출발 전): KIDS 트립 진입 + 안전점검
+      미완료면 dedicated 화면 강제. .check-head (24px h1 + 11px crumb caps +
+      "필수 의무" pill bus 10px caps + 차량/동승 meta) + .progress 6px bar +
+      10px caps "{done}/{total} 완료" + 4 CheckItem (안전벨트·비상등·후진경보음·
+      출입문잠금장치·좌석통로 인원제한) — schema는 seatbeltAllOk 1개만,
+      나머지 3개는 client useState placeholder (베타 backlog: schema 확장).
+      helperPresent는 helper 배정 시 useEffect 자동 mark. .check-cta sticky
+      BtnBig 62px h + 18px radius + lock icon "점검 완료 후 운행 시작" disabled.
+    - **Running view** (refac 02 — 운행 중): RunTop (.run-top 백+노선 caps+
+      시작·경과 16px+알림/긴급 38x38 12px radius) + 작은 banner 띠 (Wake Lock·
+      KIDS·GPS) + **NextStopCard** 18px padding + body grid 1fr 130px + big-name
+      28px + eta 42px **text-bus** + "도착 {scheduledAt} · 대기 N명" + pickup-wrap
+      그룹핑 (status별, 다음 stop 학생 + 이전 정류장 완료) + **StudentRow**
+      4 variants 픽셀 정밀 — pending: bg-card border + **회색 muted action**
+      (refac CSS 그대로) / boarded: bg-muted opacity-70 + green check avatar +
+      transparent text-success "탑승됨" / absent: bg-transparent opacity-40 +
+      line-through name + 결석 라벨 / no-show: bg-destructive-soft + 빨간 avatar
+      + bg-destructive 흰글씨 phone "연락" + run-bottom progress-mini 5px bar +
+      **BtnBig** 62px primary "정류장 도착" / 모든 통과 시 자동 PostTripCheckScreen.
+      DriverHeader/BottomTabs `/trip/*`에서 자동 숨김. inline post safety card 제거.
+    - **PostTripCheckScreen** (refac 03 — 도착 후): 모든 stop 통과 + KIDS면 자동
+      dedicated 화면. ArrivedBanner 녹색 그라디언트 (135deg ok→#1aa370) **20px
+      radius** + box-shadow + 54x54 round bg-white-25 check + 22px h2 "전원
+      하차 완료" + 13px sub "{finalStop} · {endedHHmm} 도착" + 3-stat grid
+      (20px v 9px caps l opacity-80 — 하차/운행/km) + .danger-note 빨간 강조 박스
+      "차량 내부 학생 잔류 확인은 도로교통법상 의무 항목입니다." + 4 CheckItem
+      (allAlightedOk schema-backed + 차량 내부 잠금/키 회수/운영기록 확인 client
+      placeholder) + BtnBig danger "운행 종료" (allDone 시 enabled).
+  - **Phase 3 학원장 list topbar** (commit `f9d6f3c` + `5409467`):
+    - dashboard·routes·students·vehicles 4 페이지 큰 H1 (3xl/4xl font-black) +
+      카운트 sub + 우측 bus-yellow CTA "+ 새 X" 패턴 통일.
+  - **Phase 4 마케팅 hero** (commit `72612dc`):
+    - pill "도로교통법 어린이통학버스 의무 충족" + headline "학원 셔틀, 이제
+      안 보이는 게 가장 큰 문제다." (안 보이는 highlight) + 3 시점 sub + CTAs
+      "무료로 시작하기" /signup + "15초 데모 보기" #features.
+  - **검증** (Chrome MCP `localhost:3000` dev 서버, 모바일 420×900):
+    - parent 4 화면 모두 hi-fi 01·02·03·04 frame과 픽셀 단위 일치
+    - driver 3 phase 시나리오 통과 (pre → running → post → finished)
+  - **베타 backlog (다음 세션 picking up)**:
+    1. **SafetyCheck schema 확장** — 9개 항목 모두 영구 저장 (`emergencyLightOk`
+       `doorLockOk` `capacityOk` `cabinLockOk` `keyReturnedOk` `recordReviewedOk`
+       컬럼 + RLS). 현재 client useState라 reload 시 0/4 리셋.
+    2. **Owner detail/sub pages 픽셀 align** (Phase 3 v2): routes/[id],
+       dashboard/trip/[tripId], pending, safety-report, billing,
+       settings/policies — refac HTML 1:1.
+    3. **Marketing 본문 sections** (Phase 4 v2): trusted-by pills + Pain 3 카드 +
+       Features dark bg 3 tabs + 월요일 시작 4-step + Pricing 3-tier + FAQ.
+  - **개발 환경 (다른 컴퓨터에서 이어가기)**:
+    - `pnpm dev` (port 3000 강제). port 충돌 시 PowerShell:
+      `Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force }`
+    - **Vercel 배포 대기 X** — 디자인 작업은 dev 서버로만 검증.
+    - demo 계정: `demo_parent1` / `demo_driver` / `demo1234!`
+    - Chrome MCP `localhost:3000` 모바일 420×900 viewport.
 
 ### 알려진 미해결 (다음 세션)
 
@@ -382,6 +484,27 @@ vercel deploy --prod --yes  # 프로덕션 배포
        upgrade 또는 GitHub public Releases / Vercel Blob 검토 후 전환
   - ⚠️ EXPO_TOKEN 2개 회전 필수 — 채팅 transcript에 평문 노출. 베타 시작 전
        expo.dev → Account → Access Tokens에서 revoke + 재발급 → 1Password 보관
+- 사용자 작업 (W23-H 2026-05-08 시점 — 디자인 풀세트 검증):
+  - ⏰ EAS 1.0.6 빌드 결과 → /admin/apk 등록 (1.0.5는 skip, 1.0.6 단일 활성화)
+  - ⏰ BlueStacks 검증 시나리오 4개 통과 (로그인 한글 알림 / 헤더 me endpoint /
+       RunListScreen 풀세트 / TripScreen 다크 그라디언트)
+  - ⚠️ EXPO_TOKEN 2개 회전 (W23-B에서 carry-over, 베타 시작 전 필수)
+  - ⏰ EAS APK 30일 retention 만료 (~2026-05-21, ~13일 남음) — Vercel Blob /
+       GitHub Releases / Supabase Pro 검토 후 전환
+
+### 베타 진입 backlog (W23-H 1.0.7+ 또는 운영 정책)
+
+1. RN `/api/auth/login-id-lookup` endpoint — `recoveryEmail` 등록한 driver의 RN
+   로그인이 placeholder 이메일만 시도해 깨짐. web actions의 lookup 흐름 RN 포팅
+   필요. 또는 운영 정책: driver는 recoveryEmail 미입력 권고.
+2. Pretendard 폰트 RN 명시 로드 — 현재 system 기본 sans-serif. `expo-font` +
+   `Pretendard-Bold.ttf` 등록 필요.
+3. RN 권한 카드 실제 status — 현재 "운행 환경 이상 없음" 고정 표시.
+   `expo-location`, FCM messaging의 실제 권한 status로 동적 update 필요.
+4. EXPO_TOKEN 운영 정책 — 1Password에 보관. PowerShell history·채팅에 평문
+   노출 절대 금지 (`$env:EXPO_TOKEN = "<1Password>"` placeholder만).
+5. EAS APK 30일 retention 대비 — Vercel Blob, GitHub public Releases,
+   또는 Supabase Pro upgrade 검토.
 
 ### 환경 변수 가드레일 (W15-D·W18 트러블슈팅 결과)
 

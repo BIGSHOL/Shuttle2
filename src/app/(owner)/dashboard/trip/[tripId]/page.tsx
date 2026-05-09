@@ -25,7 +25,10 @@ import type { TripLiveMapStop } from "@/lib/map/trip-live-map-inner";
 
 import { OwnerTripLiveMap } from "./_components/owner-trip-live-map";
 import { StopArrivalsTable } from "./_components/stop-arrivals-table";
+import { TripNoShowBanner } from "./_components/trip-no-show-banner";
 import { TripStatsCard } from "./_components/trip-stats-card";
+import { TripStopsTimeline } from "./_components/trip-stops-timeline";
+import { TripStudentTimeline } from "./_components/trip-student-timeline";
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 
@@ -241,6 +244,56 @@ export default async function OwnerTripDetailPage({
   }));
   // W23+: list inline 통합 — 정류장 row에서 stopId로 lookup해 통과 시각 표시.
   const stopArrivalMap = new Map(stopArrivals.map((a) => [a.stopId, a]));
+
+  // W24-B C2: 신규 컴포넌트(TripStopsTimeline·TripStudentTimeline·TripNoShowBanner)용 데이터 prep.
+  // 기존 매핑(studentToStopId·studentsByStop)은 그대로 재사용.
+  const studentNameById = new Map<string, string>();
+  for (const rs of trip.route.students) {
+    studentNameById.set(rs.student.id, rs.student.name);
+  }
+  const stopNameById = new Map<string, string>();
+  const stopScheduledById = new Map<string, string | null>();
+  for (const rs of trip.route.stops) {
+    stopNameById.set(rs.stop.id, rs.stop.name);
+    stopScheduledById.set(rs.stop.id, rs.scheduledAt);
+  }
+
+  const noShowBannerItems = trip.events
+    .filter((e) => e.type === "NO_SHOW" || e.type === "NO_DROPOFF")
+    .map((e) => {
+      const stopId = studentToStopId.get(e.studentId) ?? null;
+      return {
+        eventId: e.id,
+        studentId: e.studentId,
+        studentName: studentNameById.get(e.studentId) ?? "—",
+        stopName: stopId ? (stopNameById.get(stopId) ?? null) : null,
+        type: e.type as "NO_SHOW" | "NO_DROPOFF",
+      };
+    });
+
+  const studentEventRows = trip.events.map((e) => {
+    const stopId = studentToStopId.get(e.studentId) ?? null;
+    return {
+      eventId: e.id,
+      type: e.type as "BOARD" | "ALIGHT" | "NO_SHOW" | "NO_DROPOFF",
+      atISO: e.at.toISOString(),
+      studentId: e.studentId,
+      studentName: studentNameById.get(e.studentId) ?? "—",
+      stopId,
+      stopName: stopId ? (stopNameById.get(stopId) ?? null) : null,
+      notes: e.notes,
+    };
+  });
+
+  const stopTimelineRows = stopArrivalRows.map((r) => ({
+    stopId: r.stopId,
+    stopOrder: r.stopOrder,
+    stopName: r.stopName,
+    scheduledAt: stopScheduledById.get(r.stopId) ?? null,
+    arrivedAt: r.arrivedAt,
+    boardCount: r.boardCount,
+    noShowCount: r.noShowCount,
+  }));
 
   const eventType: "BOARD" | "ALIGHT" =
     trip.route.direction === "PICKUP" ? "BOARD" : "ALIGHT";
@@ -486,14 +539,29 @@ export default async function OwnerTripDetailPage({
         </section>
       ) : null}
 
+      {/* W24-B C2: 미탑승·미하차 빨간 배너 — 좌측 destructive stripe + 학생 chip + 보호자 연락 */}
+      {noShowBannerItems.length > 0 ? (
+        <TripNoShowBanner noShows={noShowBannerItems} />
+      ) : null}
+
       {/* W19-D: 운행 통계 카드 (운행 중·종료 모두) */}
       {tripStats ? (
         <TripStatsCard stats={tripStats} isRunning={isRunning} />
       ) : null}
 
+      {/* W24-B C2: 정류장 진행 timeline — done/next/pending dot + 수직 연결선 */}
+      {stopTimelineRows.length > 0 ? (
+        <TripStopsTimeline rows={stopTimelineRows} />
+      ) : null}
+
       {/* W19-D: 정류장 도착 시각 + 구간 소요 표 (STOP_PASS 기록 있을 때만) */}
       {stopArrivalRows.some((r) => r.arrivedAt !== null) ? (
         <StopArrivalsTable rows={stopArrivalRows} />
+      ) : null}
+
+      {/* W24-B C2: 학생 처리 이벤트 timeline (탭 — 전체/처리/미처리) */}
+      {studentEventRows.length > 0 ? (
+        <TripStudentTimeline events={studentEventRows} />
       ) : null}
 
       {/* 종료된 운행: GPS 경로 재생 (LocationPing trail) */}

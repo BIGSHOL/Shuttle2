@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 
-import { LivePulseDot } from "./live-pulse-dot";
+import { LivePulseDot } from "./live-dot";
 
 // 학부모 home / trip-live에서 노출되는 운행 상태 배지.
 // kind는 derive — Trip.startedAt/endedAt + BoardingEvent + AbsenceRequest로 결정.
