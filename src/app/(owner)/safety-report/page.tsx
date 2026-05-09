@@ -17,6 +17,7 @@ import {
 } from "@/lib/pdf/quarter";
 
 import { ReportDownloadForm } from "./report-download-form";
+import { StudentAttendanceTable } from "./student-attendance-table";
 
 const DOW_KO_SHORT = ["일", "월", "화", "수", "목", "금", "토"] as const;
 
@@ -268,19 +269,24 @@ export default async function SafetyReportPage() {
     }))
     .sort((a, b) => b.noShow - a.noShow);
 
-  // 분기 옵션
-  const years = [cur.year, cur.year - 1];
+  // 분기 옵션 — 현재 분기부터 과거 4개(=1년치)만 노출. 끝없이 나열되지 않도록.
+  // 안전운행기록 보관 의무는 3년이지만, 다운로드 시점에서 흔히 필요한 건 직전 1년.
+  // 더 과거 분기 필요 시 향후 "전체 보기" 토글 추가 가능 (베타에선 1년치 충분).
+  const QUARTER_HISTORY_COUNT = 4;
   const quarters: { value: { year: number; quarter: Quarter }; label: string }[] = [];
-  for (const y of years) {
-    for (const q of [1, 2, 3, 4] as Quarter[]) {
-      if (y > cur.year || (y === cur.year && q > cur.quarter)) continue;
-      quarters.push({
-        value: { year: y, quarter: q },
-        label: `${y}년 ${q}분기 (${quarterMonthsLabel(y, q).split(" ").slice(1).join(" ")})`,
-      });
+  let qYear = cur.year;
+  let qQ = cur.quarter as number;
+  for (let i = 0; i < QUARTER_HISTORY_COUNT; i++) {
+    quarters.push({
+      value: { year: qYear, quarter: qQ as Quarter },
+      label: `${qYear}년 ${qQ}분기 (${quarterMonthsLabel(qYear, qQ as Quarter).split(" ").slice(1).join(" ")})`,
+    });
+    qQ -= 1;
+    if (qQ < 1) {
+      qQ = 4;
+      qYear -= 1;
     }
   }
-  quarters.reverse();
 
   return (
     <main className="mx-auto max-w-7xl space-y-5 p-4 lg:p-6">
@@ -502,68 +508,9 @@ export default async function SafetyReportPage() {
         </Card>
       ) : null}
 
-      {/* W25 P2-A: 학생 출석 분석 표 — 미탑승률 ↓ 정렬 + 상태 */}
+      {/* W25 P2-A: 학생 출석 분석 — 검색·상태 필터·페이지네이션 (client) */}
       {studentRows.length > 0 ? (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">학생 출석 분석</CardTitle>
-            <CardDescription>
-              최근 7일 BoardingEvent 누적. 미탑승률 30% 이상은 보호자 상담 권장.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead className="bg-muted/50 text-muted-foreground text-[10px] font-extrabold tracking-wide uppercase">
-                  <tr>
-                    <th className="px-4 py-2 text-left">학생</th>
-                    <th className="px-2 py-2 text-right">탑승</th>
-                    <th className="px-2 py-2 text-right">미탑승</th>
-                    <th className="px-2 py-2 text-right">미탑승률</th>
-                    <th className="px-4 py-2 text-left">상태</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y">
-                  {studentRows.slice(0, 30).map((s) => {
-                    const status =
-                      s.noShowRate >= 30
-                        ? { label: "상담 권장", cls: "bg-destructive/10 text-destructive" }
-                        : s.noShowRate >= 10
-                          ? { label: "관찰", cls: "bg-warning-soft text-warning" }
-                          : { label: "정상", cls: "bg-success-soft text-success" };
-                    return (
-                      <tr key={s.id}>
-                        <td className="px-4 py-2.5 font-bold tracking-tight">
-                          {s.name}
-                        </td>
-                        <td className="px-2 py-2.5 text-right tabular-nums font-semibold">
-                          {s.board}
-                        </td>
-                        <td
-                          className={`px-2 py-2.5 text-right tabular-nums font-extrabold ${s.noShow > 0 ? "text-destructive" : ""}`}
-                        >
-                          {s.noShow}
-                        </td>
-                        <td
-                          className={`px-2 py-2.5 text-right tabular-nums font-extrabold ${s.noShowRate >= 30 ? "text-destructive" : s.noShowRate >= 10 ? "text-warning" : ""}`}
-                        >
-                          {s.noShowRate}%
-                        </td>
-                        <td className="px-4 py-2.5">
-                          <span
-                            className={`rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide ${status.cls}`}
-                          >
-                            {status.label}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </CardContent>
-        </Card>
+        <StudentAttendanceTable rows={studentRows} />
       ) : null}
 
       {/* 분기 선택 PDF — 기존 폼 그대로 */}

@@ -10,17 +10,21 @@ import {
 import { quarterLabel, quarterMonthsLabel } from "./quarter";
 import type { SafetyReportData, SafetyReportRow } from "./safety-report-data";
 
-// 한글 폰트 등록 — Pretendard ttf jsDelivr CDN.
-// woff2는 react-pdf 미지원, ttf 사용. cold start 시 한 번 다운로드 후 캐시.
+// 한글 폰트 등록 — Spoqa Han Sans Neo ttf jsDelivr CDN.
+// 2026-05 시점에 Pretendard repo에서 ttf 파일이 사라져(.css·.otf만 남음) jsdelivr
+// 404 발생 → PDF 렌더링 실패. Spoqa Han Sans는 한글 통학버스 운영 문서에 적합한
+// 대체 ttf 보유. react-pdf는 woff2/otf 안정성 떨어져 ttf 권장.
+// cold start 시 한 번 다운로드 후 react-pdf가 메모리 캐시.
+// 디자인 토큰은 Pretendard family 이름을 그대로 유지 (다른 PDF 위치도 같이 사용).
 Font.register({
   family: "Pretendard",
   fonts: [
     {
-      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/Pretendard-Regular.ttf",
+      src: "https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Regular.ttf",
       fontWeight: 400,
     },
     {
-      src: "https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/packages/pretendard/dist/web/static/Pretendard-Bold.ttf",
+      src: "https://cdn.jsdelivr.net/gh/spoqa/spoqa-han-sans/Subset/SpoqaHanSansNeo/SpoqaHanSansNeo-Bold.ttf",
       fontWeight: 700,
     },
   ],
