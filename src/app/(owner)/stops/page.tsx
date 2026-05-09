@@ -1,6 +1,7 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, MapPin, MapPinOff, Repeat } from "lucide-react";
 
+import { KpiStrip, KpiStripCell } from "@/components/kpi-card";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -23,25 +24,85 @@ import { getOrgId } from "@/lib/auth/session";
 export default async function StopsPage() {
   const orgId = await getOrgId();
 
-  const stops = await db.stop.findMany({
-    where: { orgId },
-    orderBy: [{ name: "asc" }],
-  });
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7);
+
+  const [stops, usedStopCount, recentChangeCount] = await Promise.all([
+    db.stop.findMany({
+      where: { orgId },
+      orderBy: [{ name: "asc" }],
+      include: {
+        _count: { select: { routes: true } },
+      },
+    }),
+    db.stop.count({
+      where: { orgId, routes: { some: {} } },
+    }),
+    db.stopChangeRequest.count({
+      where: { orgId, createdAt: { gte: sevenDaysAgo } },
+    }),
+  ]);
+
+  const unusedCount = stops.length - usedStopCount;
+  const noAddressCount = stops.filter((s) => !s.address).length;
 
   return (
-    <main className="mx-auto max-w-6xl space-y-6 p-6">
-      <div className="flex items-center justify-between">
+    <main className="mx-auto max-w-7xl space-y-5 p-4 lg:p-6">
+      {/* 페이지 헤더 */}
+      <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h2 className="text-2xl font-semibold">정류장</h2>
-          <p className="text-muted-foreground text-sm">
-            카카오맵 좌표로 정류장을 등록합니다. 카드를 누르면 위치 지도·사용
-            노선·home 학생·변경 요청 history를 확인합니다.
+          <h2 className="text-2xl font-black tracking-tight lg:text-3xl">
+            정류장
+          </h2>
+          <p className="text-muted-foreground mt-1 text-xs font-semibold lg:text-sm">
+            카카오맵 좌표로 정류장을 등록합니다. 행을 누르면 지도·사용 노선·home
+            학생·변경 요청 history를 확인합니다.
           </p>
         </div>
         <Button asChild>
           <Link href="/stops/new">+ 새 정류장</Link>
         </Button>
       </div>
+
+      {/* KPI strip */}
+      <KpiStrip cols={4}>
+        <KpiStripCell
+          label="총 정류장"
+          value={stops.length}
+          subtext={
+            stops.length > 0 && noAddressCount > 0
+              ? `주소 미확인 ${noAddressCount}건`
+              : "전체 등록"
+          }
+          Icon={MapPin}
+          tone="info"
+        />
+        <KpiStripCell
+          label="사용 중"
+          value={usedStopCount}
+          subtext={
+            stops.length > 0
+              ? `${Math.round((usedStopCount / stops.length) * 100)}% 가동`
+              : "-"
+          }
+          Icon={MapPin}
+          tone={usedStopCount > 0 ? "success" : "muted"}
+        />
+        <KpiStripCell
+          label="미사용"
+          value={unusedCount}
+          subtext={unusedCount > 0 ? "노선 배정 검토" : "전부 사용 중"}
+          Icon={MapPinOff}
+          tone={unusedCount > 0 ? "warning" : "success"}
+        />
+        <KpiStripCell
+          label="최근 변경 요청"
+          value={recentChangeCount}
+          subtext="최근 7일"
+          Icon={Repeat}
+          tone={recentChangeCount > 0 ? "warning" : "muted"}
+        />
+      </KpiStrip>
 
       {stops.length === 0 ? (
         <Card>
@@ -60,7 +121,7 @@ export default async function StopsPage() {
         </Card>
       ) : (
         <>
-          {/* 모바일/태블릿: 카드 stack — 가로 스크롤 회피 */}
+          {/* 모바일: 카드 stack */}
           <ul className="space-y-2 lg:hidden">
             {stops.map((s) => (
               <li key={s.id}>
@@ -73,7 +134,8 @@ export default async function StopsPage() {
                       {s.name}
                     </h3>
                     <p className="text-muted-foreground mt-1.5 truncate text-xs font-medium">
-                      {s.address ?? "주소 미확인"} · 반경 {s.radiusM}m
+                      {s.address ?? "주소 미확인"} · 반경 {s.radiusM}m · 노선{" "}
+                      {s._count.routes}건
                     </p>
                   </div>
                   <ChevronRight className="text-muted-foreground mt-1 h-4 w-4 shrink-0" />
@@ -82,7 +144,7 @@ export default async function StopsPage() {
             ))}
           </ul>
 
-          {/* 데스크톱: 표 — 행 전체 Link */}
+          {/* 데스크톱: 표 */}
           <Card className="hidden py-0 lg:block">
             <CardContent className="p-0">
               <Table>
@@ -91,6 +153,7 @@ export default async function StopsPage() {
                     <TableHead>이름</TableHead>
                     <TableHead>주소</TableHead>
                     <TableHead className="w-24">반경</TableHead>
+                    <TableHead className="w-24">노선 사용</TableHead>
                     <TableHead className="w-12 pr-[18px] text-right" />
                   </TableRow>
                 </TableHeader>
@@ -103,7 +166,7 @@ export default async function StopsPage() {
                       <TableCell className="p-0">
                         <Link
                           href={`/stops/${s.id}`}
-                          className="block px-2 py-2 font-medium"
+                          className="block px-2 py-2.5 font-extrabold tracking-tight"
                         >
                           {s.name}
                         </Link>
@@ -111,7 +174,7 @@ export default async function StopsPage() {
                       <TableCell className="p-0">
                         <Link
                           href={`/stops/${s.id}`}
-                          className="text-muted-foreground block px-2 py-2 text-sm"
+                          className="text-muted-foreground block px-2 py-2.5 text-sm"
                         >
                           {s.address ?? (
                             <span className="text-muted-foreground/60">
@@ -123,7 +186,7 @@ export default async function StopsPage() {
                       <TableCell className="p-0">
                         <Link
                           href={`/stops/${s.id}`}
-                          className="text-muted-foreground block px-2 py-2 text-sm"
+                          className="text-muted-foreground block px-2 py-2.5 text-sm"
                         >
                           {s.radiusM}m
                         </Link>
@@ -131,7 +194,24 @@ export default async function StopsPage() {
                       <TableCell className="p-0">
                         <Link
                           href={`/stops/${s.id}`}
-                          className="text-muted-foreground flex items-center justify-end pr-[18px] py-2"
+                          className="block px-2 py-2.5 text-sm font-bold tabular-nums"
+                        >
+                          {s._count.routes > 0 ? (
+                            <span>
+                              {s._count.routes}
+                              <span className="text-muted-foreground text-xs font-medium">
+                                건
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-warning text-xs">미사용</span>
+                          )}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="p-0">
+                        <Link
+                          href={`/stops/${s.id}`}
+                          className="text-muted-foreground flex items-center justify-end py-2.5 pr-[18px]"
                           aria-label="상세"
                         >
                           <ChevronRight className="h-4 w-4" />

@@ -1,14 +1,17 @@
 import {
   BarChart3,
+  Bell,
   Bus,
+  CalendarOff,
   CreditCard,
   FileCheck,
   GraduationCap,
   IdCard,
-  Inbox,
   LayoutDashboard,
   MapPin,
+  MapPinned,
   Route,
+  Settings,
   ShieldCheck,
   Users,
   type LucideIcon,
@@ -16,10 +19,18 @@ import {
 
 // 학원장 nav 공용 정의. 헤더(데스크톱)와 BottomNav(모바일)가 동일 항목을 사용.
 // 항목 12개 — 아이콘 + 라벨로 표시.
+export type OwnerNavGroup = "main" | "manage" | "request" | "legal" | "footer";
+
 export type OwnerNavItem = {
   href: string;
   label: string;
   Icon: LucideIcon;
+  group: OwnerNavGroup;
+  /**
+   * 사이드바·하단 nav에 미처리 카운트 dot 표시용 키.
+   * layout에서 db count 결과를 props로 주입할 때 매칭.
+   */
+  countKey?: "absences" | "stopChanges" | "notifications";
 };
 
 /**
@@ -51,17 +62,51 @@ export function buildOwnerNav(
 ): OwnerNavItem[] {
   const studentLabel = orgType === "ACADEMY" ? "학생" : "원아";
   return [
-    { href: "/dashboard", label: "대시보드", Icon: LayoutDashboard },
-    { href: "/pending", label: "처리 큐", Icon: Inbox },
-    { href: "/vehicles", label: "차량", Icon: Bus },
-    { href: "/stops", label: "정류장", Icon: MapPin },
-    { href: "/routes", label: "노선", Icon: Route },
-    { href: "/students", label: studentLabel, Icon: Users },
-    { href: "/staff", label: "직원", Icon: IdCard },
-    { href: "/guardians", label: "보호자", Icon: ShieldCheck },
-    { href: "/training", label: "안전교육", Icon: GraduationCap },
-    { href: "/dashboard/analytics", label: "분석", Icon: BarChart3 },
-    { href: "/safety-report", label: "안전기록", Icon: FileCheck },
-    { href: "/billing", label: "결제", Icon: CreditCard },
+    // 메인
+    { href: "/dashboard", label: "대시보드", Icon: LayoutDashboard, group: "main" },
+    { href: "/dashboard/analytics", label: "운행 분석", Icon: BarChart3, group: "main" },
+    {
+      href: "/dashboard/notifications",
+      label: "알림",
+      Icon: Bell,
+      group: "main",
+      countKey: "notifications",
+    },
+    // 관리
+    { href: "/students", label: studentLabel, Icon: Users, group: "manage" },
+    { href: "/vehicles", label: "차량", Icon: Bus, group: "manage" },
+    { href: "/routes", label: "노선", Icon: Route, group: "manage" },
+    { href: "/stops", label: "정류장", Icon: MapPin, group: "manage" },
+    { href: "/staff", label: "직원", Icon: IdCard, group: "manage" },
+    { href: "/guardians", label: "보호자", Icon: ShieldCheck, group: "manage" },
+    { href: "/training", label: "안전교육", Icon: GraduationCap, group: "manage" },
+    // 요청
+    {
+      href: "/absences",
+      label: "결석",
+      Icon: CalendarOff,
+      group: "request",
+      countKey: "absences",
+    },
+    {
+      href: "/stop-change-requests",
+      label: "정류장 변경",
+      Icon: MapPinned,
+      group: "request",
+      countKey: "stopChanges",
+    },
+    // 법규
+    { href: "/safety-report", label: "안전운행기록", Icon: FileCheck, group: "legal" },
+    // 푸터 (데스크톱 사이드바 하단 / 모바일은 사용자 메뉴 dropdown에서)
+    { href: "/billing", label: "요금·청구", Icon: CreditCard, group: "footer" },
+    { href: "/settings", label: "설정", Icon: Settings, group: "footer" },
   ];
 }
+
+export const OWNER_NAV_GROUP_LABEL: Record<OwnerNavGroup, string> = {
+  main: "메인",
+  manage: "관리",
+  request: "요청",
+  legal: "법규",
+  footer: "기타",
+};

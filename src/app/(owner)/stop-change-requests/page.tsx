@@ -1,3 +1,6 @@
+import { CheckCircle2, Clock, MapPinned, Shield } from "lucide-react";
+
+import { KpiStrip, KpiStripCell } from "@/components/kpi-card";
 import {
   Card,
   CardContent,
@@ -49,15 +52,69 @@ export default async function OwnerStopChangeRequestsPage() {
     },
   });
 
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setUTCDate(sevenDaysAgo.getUTCDate() - 7);
+  const thisWeekProcessed = await db.stopChangeRequest.count({
+    where: {
+      orgId,
+      status: { in: ["APPROVED", "REJECTED"] },
+      decidedAt: { gte: sevenDaysAgo },
+    },
+  });
+  const avgMinutes = (() => {
+    const decided = recent.filter((r) => r.decidedAt != null);
+    if (decided.length === 0) return null;
+    const total = decided.reduce(
+      (acc, r) =>
+        acc + (r.decidedAt!.getTime() - r.createdAt.getTime()) / 60000,
+      0,
+    );
+    return Math.round(total / decided.length);
+  })();
+
   return (
-    <main className="mx-auto max-w-4xl space-y-6 p-6">
+    <main className="mx-auto max-w-7xl space-y-5 p-4 lg:p-6">
       <div>
-        <h2 className="text-2xl font-semibold">정류장 변경 요청</h2>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <h2 className="text-2xl font-black tracking-tight lg:text-3xl">
+          정류장 변경 요청
+        </h2>
+        <p className="text-muted-foreground mt-1 text-xs font-semibold lg:text-sm">
           학부모가 보낸 정류장 변경 요청을 검토하세요. 승인 시 새 정류장이
           생성되고 자녀의 RouteStudent 정류장이 즉시 갱신됩니다.
         </p>
       </div>
+
+      {/* KPI 4 */}
+      <KpiStrip cols={4}>
+        <KpiStripCell
+          label="대기 중"
+          value={pending.length}
+          subtext={pending.length > 0 ? "검토 필요" : "이상 없음"}
+          Icon={MapPinned}
+          tone={pending.length > 0 ? "warning" : "success"}
+        />
+        <KpiStripCell
+          label="이번 주 처리됨"
+          value={thisWeekProcessed}
+          subtext="승인·반려 합산"
+          Icon={CheckCircle2}
+          tone="success"
+        />
+        <KpiStripCell
+          label="평균 처리시간"
+          value={avgMinutes != null ? `${avgMinutes}분` : "—"}
+          subtext={avgMinutes != null ? "최근 20건" : "데이터 없음"}
+          Icon={Clock}
+          tone="muted"
+        />
+        <KpiStripCell
+          label="처리 정책"
+          value="학원장 승인"
+          subtext="자동 적용 OFF"
+          Icon={Shield}
+          tone="info"
+        />
+      </KpiStrip>
 
       <section className="space-y-3">
         <h3 className="text-base font-medium">대기 중 ({pending.length})</h3>

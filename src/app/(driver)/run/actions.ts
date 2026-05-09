@@ -146,12 +146,14 @@ export async function assignHelperAction(
 }
 
 // W23+: 정류장 수기 "도착" 마킹 — GPS 자동 감지 안 됐을 때 driver가 직접 누름.
+// W25 fix: 인자는 RouteStop.id (Stop.id 아님). 같은 Stop이 한 노선에서 등원·하원
+// 두 번 등장하면 RouteStop.id로 정확히 구분 가능.
 export async function markStopPassedAction(
   tripId: string,
-  stopId: string,
+  routeStopId: string,
 ): Promise<void> {
   const me = await requireDriver();
-  await markStopPassed(me, tripId, stopId);
+  await markStopPassed(me, tripId, routeStopId);
   revalidatePath(`/trip/${tripId}`);
   revalidatePath(`/dashboard/trip/${tripId}`);
   revalidatePath("/dashboard");

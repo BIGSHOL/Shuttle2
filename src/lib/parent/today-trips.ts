@@ -17,7 +17,22 @@ export type RouteSummary = {
   vehicle: { plate: string; mode: "KIDS" | "GENERAL" };
 };
 
-export type StopSummary = { id: string; name: string };
+export type StopSummary = {
+  id: string;
+  name: string;
+  scheduledAt: string | null; // 자녀 정류장의 노선 내 scheduledAt
+};
+
+// W25 P0-A: running trip은 hero 카드에 풀세트 표시 — ETA·현재 위치·탑승 학생·기사
+export type RunningTripDetails = {
+  driverName: string | null;
+  boardedCount: number;
+  totalStudents: number;
+  // 자녀 정류장의 노선 내 order (1-based)
+  childStopOrder: number | null;
+  // 가장 최근 STOP_PASS 매칭된 정류장 order. 없으면 0 (출발 직후).
+  currentStopOrder: number | null;
+};
 
 export type ChildTripCard =
   | {
@@ -26,15 +41,7 @@ export type ChildTripCard =
       route: RouteSummary;
       childStop: StopSummary;
       startedAtISO: string;
-      // refac hi-fi: hero 카드 보조 정보 — 자녀 정류장 예정 시각·기사 이름.
-      // running 상태에서만 의미 있어 그 분기에만 채움.
-      childStopScheduledAt: string | null; // "HH:mm"
-      driverName: string | null;
-      // refac hi-fi 3-info row: "현재 위치 N정류장 전" + "탑승 학생 X/Y".
-      // 데이터가 없으면 null — LIVE 카드는 row를 두 칸으로 fallback.
-      boardedCount: number; // BoardingEvent type=BOARD
-      totalAssigned: number; // RouteStudent for this route
-      stopsAheadOfChild: number | null; // 음수면 통과(0으로 clamp), null이면 미산정
+      details: RunningTripDetails;
     }
   | { kind: "scheduled"; route: RouteSummary; childStop: StopSummary }
   | {
@@ -68,12 +75,17 @@ export async function getTodayChildTrips(
       route: {
         include: {
           vehicle: { select: { plate: true, mode: true } },
-          // 첫 stop의 scheduledAt(전체 노선 출발 시각) + 자녀 stop의 scheduledAt 모두
-          // 필요 — 같은 query에서 stops 전체를 가져와 client에서 derive.
+          // 정류장 순서·시각 풀 (자녀 정류장 ETA + 현재 정류장 매핑용)
           stops: {
             orderBy: { order: "asc" },
-            select: { scheduledAt: true, stopId: true },
+            select: {
+              order: true,
+              scheduledAt: true,
+              stop: { select: { id: true, lat: true, lng: true } },
+            },
           },
+          // 노선 배정 학생 수 (탑승 진행률 분모)
+          _count: { select: { students: true } },
           trips: {
             where: { date: today },
             select: {
@@ -81,6 +93,18 @@ export async function getTodayChildTrips(
               startedAt: true,
               endedAt: true,
               driver: { select: { name: true } },
+              // 탑승 카운트
+              events: {
+                where: { type: "BOARD" },
+                select: { id: true },
+              },
+              // 가장 최근 STOP_PASS ping (현재 정류장 매핑)
+              pings: {
+                where: { source: "STOP_PASS" },
+                orderBy: { recordedAt: "desc" },
+                take: 1,
+                select: { lat: true, lng: true },
+              },
             },
           },
         },
@@ -109,10 +133,15 @@ export async function getTodayChildTrips(
           mode: rs.route.vehicle.mode,
         },
       };
-      const childStop: StopSummary = rs.stop;
-      const childStopScheduledAt =
-        rs.route.stops.find((rsStop) => rsStop.stopId === rs.stopId)
-          ?.scheduledAt ?? null;
+      // 자녀 정류장의 노선 내 order + scheduledAt
+      const childStopRouteEntry = rs.route.stops.find(
+        (rsItem) => rsItem.stop.id === rs.stop.id,
+      );
+      const childStop: StopSummary = {
+        id: rs.stop.id,
+        name: rs.stop.name,
+        scheduledAt: childStopRouteEntry?.scheduledAt ?? null,
+      };
 
       const trip = rs.route.trips[0];
       if (trip?.endedAt) {
@@ -124,48 +153,21 @@ export async function getTodayChildTrips(
           endedAtISO: trip.endedAt.toISOString(),
         });
       } else if (trip?.startedAt) {
-        // refac hi-fi 3-info row 보강 — 탑승 진행률·자녀 stop까지 남은 정류장 수.
-        // 보통 한 페이지에 running trip 0~2개라 N+1 query 비용 미미.
-        const [boardedCount, totalAssigned, latestEvents] = await Promise.all([
-          db.boardingEvent.count({
-            where: { tripId: trip.id, type: "BOARD" },
-          }),
-          db.routeStudent.count({ where: { routeId: rs.route.id } }),
-          db.boardingEvent.findMany({
-            where: {
-              tripId: trip.id,
-              type: { in: ["BOARD", "ALIGHT"] },
-            },
-            select: {
-              student: {
-                select: {
-                  routes: {
-                    where: { routeId: rs.route.id },
-                    select: { stopId: true },
-                  },
-                },
-              },
-            },
-          }),
-        ]);
-
-        // 자녀 stop의 route order
-        const childStopOrder = rs.route.stops.findIndex(
-          (s) => s.stopId === rs.stopId,
-        );
-        // 이미 들른 stop들의 max order
-        const visitedStopIds = new Set<string>();
-        for (const e of latestEvents) {
-          for (const r of e.student.routes) visitedStopIds.add(r.stopId);
+        // 가장 최근 STOP_PASS ping → 가장 가까운 RouteStop order 매핑
+        let currentStopOrder: number | null = null;
+        const lastPing = trip.pings[0];
+        if (lastPing) {
+          let best: { order: number; dist: number } | null = null;
+          for (const rsItem of rs.route.stops) {
+            const dx = rsItem.stop.lat - lastPing.lat;
+            const dy = rsItem.stop.lng - lastPing.lng;
+            const d2 = dx * dx + dy * dy; // squared 충분 (정렬용)
+            if (!best || d2 < best.dist) {
+              best = { order: rsItem.order, dist: d2 };
+            }
+          }
+          currentStopOrder = best?.order ?? null;
         }
-        let maxVisitedOrder = -1;
-        for (let i = 0; i < rs.route.stops.length; i++) {
-          if (visitedStopIds.has(rs.route.stops[i].stopId)) maxVisitedOrder = i;
-        }
-        const stopsAheadOfChild =
-          childStopOrder >= 0 && maxVisitedOrder >= 0
-            ? Math.max(0, childStopOrder - maxVisitedOrder)
-            : null;
 
         cards.push({
           kind: "running",
@@ -173,11 +175,13 @@ export async function getTodayChildTrips(
           route,
           childStop,
           startedAtISO: trip.startedAt.toISOString(),
-          childStopScheduledAt,
-          driverName: trip.driver?.name ?? null,
-          boardedCount,
-          totalAssigned,
-          stopsAheadOfChild,
+          details: {
+            driverName: trip.driver?.name ?? null,
+            boardedCount: trip.events.length,
+            totalStudents: rs.route._count.students,
+            childStopOrder: childStopRouteEntry?.order ?? null,
+            currentStopOrder,
+          },
         });
       } else {
         // trip이 없거나 startedAt이 아직 null
