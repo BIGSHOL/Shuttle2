@@ -243,6 +243,23 @@ pnpm build              # production 빌드 (라우트 충돌 검증)
 vercel deploy --prod --yes  # 프로덕션 배포
 ```
 
+## UI 검증 방식 (반드시 dev 서버 + Chrome MCP)
+
+브라우저로 확인 가능한 변경(UI/UX·페이지·컴포넌트·디자인)은 **항상**:
+
+1. `pnpm dev`로 dev 서버 띄우기 (port 3000 강제)
+2. Chrome MCP `localhost:3000` 모바일 420×900(parent/driver/helper) 또는 데스크톱(owner) viewport로 검증
+
+**금지**: `preview_*` MCP 도구(`preview_start`, `preview_screenshot`, `preview_snapshot` 등) 이 프로젝트에서 사용하지 않음. Vercel 배포 대기 없이 dev 서버로 즉시 검증하는 워크플로우(W24-D부터 정착).
+
+port 3000 충돌 시 PowerShell:
+
+```powershell
+Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Object -ExpandProperty OwningProcess | Sort-Object -Unique | ForEach-Object { Stop-Process -Id $_ -Force }
+```
+
+데모 계정: `demo_parent1` / `demo_driver` / `demo1234!`
+
 ## 진행 현황
 
 `progress.md` — 세션이 끊겨도 웹/앱 클로드 코드에서 이어가도록 마일스톤·결정사항·다음 우선순위 기록.

@@ -396,6 +396,13 @@ model SafetyCheck {
   helperPresent     Boolean // 동승보호자 동승 확인
   allAlightedOk     Boolean // 운행 종료 후 전원 하차 확인
   alightCheckedAt   DateTime?
+  // W26-A: refac Driver Run.html 9 항목 영구 저장 (도교법 §53)
+  emergencyLightOk  Boolean   @default(false) // pre: 비상등·후진경보음 작동
+  doorLockOk        Boolean   @default(false) // pre: 출입문 잠금장치 정상
+  capacityOk        Boolean   @default(false) // pre: 좌석·통로 인원 제한 충족
+  cabinLockOk       Boolean   @default(false) // post: 차량 내부 잠금
+  keyReturnedOk     Boolean   @default(false) // post: 시동키 회수
+  recordReviewedOk  Boolean   @default(false) // post: 운영기록 검토
 }
 
 // 결석·일시 불승차 신청

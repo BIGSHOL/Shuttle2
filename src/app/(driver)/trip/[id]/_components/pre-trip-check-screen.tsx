@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useTransition } from "react";
 import { Lock } from "lucide-react";
 import { toast } from "sonner";
 
@@ -10,10 +10,9 @@ import { BtnBig } from "./btn-big";
 import { CheckItem } from "./check-item";
 
 // W24-D Phase 2 driver: refac Driver Run.html "01 · 출발 전 안전점검" 픽셀 단위
-// reproduce. refac은 4개 점검 항목 — 우리 SafetyCheck schema는 seatbeltAllOk +
-// helperPresent 2개만 있어 나머지 2개(비상등·후진경보음, 출입문 잠금장치)는
-// client state로 임시 처리. 베타 backlog: SafetyCheck.emergencyLightOk +
-// doorLockOk 컬럼 추가해서 영구 저장.
+// reproduce. W26-A: 4개 점검 항목 모두 SafetyCheck 컬럼으로 영구 저장
+// (seatbeltAllOk + emergencyLightOk + doorLockOk + capacityOk).
+// helperPresent는 helper 배정 시 자동 mark — 별도 visual checklist 노출 X.
 //
 // refac CSS:
 //   .check-screen{height:100%;display:flex;flex-direction:column}
@@ -57,18 +56,41 @@ export function PreTripCheckScreen({
     seatbeltAllOk: boolean;
     helperPresent: boolean;
     allAlightedOk: boolean;
+    emergencyLightOk: boolean;
+    doorLockOk: boolean;
+    capacityOk: boolean;
+    cabinLockOk: boolean;
+    keyReturnedOk: boolean;
+    recordReviewedOk: boolean;
   } | null;
   onComplete: () => void;
 }) {
   const [pending, startTransition] = useTransition();
-  // refac 4 항목 중 schema 미지원 3개는 client state. helperPresent는 자동 처리:
-  // 운행 시작 시 helper 선택했으면 자동 true. (도교법 §53⑦ 동승보호자 의무는
-  // /run 단계에서 helper 미배정 시 차단. 여기선 visual checklist에 별도 노출 X)
-  const [emergencyLightOk, setEmergencyLightOk] = useState<boolean>(false);
-  const [doorLockOk, setDoorLockOk] = useState<boolean>(false);
-  const [capacityOk, setCapacityOk] = useState<boolean>(false);
+  // helperPresent는 helper 배정 시 자동 처리: 운행 시작 시 helper 선택했으면 자동
+  // true. (도교법 §53⑦ 동승보호자 의무는 /run 단계에서 helper 미배정 시 차단.
+  // 여기선 visual checklist에 별도 노출 X)
 
   const seatbelt = safetyCheck?.seatbeltAllOk ?? false;
+  const emergencyLight = safetyCheck?.emergencyLightOk ?? false;
+  const doorLock = safetyCheck?.doorLockOk ?? false;
+  const capacity = safetyCheck?.capacityOk ?? false;
+
+  function toggleField(
+    field:
+      | "seatbeltAllOk"
+      | "emergencyLightOk"
+      | "doorLockOk"
+      | "capacityOk",
+    current: boolean,
+  ) {
+    startTransition(async () => {
+      try {
+        await upsertSafetyCheckAction(tripId, { [field]: !current });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "저장 실패");
+      }
+    });
+  }
   // helperPresent는 helper 배정 시 자동 set. 사용자에게 별도 토글 노출 안 함.
   // 도교법 §53⑦은 helper 배정만으로 자동 충족.
   const helperPresentInDb = safetyCheck?.helperPresent ?? false;
@@ -96,38 +118,28 @@ export function PreTripCheckScreen({
       title: "안전벨트 작동 확인",
       desc: "모든 좌석의 벨트가 정상 작동하는지 점검",
       done: seatbelt,
-      onToggle: () => {
-        startTransition(async () => {
-          try {
-            await upsertSafetyCheckAction(tripId, {
-              seatbeltAllOk: !seatbelt,
-            });
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : "저장 실패");
-          }
-        });
-      },
+      onToggle: () => toggleField("seatbeltAllOk", seatbelt),
     },
     {
       id: "emergency",
       title: "비상등·후진경보음",
       desc: "비상등, 후진 시 경보음 작동 확인",
-      done: emergencyLightOk,
-      onToggle: () => setEmergencyLightOk((v) => !v),
+      done: emergencyLight,
+      onToggle: () => toggleField("emergencyLightOk", emergencyLight),
     },
     {
       id: "door",
       title: "출입문 잠금장치",
       desc: "승하차문이 잘 닫히고 잠금이 정상인지 확인",
-      done: doorLockOk,
-      onToggle: () => setDoorLockOk((v) => !v),
+      done: doorLock,
+      onToggle: () => toggleField("doorLockOk", doorLock),
     },
     {
       id: "capacity",
       title: "좌석·통로 인원 제한",
       desc: "정원 초과 여부, 통로 적재물 없는지 확인",
-      done: capacityOk,
-      onToggle: () => setCapacityOk((v) => !v),
+      done: capacity,
+      onToggle: () => toggleField("capacityOk", capacity),
     },
   ];
 

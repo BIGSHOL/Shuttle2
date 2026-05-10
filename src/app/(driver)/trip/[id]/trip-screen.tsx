@@ -356,6 +356,12 @@ export async function TripScreen({
                 seatbeltAllOk: trip.safetyCheck.seatbeltAllOk,
                 helperPresent: trip.safetyCheck.helperPresent,
                 allAlightedOk: trip.safetyCheck.allAlightedOk,
+                emergencyLightOk: trip.safetyCheck.emergencyLightOk,
+                doorLockOk: trip.safetyCheck.doorLockOk,
+                capacityOk: trip.safetyCheck.capacityOk,
+                cabinLockOk: trip.safetyCheck.cabinLockOk,
+                keyReturnedOk: trip.safetyCheck.keyReturnedOk,
+                recordReviewedOk: trip.safetyCheck.recordReviewedOk,
               }
             : null
         }

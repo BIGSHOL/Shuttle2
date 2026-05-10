@@ -34,6 +34,14 @@ export const SafetyFieldsInputSchema = z.object({
   seatbeltAllOk: z.boolean().optional(),
   helperPresent: z.boolean().optional(),
   allAlightedOk: z.boolean().optional(),
+  // W26-A: pre-trip 추가 3개 (refac Driver Run.html 01)
+  emergencyLightOk: z.boolean().optional(),
+  doorLockOk: z.boolean().optional(),
+  capacityOk: z.boolean().optional(),
+  // W26-A: post-trip 추가 3개 (refac Driver Run.html 03)
+  cabinLockOk: z.boolean().optional(),
+  keyReturnedOk: z.boolean().optional(),
+  recordReviewedOk: z.boolean().optional(),
 });
 export type SafetyFieldsInput = z.infer<typeof SafetyFieldsInputSchema>;
 

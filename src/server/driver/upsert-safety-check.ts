@@ -30,6 +30,13 @@ export async function upsertSafetyCheck(
     helperPresent?: boolean;
     allAlightedOk?: boolean;
     alightCheckedAt?: Date | null;
+    // W26-A
+    emergencyLightOk?: boolean;
+    doorLockOk?: boolean;
+    capacityOk?: boolean;
+    cabinLockOk?: boolean;
+    keyReturnedOk?: boolean;
+    recordReviewedOk?: boolean;
   } = {};
   if (fields.seatbeltAllOk !== undefined) {
     data.seatbeltAllOk = fields.seatbeltAllOk;
@@ -42,6 +49,12 @@ export async function upsertSafetyCheck(
     data.allAlightedOk = fields.allAlightedOk;
     data.alightCheckedAt = fields.allAlightedOk ? now : null;
   }
+  if (fields.emergencyLightOk !== undefined) data.emergencyLightOk = fields.emergencyLightOk;
+  if (fields.doorLockOk !== undefined) data.doorLockOk = fields.doorLockOk;
+  if (fields.capacityOk !== undefined) data.capacityOk = fields.capacityOk;
+  if (fields.cabinLockOk !== undefined) data.cabinLockOk = fields.cabinLockOk;
+  if (fields.keyReturnedOk !== undefined) data.keyReturnedOk = fields.keyReturnedOk;
+  if (fields.recordReviewedOk !== undefined) data.recordReviewedOk = fields.recordReviewedOk;
 
   await db.safetyCheck.upsert({
     where: { tripId },
@@ -52,6 +65,12 @@ export async function upsertSafetyCheck(
       helperPresent: fields.helperPresent ?? false,
       allAlightedOk: fields.allAlightedOk ?? false,
       alightCheckedAt: fields.allAlightedOk ? now : null,
+      emergencyLightOk: fields.emergencyLightOk ?? false,
+      doorLockOk: fields.doorLockOk ?? false,
+      capacityOk: fields.capacityOk ?? false,
+      cabinLockOk: fields.cabinLockOk ?? false,
+      keyReturnedOk: fields.keyReturnedOk ?? false,
+      recordReviewedOk: fields.recordReviewedOk ?? false,
     },
     update: data,
   });

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useTransition } from "react";
 import { AlertTriangle, ArrowLeft, Lock } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
@@ -15,8 +15,8 @@ import { CheckItem } from "./check-item";
 // reproduce. 모든 stop 통과 + KIDS + 운행 종료 전 phase. 안전점검 4개 항목
 // 완료해야 운행 종료 가능 — 차량 내부 학생 잔류 확인 등.
 //
-// 우리 schema는 allAlightedOk 1개만 있어 나머지 3개는 client state.
-// 베타 backlog: SafetyCheck.cabinLockOk + keyReturnedOk + recordReviewedOk 추가.
+// W26-A: 4개 항목 모두 SafetyCheck 컬럼으로 영구 저장
+// (allAlightedOk + cabinLockOk + keyReturnedOk + recordReviewedOk).
 //
 // refac CSS:
 //   .arrived-screen{background:bg;height:100%;display:flex;flex-direction:column}
@@ -53,18 +53,40 @@ export function PostTripCheckScreen({
     seatbeltAllOk: boolean;
     helperPresent: boolean;
     allAlightedOk: boolean;
+    emergencyLightOk: boolean;
+    doorLockOk: boolean;
+    capacityOk: boolean;
+    cabinLockOk: boolean;
+    keyReturnedOk: boolean;
+    recordReviewedOk: boolean;
   } | null;
   onEndTrip: () => void;
   endPending: boolean;
   backHref: string;
 }) {
   const [pending, startTransition] = useTransition();
-  // refac 4 항목 중 schema 미지원 3개는 client state (allAlightedOk만 schema-backed)
-  const [cabinLockOk, setCabinLockOk] = useState<boolean>(false);
-  const [keyReturnedOk, setKeyReturnedOk] = useState<boolean>(false);
-  const [recordReviewedOk, setRecordReviewedOk] = useState<boolean>(false);
 
   const allAlighted = safetyCheck?.allAlightedOk ?? false;
+  const cabinLock = safetyCheck?.cabinLockOk ?? false;
+  const keyReturned = safetyCheck?.keyReturnedOk ?? false;
+  const recordReviewed = safetyCheck?.recordReviewedOk ?? false;
+
+  function toggleField(
+    field:
+      | "allAlightedOk"
+      | "cabinLockOk"
+      | "keyReturnedOk"
+      | "recordReviewedOk",
+    current: boolean,
+  ) {
+    startTransition(async () => {
+      try {
+        await upsertSafetyCheckAction(tripId, { [field]: !current });
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : "저장 실패");
+      }
+    });
+  }
 
   const items: Array<{
     id: string;
@@ -78,38 +100,28 @@ export function PostTripCheckScreen({
       title: "차량 내부 학생 잔류 확인",
       desc: "모든 좌석·통로·뒷좌석을 직접 눈으로 확인",
       done: allAlighted,
-      onToggle: () => {
-        startTransition(async () => {
-          try {
-            await upsertSafetyCheckAction(tripId, {
-              allAlightedOk: !allAlighted,
-            });
-          } catch (err) {
-            toast.error(err instanceof Error ? err.message : "저장 실패");
-          }
-        });
-      },
+      onToggle: () => toggleField("allAlightedOk", allAlighted),
     },
     {
       id: "cabinLock",
       title: "차량 내부 잠금",
       desc: "전 좌석 벨트 정리, 모든 출입문 잠금",
-      done: cabinLockOk,
-      onToggle: () => setCabinLockOk((v) => !v),
+      done: cabinLock,
+      onToggle: () => toggleField("cabinLockOk", cabinLock),
     },
     {
       id: "key",
       title: "키 회수",
       desc: "시동키 학원 사무실 보관함에 반납",
-      done: keyReturnedOk,
-      onToggle: () => setKeyReturnedOk((v) => !v),
+      done: keyReturned,
+      onToggle: () => toggleField("keyReturnedOk", keyReturned),
     },
     {
       id: "record",
       title: "운영기록 확인",
       desc: "인원·시각·경로 자동 기록 검토",
-      done: recordReviewedOk,
-      onToggle: () => setRecordReviewedOk((v) => !v),
+      done: recordReviewed,
+      onToggle: () => toggleField("recordReviewedOk", recordReviewed),
     },
   ];
 

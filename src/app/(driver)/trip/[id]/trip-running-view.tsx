@@ -99,6 +99,13 @@ export function TripRunningView({
     seatbeltAllOk: boolean;
     helperPresent: boolean;
     allAlightedOk: boolean;
+    // W26-A: 9 항목 영구 저장 (refac Driver Run.html)
+    emergencyLightOk: boolean;
+    doorLockOk: boolean;
+    capacityOk: boolean;
+    cabinLockOk: boolean;
+    keyReturnedOk: boolean;
+    recordReviewedOk: boolean;
   } | null;
   boardedStudentIds: string[];
   alightedStudentIds: string[];
