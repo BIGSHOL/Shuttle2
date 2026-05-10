@@ -59,11 +59,15 @@ next-env.d.ts
 .env*.local
 
 # W23-E 응급 진단 흔적 (민감 정보 가능성, repo 외부 보관)
-/rn-crash.log
+/rn-crash*.log
 /scripts/list-driver-apk.ts
 /scripts/register-driver-apk.ts
+
+# W23 RN APK 산출물 (EAS·Supabase Storage 배포 경로)
+/driver-*.apk
 
 # Claude Code 개인 권한 override·런타임 cache (팀 공유 X)
 .claude/settings.local.json
 .claude/agent-memory/
 .claude/worktrees/
+.claude/scheduled_tasks.lock
