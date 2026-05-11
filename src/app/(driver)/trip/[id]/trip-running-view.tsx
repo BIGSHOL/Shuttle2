@@ -252,10 +252,17 @@ export function TripRunningView({
 
   // refac 01 frame: KIDS 모드 + 출발 전 안전점검 미완료면 dedicated pre-trip 화면.
   // 운전 중 화면(02)을 보기 전에 안전점검 완료 강제 — 도교법 §53 의무.
+  // W26-A 후속 fix: 4개 schema-backed 항목 + helperPresent 자동 mark 모두 true여야
+  // 통과. 이전엔 seatbelt + helperPresent 2개만 보고 통과시켜서 신규 3개
+  // (emergencyLightOk·doorLockOk·capacityOk) 미체크 상태로 Running view 진입 가능했음.
   const preTripIncomplete =
     isKidsMode &&
     isDriver &&
-    (!safetyCheck?.seatbeltAllOk || !safetyCheck?.helperPresent);
+    (!safetyCheck?.seatbeltAllOk ||
+      !safetyCheck?.helperPresent ||
+      !safetyCheck?.emergencyLightOk ||
+      !safetyCheck?.doorLockOk ||
+      !safetyCheck?.capacityOk);
   if (preTripIncomplete) {
     return (
       <PreTripCheckScreen
