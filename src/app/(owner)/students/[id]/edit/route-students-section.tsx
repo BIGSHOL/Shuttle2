@@ -6,13 +6,7 @@ import { useActionState, useState, useTransition } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -116,35 +110,33 @@ export function RouteStudentsSection({
                 <Label htmlFor="routeId" className="text-xs">
                   노선
                 </Label>
-                <Select name="routeId" required defaultValue={routes[0]?.id}>
-                  <SelectTrigger id="routeId">
-                    <SelectValue placeholder="노선 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {routes.map((r) => (
-                      <SelectItem key={r.id} value={r.id}>
-                        [{r.direction === "PICKUP" ? "등원" : "하원"}] {r.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  id="routeId"
+                  name="routeId"
+                  required
+                  defaultValue={routes[0]?.id}
+                  placeholder="노선 선택"
+                  searchPlaceholder="노선 이름·방향으로 검색"
+                  options={routes.map((r) => ({
+                    value: r.id,
+                    label: r.name,
+                    description: r.direction === "PICKUP" ? "등원" : "하원",
+                  }))}
+                />
               </div>
               <div className="space-y-1">
                 <Label htmlFor="stopId" className="text-xs">
                   정류장
                 </Label>
-                <Select name="stopId" required defaultValue={stops[0]?.id}>
-                  <SelectTrigger id="stopId">
-                    <SelectValue placeholder="정류장 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stops.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  id="stopId"
+                  name="stopId"
+                  required
+                  defaultValue={stops[0]?.id}
+                  placeholder="정류장 선택"
+                  searchPlaceholder="정류장 이름으로 검색"
+                  options={stops.map((s) => ({ value: s.id, label: s.name }))}
+                />
               </div>
               <div className="flex items-end">
                 <Button type="submit" disabled={pending} className="w-full">

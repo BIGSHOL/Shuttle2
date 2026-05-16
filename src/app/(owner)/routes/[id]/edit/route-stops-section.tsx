@@ -7,13 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Table,
   TableBody,
@@ -101,18 +95,15 @@ export function RouteStopsSection({
                 <Label htmlFor="stopId" className="text-xs">
                   정류장
                 </Label>
-                <Select name="stopId" required defaultValue={stops[0]?.id}>
-                  <SelectTrigger id="stopId">
-                    <SelectValue placeholder="정류장 선택" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {stops.map((s) => (
-                      <SelectItem key={s.id} value={s.id}>
-                        {s.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <SearchableSelect
+                  id="stopId"
+                  name="stopId"
+                  required
+                  defaultValue={stops[0]?.id}
+                  placeholder="정류장 선택"
+                  searchPlaceholder="정류장 이름으로 검색"
+                  options={stops.map((s) => ({ value: s.id, label: s.name }))}
+                />
                 {state.fieldErrors?.stopId ? (
                   <p className="text-destructive text-xs">
                     {state.fieldErrors.stopId[0]}
