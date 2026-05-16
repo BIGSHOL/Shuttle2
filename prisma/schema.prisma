@@ -222,6 +222,10 @@ model Stop {
   // 사용자 노출은 좌표 대신 이 값. nullable — 등록 후 카카오 일시 장애·외국 좌표 등.
   address String?
   radiusM Int          @default(50) // 도착 판정 반경 (미터)
+  // W26-E: 정류장 사용/미사용 토글. 미사용은 신규 노선·학생 배정 picker에서 제외.
+  // 기존 RouteStop·RouteStudent는 그대로 유지되어 재활성화 시 즉시 복귀 가능
+  // (계절·임시 폐쇄·터널 공사 등 운영 시나리오).
+  isActive Boolean @default(true)
 
   routes                  RouteStop[]
   students                RouteStudent[]
@@ -235,6 +239,7 @@ model Stop {
   ledgerTo                StopChangeLedger[]        @relation("LedgerToStop")
 
   @@index([orgId])
+  @@index([orgId, isActive])
 }
 
 model RouteStop {

@@ -15,9 +15,11 @@ import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { StopMapDisplay } from "@/lib/map/stop-map-display";
 
 import { DeleteStopButton } from "../_components/delete-stop-button";
+import { ToggleStopActiveButton } from "../_components/toggle-stop-active-button";
 
 // W21-C: 정류장 360° 상세.
-// 학원장이 한 정류장의 위치(맵)·사용 노선·home 학생·30일 변경 요청을 한 화면에서.
+// 학원장이 한 정류장의 위치(맵)·사용 노선·배정 학생·30일 변경 요청을 한 화면에서.
+// W26-E: isActive 토글 헤더 액션 추가.
 
 const DIRECTION_LABEL = { PICKUP: "등원", DROPOFF: "하원" } as const;
 const MODE_LABEL = { KIDS: "어린이용", GENERAL: "일반용" } as const;
@@ -56,7 +58,9 @@ export default async function StopProfilePage({
   const [stop, routeStops, routeStudents, stopChanges] = await Promise.all([
     db.stop.findFirst({ where: { id, orgId } }),
     db.routeStop.findMany({
-      where: { stopId: id },
+      // W26-E: orgId 가드 추가. RouteStop은 orgId 직접 컬럼이 없으므로 route→vehicle 경유.
+      // (Stop 자체는 위 stop.findFirst에서 orgId 가드 통과, 정류장 공유 시나리오 대비)
+      where: { stopId: id, route: { vehicle: { orgId } } },
       include: {
         route: {
           select: {
@@ -120,7 +124,14 @@ export default async function StopProfilePage({
       {/* 헤더 */}
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="text-2xl font-semibold">{stop.name}</h2>
+          <div className="flex flex-wrap items-center gap-2">
+            <h2 className="text-2xl font-semibold">{stop.name}</h2>
+            {!stop.isActive ? (
+              <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-extrabold tracking-wide">
+                미사용
+              </span>
+            ) : null}
+          </div>
           <p className="text-muted-foreground mt-1 text-sm">
             {stop.address ?? "주소 미확인"} · 반경 {stop.radiusM}m
           </p>
@@ -129,6 +140,7 @@ export default async function StopProfilePage({
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <ToggleStopActiveButton id={stop.id} isActive={stop.isActive} />
           <Button asChild variant="outline">
             <Link href={`/stops/${stop.id}/edit`}>편집</Link>
           </Button>
@@ -154,7 +166,7 @@ export default async function StopProfilePage({
         <div className="grid grid-cols-2 gap-px bg-border lg:grid-cols-4">
           {[
             { label: "사용 노선", value: `${routeStops.length}개` },
-            { label: "home 학생", value: `${routeStudents.length}명` },
+            { label: "배정 학생", value: `${routeStudents.length}명` },
             {
               label: "변경 요청 (이 정류장→다른 곳)",
               value: `${fromCount}건`,
@@ -236,18 +248,18 @@ export default async function StopProfilePage({
         </CardContent>
       </Card>
 
-      {/* home 학생 list */}
+      {/* 배정 학생 list */}
       <Card>
         <CardHeader>
-          <CardTitle>이 정류장이 home인 학생</CardTitle>
+          <CardTitle>이 정류장에 배정된 학생</CardTitle>
           <CardDescription>
-            이 정류장을 home으로 사용하는 학생. 행 클릭 시 학생 상세로.
+            이 정류장을 등하원 거점으로 사용하는 학생. 행 클릭 시 학생 상세로.
           </CardDescription>
         </CardHeader>
         <CardContent className="p-0">
           {routeStudents.length === 0 ? (
             <p className="text-muted-foreground p-6 text-sm">
-              home 학생이 없습니다.
+              배정된 학생이 없습니다.
             </p>
           ) : (
             <ul className="divide-y">
@@ -282,7 +294,7 @@ export default async function StopProfilePage({
         </CardContent>
       </Card>
 
-      {/* 30일 변경 요청 history */}
+      {/* 30일 변경 요청 이력 */}
       <Card>
         <CardHeader>
           <CardTitle>최근 30일 변경 요청</CardTitle>

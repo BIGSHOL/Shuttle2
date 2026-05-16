@@ -148,6 +148,21 @@ route group 다른 그룹이 같은 path를 만들면 빌드 실패. 우리 패�
 - 모든 DB 쿼리는 `orgId`로 필터. 학원 간 데이터 누출 방지가 최우선.
 - 일자/시각은 항상 KST 기준. DB는 UTC, 표시는 `Asia/Seoul`.
 - 에러는 swallow 금지. 사용자에게는 한국어 메시지, 로그는 영문.
+- **사용자 노출 텍스트는 100% 한글.** JSX 안 `>text<` · `placeholder=` ·
+  `title=` · `alt=` · `aria-label=` · toast/alert/confirm 메시지 등 화면에
+  보이는 모든 문자열. 영문 외래어가 자연스러운 도메인 용어는 한글 표기 우선
+  ("history" → "이력", "home 학생" → "배정 학생", "Live" → "실시간",
+  "ETA" → "도착 예상", "PWA" → "앱"). 예외는 다음만 허용:
+  - **고유명사·브랜드명**: 셔틀이·MakeEdu·Toss·Stripe·Vercel·Supabase 등
+  - **enum/code constant**: `PICKUP`/`DROPOFF`·`KIDS`/`GENERAL`·`OWNER` 등
+    DB enum 값 (UI 노출 시 한글 label로 변환: `DIRECTION_LABEL` 등 사전 사용)
+  - **버전 표기·식별자**: v1.0.6·com.shuttlee.driver
+  - **단위 약어**: km·m·ms·MB·GB (한국에서 일반 사용)
+  - **사이드 마커**: `(import)` 같은 데이터 출처 표시
+  코드 주석·로그·변수명·CSS 클래스는 영문 그대로 OK.
+- JSX 변경 시 즉시 spot check: 새 텍스트에 영문 단어가 없는지 한 번 본인 검토.
+  PR/commit 시 사용자 노출 영문 잔존을 W18-B·W25-fix 같은 별도 한글화 wave로
+  미루지 말 것 — 처음부터 한글로 작성.
 
 ## 멀티테넌시 규칙 (중요)
 

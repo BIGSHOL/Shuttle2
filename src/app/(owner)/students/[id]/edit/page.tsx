@@ -53,12 +53,14 @@ export default async function EditStudentPage({
 
   const [routes, stops] = await Promise.all([
     db.route.findMany({
-      where: { vehicle: { orgId } },
+      // W26-B: 미사용 노선은 신규 배정 picker에서 제외
+      where: { vehicle: { orgId }, isActive: true },
       orderBy: [{ direction: "asc" }, { name: "asc" }],
       select: { id: true, name: true, direction: true },
     }),
     db.stop.findMany({
-      where: { orgId },
+      // W26-E: 미사용 정류장은 신규 배정 picker에서 제외
+      where: { orgId, isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

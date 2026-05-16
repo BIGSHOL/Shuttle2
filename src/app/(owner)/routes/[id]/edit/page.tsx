@@ -42,7 +42,8 @@ export default async function EditRoutePage({
       select: { id: true, plate: true, mode: true },
     }),
     db.stop.findMany({
-      where: { orgId },
+      // W26-E: 미사용 정류장은 신규 RouteStop picker에서 제외
+      where: { orgId, isActive: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),

@@ -104,6 +104,28 @@ export async function updateStopAction(
   redirect("/stops");
 }
 
+// W26-E: 정류장 사용/미사용 빠른 토글. RouteStop·RouteStudent 매핑은 유지.
+export async function toggleStopActiveAction(
+  id: string,
+  nextActive: boolean,
+): Promise<void> {
+  const orgId = await getOrgId();
+
+  const result = await db.stop.updateMany({
+    where: { id, orgId },
+    data: { isActive: nextActive },
+  });
+
+  if (result.count === 0) {
+    throw new Error("해당 정류장을 찾을 수 없습니다");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/stops");
+  revalidatePath(`/stops/${id}`);
+  revalidatePath(`/stops/${id}/edit`);
+}
+
 export async function deleteStopAction(id: string): Promise<void> {
   const orgId = await getOrgId();
 

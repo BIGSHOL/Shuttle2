@@ -432,10 +432,10 @@ export default async function StudentProfilePage({
         </CardContent>
       </Card>
 
-      {/* 결석 신청 history */}
+      {/* 결석 신청 이력 */}
       <Card>
         <CardHeader>
-          <CardTitle>결석 신청 history</CardTitle>
+          <CardTitle>결석 신청 이력</CardTitle>
           <CardDescription>최근 30일 학부모 결석 신청.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">
@@ -482,10 +482,10 @@ export default async function StudentProfilePage({
         </CardContent>
       </Card>
 
-      {/* 정류장 변경 history */}
+      {/* 정류장 변경 이력 */}
       <Card>
         <CardHeader>
-          <CardTitle>정류장 변경 history</CardTitle>
+          <CardTitle>정류장 변경 이력</CardTitle>
           <CardDescription>최근 30일 학부모 변경 신청.</CardDescription>
         </CardHeader>
         <CardContent className="p-0">

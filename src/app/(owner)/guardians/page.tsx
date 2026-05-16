@@ -121,7 +121,7 @@ export default async function GuardiansPage() {
           </h2>
           <p className="text-muted-foreground mt-1 text-xs font-semibold lg:text-sm">
             학부모·보호자를 자녀와 연결합니다. 이름을 누르면 30일 결석·정류장
-            변경 history와 푸시 디바이스 상태를 확인합니다.
+            변경 이력과 푸시 디바이스 상태를 확인합니다.
           </p>
         </div>
         <Button asChild>
