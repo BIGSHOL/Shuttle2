@@ -1,7 +1,7 @@
 # 셔틀이 진행 현황
 
 > **이 문서는 세션 중간에도 업데이트되어 웹/앱 클로드 코드로 이어갈 수 있게 함**
-> 마지막 업데이트: 2026-05-09 (W25 — 학원장 영역 README 풀 적용: 좌측 사이드바·KPI strip·routes/[id]·billing·settings)
+> 마지막 업데이트: 2026-05-11 (W26-A — SafetyCheck 9 항목 영구 저장, 베타 직전 untracked 정돈)
 
 ## 완료된 마일스톤
 
@@ -41,7 +41,9 @@
 | W23-D | UI fix 묶음 — 학생 toolbar 검색·필터·정렬·페이지 한 줄 통합 / 차량 삭제 사전체크·result 패턴 + detail/edit에서 삭제 후 `/vehicles` redirect / not-found.tsx 세션 기반 home 경로 (학원장→대시보드 등) | `8bb8761`                                              | ✅   |
 | W23-E~H | 기사 RN 1.0.4~1.0.6 흰화면 root cause·디자인 풀세트·통합 빌드 핸드오프 (metro resolveRequest hook + dark gradient TripScreen + Promise.allSettled) | `bc06637` 외 | ✅ |
 | W24    | 셔틀이 플랫폼 매니저(어드민) 시스템 — `/admin/*` 9 페이지 + impersonation + AuditLog + DriverAppRelease | `082a0cf`, `4978f51`, `6bf3532` | ✅ |
-| W25    | **학원장 영역 README 풀 적용** — 좌측 사이드바 (그룹별 nav + 미처리 dot) / Dashboard KPI 5 + 안전교육 임박 / list 5종 KPI strip (students·routes·vehicles·stops·guardians) / `routes/[id]` 360° detail 신규 / absences·stop-change-requests KPI / safety-report 7일 통계 + CSS bar 차트 / **billing·settings 신규 2종** (UI + placeholder) | (pending commit) | ✅ 코드 |
+| W25    | **학원장 영역 README 풀 적용** — 좌측 사이드바 (그룹별 nav + 미처리 dot) / Dashboard KPI 5 + 안전교육 임박 / list 5종 KPI strip (students·routes·vehicles·stops·guardians) / `routes/[id]` 360° detail 신규 / absences·stop-change-requests KPI / safety-report 7일 통계 + CSS bar 차트 / **billing·settings 신규 2종** (UI + placeholder) | `a575bbf`, `231c017`, `15075da` (PR #14 머지) | ✅ |
+| W25-fix | **W25 hotfix wave (2026-05-10)** — owner header 알림 토글 compact pill / dashboard grid 비대칭 / settings sticky / parent 배지 통일 / safety-report PDF 다운로드·분기·학생 출석·N회 ping 영문 제거·일별 차트 한글화 / LocationPing·broadcast·TRIAL 잔존 한글화 | `a0d2373`..`1186133` (8 커밋) | ✅ |
+| W26-A | **SafetyCheck 9 항목 영구 저장 (베타 차단 해소)** — 도교법 §53 9 항목 모두 schema 컬럼화. client useState 6개(emergencyLightOk·doorLockOk·capacityOk·cabinLockOk·keyReturnedOk·recordReviewedOk) reload 시 0/4 리셋 → 영구 저장. preTripIncomplete 게이트도 4 필드 + helperPresent로 확장 (`71fff89` 후속 fix — 신규 3 항목 미체크 상태로 Running view 진입 차단). 베타 직전 untracked 정리(`.gitignore` /rn-crash*.log·/driver-*.apk·scheduled_tasks.lock + upload-driver-apk.ts commit). CLAUDE.md 신규 "UI 검증 방식 (dev + Chrome MCP only)" 가드레일. | `52a8342`, `3906d49`, `71fff89` | ✅ |
 
 **프로덕션**: https://shuttle2-nine.vercel.app/ → 200 OK
 
@@ -2062,10 +2064,7 @@ d1fcb76 W24-D Phase 2 driver: pickup-wrap + StudentRow + sticky btn-big
 ### 다음 세션 backlog
 
 **우선순위 — 사용자가 다음 세션에 picking up할 영역**:
-1. **SafetyCheck schema 확장** — refac 01·03 9개 항목 모두 영구 저장:
-   `emergencyLightOk`, `doorLockOk`, `capacityOk`, `cabinLockOk`,
-   `keyReturnedOk`, `recordReviewedOk` 컬럼 + RLS 마이그레이션. 현재는 client
-   useState placeholder라 reload 시 0/4로 리셋.
+1. ~~SafetyCheck schema 확장~~ — **W26-A에서 완료** (`3906d49`, 2026-05-11). 9 fields 영구 저장, reload 시 0/4 리셋 이슈 해소.
 2. **Owner detail/sub pages 픽셀 align** (Phase 3 v2):
    `(owner)/routes/[id]`, `/dashboard/trip/[tripId]`, `/pending`,
    `/safety-report`, `/billing`, `/settings/policies` — 각 화면 hi-fi HTML
@@ -2096,6 +2095,98 @@ d1fcb76 W24-D Phase 2 driver: pickup-wrap + StudentRow + sticky btn-big
 - 4개 체크 → 자동 **Running view** 전환 (RunTop·NextStopCard·StudentRow gray)
 - 모든 stop 통과 → 자동 **PostTripCheckScreen** (ArrivedBanner 녹색 + danger-note + 4 final-checks)
 - 모든 final-checks 체크 → "운행 종료" danger BtnBig enabled → 종료 → finished view (ArrivedBanner read-only)
+
+## W25 완료 (학원장 영역 README 풀 적용) — 2026-05-09
+
+PR #14(`15075da`)로 main 머지된 광범위 owner-area 정돈. ground truth는 `data/refac/`의 owner README 디자인 명세.
+
+### 결과
+
+- **좌측 사이드바**(`(owner)/_components/owner-sidebar.tsx`): 그룹별 nav + 미처리 항목 dot 표시 — absences 대기/stop-change 대기/safety-report 만기 임박.
+- **Dashboard KPI 5 + 안전교육 임박**: 오늘 운행/탑승률/결석/미탑승/안전교육 D-30. `dashboard/page.tsx`에 KPI strip + 운행 0일 단일 column fallback.
+- **list 5종 KPI strip**: students/routes/vehicles/stops/guardians 페이지 상단에 통일된 KPI 카드. `<KpiCard>` 신규 (`src/components/kpi-card.tsx`).
+- **`/routes/[id]` 360° detail** 신규 — W21 템플릿 mirror (30일 통계 + 차량/노선/학생 cross-link).
+- **`/absences`·`/stop-change-requests`**: 페이지 상단 KPI strip 추가.
+- **`/safety-report`**: 7일 운행량 통계 + CSS bar 차트 + 학생 출석 강화 + PDF 다운로드 옵션 정리. PDF 비고에서 N회 ping 영문 표기 제거하고 거리만 표시.
+- **`/billing`·`/settings`** 신규 2종 (placeholder UI) — 결제 통합·정책 설정 자리. 실제 기능은 P1 backlog.
+- **기사 RouteStop.id mismatch fix** (`231c017`) — 정류장 수기 도착 시 race idempotent.
+
+### W25-fix wave (2026-05-10, 8 커밋 `a0d2373`..`1186133`)
+
+W25 머지 직후 운영 검증에서 발견된 잔존 영문/UI 비대칭 정돈:
+
+- 헤더 알림 토글 compact pill + 운행 리포트·새 학생 등록 액션 (`a0d2373`)
+- dashboard 운행 0일 grid 비대칭 → 단일 column fallback (`4848294`)
+- settings 페이지 헤더 sticky top + sub-nav top 보정 (`1ba9c1e`)
+- parent header 알림 종 배지를 BottomTabs와 동일 iOS 스타일로 통일 (`7745c42`)
+- safety-report PDF 다운로드·분기 옵션 정리 + 학생 출석 강화 (`e8b090a`)
+- safety-report PDF 비고 'N회 ping' 영문 제거 — 거리만 표시 (`9fc4c2e`)
+- LocationPing·broadcast·trip-live·TRIAL 잔존 한글화 (`b0d9b6e`)
+- safety-report 일별 운행량 차트 설명 영문(bar·strip) 한글화 (`1186133`)
+
+## W26-A 완료 (SafetyCheck 9 항목 영구 저장 + 베타 직전 정돈) — 2026-05-11
+
+### 결과
+
+도교법 §53⑦ 안전운행기록 9 항목 (refac Driver Run.html `01 출발 전` + `03 도착 후`)을 **모두 SafetyCheck 컬럼으로 영구 저장**. 기존 client useState 6개는 reload 시 0/4 리셋되는 베타 차단 이슈였음.
+
+**추가 컬럼 6개** (모두 Boolean @default(false), RLS는 W7 baseline 그대로):
+
+- pre-trip: `emergencyLightOk` (비상등·후진경보음), `doorLockOk` (출입문 잠금장치), `capacityOk` (좌석·통로 인원 제한)
+- post-trip: `cabinLockOk` (차량 내부 잠금), `keyReturnedOk` (시동키 회수), `recordReviewedOk` (운영기록 검토)
+
+기존 3 schema-backed(`seatbeltAllOk`/`helperPresent`/`allAlightedOk`) + 6 추가 = 총 **9 항목 영구 저장**.
+
+### 마이그레이션
+
+- 신규: `prisma/migrations/20260510120000_safety_check_full_9items/migration.sql`
+  - `ALTER TABLE "SafetyCheck" ADD COLUMN ... NOT NULL DEFAULT false × 6`
+  - 기존 row는 DEFAULT false로 안전하게 채워짐 (데이터 손실 X).
+- W24-C billing 마이그레이션이 `db:push`로 적용된 상태였음 → `pnpm db:migrate:resolve:w24c-1` 후 `pnpm db:migrate:deploy`로 W26-A 마이그레이션 적용.
+
+### 코드 변경
+
+- `prisma/schema.prisma` SafetyCheck 모델 6 fields 추가
+- `packages/shared-contracts/src/driver-inputs.ts` SafetyFieldsInputSchema 확장 (RN·PWA 공유 zod)
+- `src/server/driver/upsert-safety-check.ts` 데이터 빌더 + create branch 9 fields 처리
+- `(driver)/trip/[id]/_components/pre-trip-check-screen.tsx` 6 useState 제거 → safetyCheck 읽기 + `toggleField` 헬퍼 (기존 seatbelt 패턴 mirror)
+- `(driver)/trip/[id]/_components/post-trip-check-screen.tsx` 동일 패턴 적용
+- `trip-screen.tsx` safetyCheck prop construction 9 fields
+- `trip-running-view.tsx` 상위 prop type 9 fields
+- **후속 fix (`71fff89`)**: `trip-running-view.tsx` `preTripIncomplete` 게이트가
+  seatbelt + helperPresent 2개만 보던 것을 4 schema-backed pre-trip 필드
+  (seatbelt + emergencyLight + doorLock + capacity) + helperPresent 5 필드로
+  확장. 이전엔 신규 3 항목 미체크 상태로도 Running view 진입 가능 — 도교법
+  §53⑦ 의무 위반 경로였음. 이제 모두 true여야 통과.
+
+### 베타 직전 정돈 (commit `52a8342`)
+
+- `.gitignore` 확장:
+  - `/rn-crash.log` → `/rn-crash*.log` glob (1.0.3-bluestacks·향후 변형 cover)
+  - `/driver-*.apk` 신규 (66MB 바이너리 격리, EAS artifact/Supabase Storage가 정식 경로)
+  - `.claude/scheduled_tasks.lock` (런타임 lock)
+- `scripts/upload-driver-apk.ts` (W23-B에서 누락된 utility) commit — APK 30일 retention 대비 driver-apks bucket 재업로드 도구. secret 없음(env 사용).
+
+### CLAUDE.md 신규 가드레일
+
+**"UI 검증 방식 (반드시 dev 서버 + Chrome MCP)"** 섹션 — `preview_*` 도구 사용 금지, `pnpm dev` + Chrome MCP `localhost:3000`만 사용. demo 계정 + port 충돌 대처 PowerShell 명령 명시.
+
+### 검증 (demo_driver KIDS 운행, dev server)
+
+- `pnpm typecheck` 0 error
+- `db:migrate:deploy` 성공 (w24c-1 resolve 후)
+- `/api/driver/trip/<id>/safety` POST × 8 → 200 OK
+- DB SafetyCheck row 9 fields 모두 영속, reload 후 화면 `4/4 완료` + 검정 "운행 시작" CTA 활성
+
+### 사용자 작업 (베타 시작 / 프로덕션 머지 시)
+
+- ⏰ **프로덕션 Supabase DB에 마이그레이션 적용** — Vercel 배포 직전 또는 직후:
+  ```
+  pnpm db:migrate:deploy
+  ```
+  (`DATABASE_URL`이 프로덕션 DB를 가리키도록 `.env.local` 확인 필요. w24c-1 미해결 상태면 먼저 `pnpm db:migrate:resolve:w24c-1`)
+- ⚠️ EXPO_TOKEN 회전 (W23-H에서 carry-over, 베타 시작 전 필수)
+- ⏰ EAS APK 30일 retention 만료 대비 (~2026-05-21, ~10일 남음) — Vercel Blob / GitHub Releases / Supabase Pro 결정
 
 ## 주요 라우트
 

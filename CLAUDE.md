@@ -462,9 +462,8 @@ Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Obje
     - parent 4 화면 모두 hi-fi 01·02·03·04 frame과 픽셀 단위 일치
     - driver 3 phase 시나리오 통과 (pre → running → post → finished)
   - **베타 backlog (다음 세션 picking up)**:
-    1. **SafetyCheck schema 확장** — 9개 항목 모두 영구 저장 (`emergencyLightOk`
-       `doorLockOk` `capacityOk` `cabinLockOk` `keyReturnedOk` `recordReviewedOk`
-       컬럼 + RLS). 현재 client useState라 reload 시 0/4 리셋.
+    1. ~~SafetyCheck schema 확장~~ — **W26-A에서 완료** (`3906d49`, 2026-05-11).
+       9 fields 모두 schema 컬럼화, reload 시 0/4 리셋 이슈 해소.
     2. **Owner detail/sub pages 픽셀 align** (Phase 3 v2): routes/[id],
        dashboard/trip/[tripId], pending, safety-report, billing,
        settings/policies — refac HTML 1:1.
@@ -476,6 +475,25 @@ Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Obje
     - **Vercel 배포 대기 X** — 디자인 작업은 dev 서버로만 검증.
     - demo 계정: `demo_parent1` / `demo_driver` / `demo1234!`
     - Chrome MCP `localhost:3000` 모바일 420×900 viewport.
+- **W25 학원장 영역 README 풀 적용** (PR #14 `15075da`, 2026-05-09) — 좌측 사이드바
+  + 미처리 dot · Dashboard KPI 5 + 안전교육 임박 · list 5종 KPI strip
+  (students·routes·vehicles·stops·guardians) · `routes/[id]` 360° detail 신규 ·
+  absences·stop-change-requests KPI · safety-report 7일 통계 + CSS bar 차트 ·
+  `billing`·`settings` 신규 2종 (placeholder UI). 기사 RouteStop.id mismatch fix
+  (`231c017`)도 동봉.
+- **W25-fix wave** (2026-05-10, `a0d2373`..`1186133` 8 커밋) — owner header 알림
+  토글 compact pill · dashboard grid 비대칭 · settings sticky · parent 배지 통일
+  · safety-report PDF 다운로드/분기·학생 출석·N회 ping 영문 제거·일별 차트 한글화 ·
+  LocationPing·broadcast·TRIAL 잔존 한글화.
+- **W26-A SafetyCheck 9 항목 영구 저장 + 베타 직전 정돈** (`52a8342`, `3906d49`,
+  `71fff89`, 2026-05-11) — 도교법 §53⑦ 9 항목 모두 schema 컬럼화. 추가 6개:
+  `emergencyLightOk` `doorLockOk` `capacityOk` (pre-trip) + `cabinLockOk`
+  `keyReturnedOk` `recordReviewedOk` (post-trip). 기존 client useState reload
+  시 리셋 이슈 해소. pre/post-check-screen `toggleField` 헬퍼로 seatbelt 패턴
+  mirror. 후속 fix(`71fff89`): `preTripIncomplete` 게이트도 4 필드 + helperPresent로
+  확장 — 이전엔 신규 3 항목 미체크 상태로도 Running view 진입 가능했음. `.gitignore`
+  정돈 (`/rn-crash*.log`·`/driver-*.apk`·`scheduled_tasks.lock`) + `scripts/upload-driver-apk.ts`
+  commit. CLAUDE.md 신규 가드레일 "UI 검증 방식 (dev + Chrome MCP only)" 섹션.
 
 ### 알려진 미해결 (다음 세션)
 
@@ -506,8 +524,15 @@ Get-NetTCPConnection -LocalPort 3000 -ErrorAction SilentlyContinue | Select-Obje
   - ⏰ BlueStacks 검증 시나리오 4개 통과 (로그인 한글 알림 / 헤더 me endpoint /
        RunListScreen 풀세트 / TripScreen 다크 그라디언트)
   - ⚠️ EXPO_TOKEN 2개 회전 (W23-B에서 carry-over, 베타 시작 전 필수)
-  - ⏰ EAS APK 30일 retention 만료 (~2026-05-21, ~13일 남음) — Vercel Blob /
+  - ⏰ EAS APK 30일 retention 만료 (~2026-05-21, ~10일 남음) — Vercel Blob /
        GitHub Releases / Supabase Pro 검토 후 전환
+- 사용자 작업 (W26-A 2026-05-11 시점 — 프로덕션 머지 시):
+  - ⏰ **프로덕션 Supabase DB에 SafetyCheck 마이그레이션 적용** —
+       `pnpm db:migrate:deploy` (DATABASE_URL이 prod를 가리키는지 확인).
+       w24c-1 미해결 상태일 경우 먼저 `pnpm db:migrate:resolve:w24c-1` 후 deploy.
+       dev DB는 이미 적용 완료.
+  - ✅ dev DB 검증: 9 fields 모두 영속 (toggle → reload → 4/4 완료)
+  - ✅ typecheck 0 error / shuttle-domain-guard 가드레일 9개 통과
 
 ### 베타 진입 backlog (W23-H 1.0.7+ 또는 운영 정책)
 
