@@ -36,7 +36,8 @@ export function KpiCard({
 }: {
   label: string;
   value: number | string;
-  subtext?: string;
+  // W26-E v2: ReactNode 허용 (Link 등 인터랙티브 인라인).
+  subtext?: React.ReactNode;
   Icon?: LucideIcon;
   tone?: KpiTone;
   pulse?: boolean;
@@ -139,7 +140,9 @@ export function KpiStripCell({
 }: {
   label: string;
   value: number | string;
-  subtext?: string;
+  // W26-E v2: ReactNode 허용 — KPI subtext에 Link 등 인터랙티브 요소를 직접
+  // 넣어 빠른 필터 적용 등 UX 동선 단축.
+  subtext?: React.ReactNode;
   Icon?: LucideIcon;
   tone?: KpiTone;
 }) {

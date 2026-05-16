@@ -88,9 +88,16 @@ export default async function StopsPage({
           label="총 정류장"
           value={totalCount}
           subtext={
-            totalCount > 0 && noAddressCount > 0
-              ? `주소 미확인 ${noAddressCount}건`
-              : "전체 등록"
+            totalCount > 0 && noAddressCount > 0 ? (
+              <Link
+                href="/stops?address=missing"
+                className="hover:text-warning underline-offset-2 hover:underline"
+              >
+                주소 미확인 {noAddressCount}건
+              </Link>
+            ) : (
+              "전체 등록"
+            )
           }
           Icon={MapPin}
           tone="info"

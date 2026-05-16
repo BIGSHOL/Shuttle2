@@ -37,6 +37,12 @@ const ACTIVE_OPTIONS: { value: ParsedStopsParams["active"]; label: string }[] = 
   { value: "inactive", label: "미사용" },
 ];
 
+const ADDRESS_OPTIONS: { value: ParsedStopsParams["address"]; label: string }[] = [
+  { value: "all", label: "전체 주소 상태" },
+  { value: "set", label: "주소 있음" },
+  { value: "missing", label: "주소 미확인" },
+];
+
 export function StopsToolbar({ current }: { current: ParsedStopsParams }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -91,6 +97,7 @@ export function StopsToolbar({ current }: { current: ParsedStopsParams }) {
       p.delete("q");
       p.delete("usage");
       p.delete("active");
+      p.delete("address");
       p.delete("sort");
       p.delete("dir");
     });
@@ -104,6 +111,7 @@ export function StopsToolbar({ current }: { current: ParsedStopsParams }) {
     !!current.q ||
     current.usage !== "all" ||
     current.active !== "all" ||
+    current.address !== "all" ||
     current.sort !== "name" ||
     current.dir !== "asc";
 
@@ -148,6 +156,23 @@ export function StopsToolbar({ current }: { current: ParsedStopsParams }) {
         </SelectTrigger>
         <SelectContent>
           {ACTIVE_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
+      {/* 주소 상태 (카카오 reverse geocoding 결과 유무) */}
+      <Select
+        value={current.address}
+        onValueChange={(v) => setParam("address", v)}
+      >
+        <SelectTrigger className="h-9 w-[150px]">
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {ADDRESS_OPTIONS.map((o) => (
             <SelectItem key={o.value} value={o.value}>
               {o.label}
             </SelectItem>

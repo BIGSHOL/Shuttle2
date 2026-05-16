@@ -10,11 +10,15 @@ import { db } from "@/lib/db";
 
 export const USAGE_FILTERS = ["all", "used", "unused"] as const;
 export const ACTIVE_FILTERS = ["all", "active", "inactive"] as const;
+// W26-E v2: 주소 reverse geocoding 결과 유무 — 카카오 일시 장애·외국 좌표 등으로
+// address null 인 row 빠르게 찾기. 사용자 요청.
+export const ADDRESS_FILTERS = ["all", "set", "missing"] as const;
 export const SORT_KEYS = ["name", "radius", "routes"] as const;
 export const SORT_DIRS = ["asc", "desc"] as const;
 
 export type UsageFilter = (typeof USAGE_FILTERS)[number];
 export type ActiveFilter = (typeof ACTIVE_FILTERS)[number];
+export type AddressFilter = (typeof ADDRESS_FILTERS)[number];
 export type SortKey = (typeof SORT_KEYS)[number];
 export type SortDir = (typeof SORT_DIRS)[number];
 
@@ -27,6 +31,7 @@ export const stopsParamsSchema = z.object({
     .transform((v) => (v && v.length > 0 ? v : undefined)),
   usage: z.enum(USAGE_FILTERS).default("all"),
   active: z.enum(ACTIVE_FILTERS).default("all"),
+  address: z.enum(ADDRESS_FILTERS).default("all"),
   sort: z.enum(SORT_KEYS).default("name"),
   dir: z.enum(SORT_DIRS).default("asc"),
 });
@@ -45,6 +50,7 @@ export function parseStopsSearchParams(raw: RawSearchParams): ParsedStopsParams 
     q: pickFirst(raw.q),
     usage: pickFirst(raw.usage),
     active: pickFirst(raw.active),
+    address: pickFirst(raw.address),
     sort: pickFirst(raw.sort),
     dir: pickFirst(raw.dir),
   };
@@ -70,6 +76,11 @@ function buildWhere(orgId: string, p: ParsedStopsParams) {
     where.isActive = true;
   } else if (p.active === "inactive") {
     where.isActive = false;
+  }
+  if (p.address === "missing") {
+    where.address = null;
+  } else if (p.address === "set") {
+    where.address = { not: null };
   }
   return where;
 }
@@ -108,6 +119,11 @@ export type StopRow = Awaited<ReturnType<typeof listStops>>[number];
 
 export function hasActiveFilters(p: ParsedStopsParams): boolean {
   return Boolean(
-    p.q || p.usage !== "all" || p.active !== "all" || p.sort !== "name" || p.dir !== "asc",
+    p.q ||
+      p.usage !== "all" ||
+      p.active !== "all" ||
+      p.address !== "all" ||
+      p.sort !== "name" ||
+      p.dir !== "asc",
   );
 }
