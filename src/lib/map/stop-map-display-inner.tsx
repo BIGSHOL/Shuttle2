@@ -18,8 +18,13 @@ export function StopMapDisplayInner({
   name: string;
   heightPx?: number;
 }) {
+  // W26-D: libraries 옵션 통일. react-kakao-maps-sdk는 SPA navigation 후에도
+  // window.kakao를 재사용하므로 한 페이지에서 services 빠진 채 로드되면
+  // 다음 페이지의 picker 검색이 깨짐. picker·trip-live와 동일하게 services
+  // 포함 — 이 컴포넌트는 직접 사용하지 않지만 SDK 옵션 통일 목적.
   const [loading, error] = useKakaoLoader({
     appkey: process.env.NEXT_PUBLIC_KAKAO_MAP_KEY ?? "",
+    libraries: ["services"],
   });
 
   if (error) {
