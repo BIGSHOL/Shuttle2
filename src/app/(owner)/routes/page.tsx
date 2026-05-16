@@ -22,23 +22,30 @@ import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/auth/session";
 
 import { DeleteRouteButton } from "./_components/delete-route-button";
+import { RoutesToolbar } from "./_components/routes-toolbar";
 import { ToggleActiveButton } from "./_components/toggle-active-button";
+import {
+  listRoutes,
+  parseRoutesSearchParams,
+  type RawSearchParams,
+} from "./_lib/query";
 import { formatDirection, formatWeekdays } from "./_lib/weekdays";
 
-export default async function RoutesPage() {
+export default async function RoutesPage({
+  searchParams,
+}: {
+  searchParams: Promise<RawSearchParams>;
+}) {
   const orgId = await getOrgId();
+  const params = parseRoutesSearchParams(await searchParams);
 
-  // KPI 4 + list 한 번에 fetch.
-  const [routes, totalStops, totalAssigned, runningTripCount] =
+  // KPI는 필터 무관 전체 기준. 행 list만 필터 적용.
+  const [filteredRoutes, totalRoutes, totalKids, totalActive, totalStops, totalAssigned, runningTripCount] =
     await Promise.all([
-      db.route.findMany({
-        where: { vehicle: { orgId } },
-        orderBy: [{ direction: "asc" }, { name: "asc" }],
-        include: {
-          vehicle: { select: { plate: true, mode: true } },
-          _count: { select: { stops: true, students: true } },
-        },
-      }),
+      listRoutes(orgId, params),
+      db.route.count({ where: { vehicle: { orgId } } }),
+      db.route.count({ where: { vehicle: { orgId, mode: "KIDS" } } }),
+      db.route.count({ where: { vehicle: { orgId }, isActive: true } }),
       db.stop.count({ where: { orgId } }),
       db.routeStudent.count({ where: { route: { vehicle: { orgId } } } }),
       db.trip.count({
@@ -50,9 +57,8 @@ export default async function RoutesPage() {
       }),
     ]);
 
-  const kidsRouteCount = routes.filter((r) => r.vehicle.mode === "KIDS").length;
-  const activeRouteCount = routes.filter((r) => r.isActive).length;
-  const inactiveRouteCount = routes.length - activeRouteCount;
+  const inactiveRouteCount = totalRoutes - totalActive;
+  const filteredHasNone = filteredRoutes.length === 0 && totalRoutes > 0;
 
   return (
     <main className="mx-auto max-w-7xl space-y-5 p-4 lg:p-6">
@@ -73,18 +79,25 @@ export default async function RoutesPage() {
       <KpiStrip cols={5}>
         <KpiStripCell
           label="총 노선"
-          value={routes.length}
-          subtext={`어린이용 ${kidsRouteCount} · 일반 ${routes.length - kidsRouteCount}`}
+          value={totalRoutes}
+          subtext={`어린이용 ${totalKids} · 일반 ${totalRoutes - totalKids}`}
           Icon={RouteIcon}
           tone="info"
         />
         <KpiStripCell
           label="사용 중"
-          value={activeRouteCount}
+          value={totalActive}
           subtext={
-            inactiveRouteCount > 0
-              ? `미사용 ${inactiveRouteCount}개`
-              : "전체 활성"
+            inactiveRouteCount > 0 ? (
+              <Link
+                href="/routes?active=inactive"
+                className="hover:text-warning underline-offset-2 hover:underline"
+              >
+                미사용 {inactiveRouteCount}개
+              </Link>
+            ) : (
+              "전체 활성"
+            )
           }
           Icon={Power}
           tone={inactiveRouteCount > 0 ? "warning" : "success"}
@@ -93,8 +106,8 @@ export default async function RoutesPage() {
           label="총 정류장"
           value={totalStops}
           subtext={
-            routes.length > 0
-              ? `평균 ${(totalStops / routes.length).toFixed(1)}개 / 노선`
+            totalRoutes > 0
+              ? `평균 ${(totalStops / totalRoutes).toFixed(1)}개 / 노선`
               : "-"
           }
           Icon={MapPin}
@@ -116,7 +129,10 @@ export default async function RoutesPage() {
         />
       </KpiStrip>
 
-      {routes.length === 0 ? (
+      {/* 검색·필터 toolbar (stops-toolbar 디자인과 통일) */}
+      {totalRoutes > 0 ? <RoutesToolbar current={params} /> : null}
+
+      {totalRoutes === 0 ? (
         <Card>
           <CardHeader>
             <CardTitle>등록된 노선이 없습니다</CardTitle>
@@ -131,11 +147,29 @@ export default async function RoutesPage() {
             </Button>
           </CardContent>
         </Card>
+      ) : filteredHasNone ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>검색 결과가 없습니다</CardTitle>
+            <CardDescription>
+              검색어·필터를 조정하거나 초기화 버튼을 눌러 주세요.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button asChild variant="outline">
+              <Link href="/routes">필터 초기화</Link>
+            </Button>
+          </CardContent>
+        </Card>
       ) : (
         <>
+          <p className="text-muted-foreground text-xs">
+            {filteredRoutes.length}개 표시 · 전체 {totalRoutes}개
+          </p>
+
           {/* 모바일: 카드 stack */}
           <ul className="space-y-2 lg:hidden">
-            {routes.map((r) => {
+            {filteredRoutes.map((r) => {
               const dirCls =
                 r.direction === "PICKUP"
                   ? "bg-success-soft text-success"
@@ -212,7 +246,7 @@ export default async function RoutesPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {routes.map((r) => {
+                  {filteredRoutes.map((r) => {
                     const isKids = r.vehicle.mode === "KIDS";
                     return (
                       <TableRow
