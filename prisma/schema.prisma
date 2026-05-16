@@ -192,6 +192,9 @@ model Route {
   name      String // "월수금 등원 1코스"
   direction RouteDirection
   weekdays  Int // 비트마스크: 월=1 화=2 수=4 목=8 금=16 토=32 일=64
+  // W26-B: 노선 사용/미사용 토글. 미사용은 오늘 운행 후보·KPI에서 제외.
+  // RouteStudent 매핑은 유지되어 활성화 시 즉시 복귀 가능 (시즌·방학중 전환).
+  isActive  Boolean        @default(true)
 
   stops       RouteStop[]
   students    RouteStudent[]
@@ -200,6 +203,7 @@ model Route {
   assignments RouteAssignment[]
 
   @@index([vehicleId])
+  @@index([isActive])
 }
 
 enum RouteDirection {

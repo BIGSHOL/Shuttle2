@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Bus, MapPin, Route as RouteIcon, Users } from "lucide-react";
+import { Bus, MapPin, Power, Route as RouteIcon, Users } from "lucide-react";
 
 import { KpiStrip, KpiStripCell } from "@/components/kpi-card";
 import { Button } from "@/components/ui/button";
@@ -22,6 +22,7 @@ import { db } from "@/lib/db";
 import { getOrgId } from "@/lib/auth/session";
 
 import { DeleteRouteButton } from "./_components/delete-route-button";
+import { ToggleActiveButton } from "./_components/toggle-active-button";
 import { formatDirection, formatWeekdays } from "./_lib/weekdays";
 
 export default async function RoutesPage() {
@@ -50,6 +51,8 @@ export default async function RoutesPage() {
     ]);
 
   const kidsRouteCount = routes.filter((r) => r.vehicle.mode === "KIDS").length;
+  const activeRouteCount = routes.filter((r) => r.isActive).length;
+  const inactiveRouteCount = routes.length - activeRouteCount;
 
   return (
     <main className="mx-auto max-w-7xl space-y-5 p-4 lg:p-6">
@@ -67,13 +70,24 @@ export default async function RoutesPage() {
       </div>
 
       {/* KPI strip */}
-      <KpiStrip cols={4}>
+      <KpiStrip cols={5}>
         <KpiStripCell
           label="총 노선"
           value={routes.length}
           subtext={`어린이용 ${kidsRouteCount} · 일반 ${routes.length - kidsRouteCount}`}
           Icon={RouteIcon}
           tone="info"
+        />
+        <KpiStripCell
+          label="사용 중"
+          value={activeRouteCount}
+          subtext={
+            inactiveRouteCount > 0
+              ? `미사용 ${inactiveRouteCount}개`
+              : "전체 활성"
+          }
+          Icon={Power}
+          tone={inactiveRouteCount > 0 ? "warning" : "success"}
         />
         <KpiStripCell
           label="총 정류장"
@@ -129,9 +143,13 @@ export default async function RoutesPage() {
               const isKids = r.vehicle.mode === "KIDS";
               return (
                 <li key={r.id}>
-                  <div className="bg-card flex items-stretch gap-0 rounded-lg border shadow-sm">
+                  <div
+                    className={`bg-card flex items-stretch gap-0 rounded-lg border shadow-sm ${
+                      r.isActive ? "" : "opacity-60"
+                    }`}
+                  >
                     <span
-                      className={`${isKids ? "bg-bus" : "bg-muted"} w-1 shrink-0 rounded-l-lg`}
+                      className={`${isKids && r.isActive ? "bg-bus" : "bg-muted"} w-1 shrink-0 rounded-l-lg`}
                       aria-hidden
                     />
                     <Link
@@ -149,6 +167,11 @@ export default async function RoutesPage() {
                             어린이용
                           </span>
                         ) : null}
+                        {!r.isActive ? (
+                          <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-[10px] font-extrabold tracking-wide">
+                            미사용
+                          </span>
+                        ) : null}
                         <h3 className="text-sm font-extrabold tracking-tight">
                           {r.name}
                         </h3>
@@ -159,6 +182,7 @@ export default async function RoutesPage() {
                       </p>
                     </Link>
                     <div className="flex shrink-0 flex-col items-end gap-1.5 p-3.5">
+                      <ToggleActiveButton id={r.id} isActive={r.isActive} />
                       <Button asChild size="sm" variant="outline">
                         <Link href={`/routes/${r.id}/edit`}>편집</Link>
                       </Button>
@@ -182,7 +206,7 @@ export default async function RoutesPage() {
                     <TableHead className="w-28">요일</TableHead>
                     <TableHead className="w-24">정류장</TableHead>
                     <TableHead className="w-24">학생</TableHead>
-                    <TableHead className="w-32 pr-[18px] text-right">
+                    <TableHead className="w-40 pr-[18px] text-right">
                       관리
                     </TableHead>
                   </TableRow>
@@ -191,18 +215,26 @@ export default async function RoutesPage() {
                   {routes.map((r) => {
                     const isKids = r.vehicle.mode === "KIDS";
                     return (
-                      <TableRow key={r.id} className="hover:bg-muted/50">
+                      <TableRow
+                        key={r.id}
+                        className={`hover:bg-muted/50 ${r.isActive ? "" : "opacity-60"}`}
+                      >
                         <TableCell className="p-0">
                           <Link
                             href={`/routes/${r.id}`}
                             className="flex items-stretch gap-0"
                           >
                             <span
-                              className={`${isKids ? "bg-bus" : "bg-muted"} w-1 shrink-0`}
+                              className={`${isKids && r.isActive ? "bg-bus" : "bg-muted"} w-1 shrink-0`}
                               aria-hidden
                             />
                             <span className="flex-1 px-3 py-2.5 font-extrabold tracking-tight">
                               {r.name}
+                              {!r.isActive ? (
+                                <span className="bg-muted text-muted-foreground ml-2 rounded-md px-1.5 py-0.5 text-[10px] font-extrabold tracking-wide">
+                                  미사용
+                                </span>
+                              ) : null}
                             </span>
                           </Link>
                         </TableCell>
@@ -266,6 +298,11 @@ export default async function RoutesPage() {
                           </Link>
                         </TableCell>
                         <TableCell className="space-x-1 pr-[18px] text-right">
+                          <ToggleActiveButton
+                            id={r.id}
+                            isActive={r.isActive}
+                            showLabel={false}
+                          />
                           <Button asChild size="sm" variant="outline">
                             <Link href={`/routes/${r.id}/edit`}>편집</Link>
                           </Button>

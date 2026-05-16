@@ -24,7 +24,8 @@ export default async function RunPage() {
 
   const [allRoutes, helpers, todayTrips] = await Promise.all([
     db.route.findMany({
-      where: { vehicle: { orgId } },
+      // W26-B: 미사용 노선은 오늘 운행 후보에서 제외
+      where: { vehicle: { orgId }, isActive: true },
       orderBy: [{ direction: "asc" }, { name: "asc" }],
       include: {
         vehicle: { select: { plate: true, mode: true } },

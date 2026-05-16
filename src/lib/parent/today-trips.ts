@@ -122,6 +122,7 @@ export async function getTodayChildTrips(
 
     for (const rs of studentAssignments) {
       if ((rs.route.weekdays & bit) === 0) continue; // 오늘 요일 아님
+      if (!rs.route.isActive) continue; // W26-B: 미사용 노선은 학부모 home에서 제외
 
       const route: RouteSummary = {
         id: rs.route.id,

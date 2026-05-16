@@ -83,7 +83,8 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     db.vehicle.count({ where: { orgId } }),
     db.student.count({ where: { orgId } }),
-    db.route.count({ where: { vehicle: { orgId } } }),
+    // W26-B: dashboard 노선 카운트는 사용 중인 것만
+    db.route.count({ where: { vehicle: { orgId }, isActive: true } }),
     db.absenceRequest.count({
       where: {
         student: { orgId },

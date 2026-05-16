@@ -24,6 +24,12 @@ const RouteInput = z.object({
     .int("요일 비트마스크가 올바르지 않습니다")
     .min(0)
     .max(127, "요일 비트마스크 범위를 벗어났습니다"),
+  // W26-B: 노선 사용/미사용 토글. checkbox formData는 'on' 또는 null이라
+  // .preprocess로 boolean 변환.
+  isActive: z.preprocess(
+    (v) => v === "on" || v === "true" || v === true,
+    z.boolean(),
+  ),
 });
 
 export type RouteFormState = {
@@ -37,6 +43,8 @@ function parseRouteForm(formData: FormData) {
     name: formData.get("name"),
     direction: formData.get("direction"),
     weekdays: formData.get("weekdays"),
+    // W26-B: checkbox는 unchecked일 때 null이므로 명시적 boolean 변환.
+    isActive: formData.get("isActive") ?? false,
   });
 }
 
@@ -125,6 +133,28 @@ export async function deleteRouteAction(id: string): Promise<void> {
 
   revalidatePath("/dashboard");
   revalidatePath("/routes");
+}
+
+// W26-B: 빠른 토글 (list page에서 form submit). next 값 명시.
+export async function toggleRouteActiveAction(
+  id: string,
+  nextActive: boolean,
+): Promise<void> {
+  const orgId = await getOrgId();
+
+  const result = await db.route.updateMany({
+    where: { id, vehicle: { orgId } },
+    data: { isActive: nextActive },
+  });
+
+  if (result.count === 0) {
+    throw new Error("해당 노선을 찾을 수 없습니다");
+  }
+
+  revalidatePath("/dashboard");
+  revalidatePath("/routes");
+  revalidatePath(`/routes/${id}`);
+  revalidatePath(`/routes/${id}/edit`);
 }
 
 // ────────────────────────────────────────────────────────────────────

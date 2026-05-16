@@ -72,6 +72,7 @@ export default async function EditRoutePage({
             name: route.name,
             direction: route.direction,
             weekdays: route.weekdays,
+            isActive: route.isActive,
           }}
           title=""
           submitLabel="기본 정보 저장"

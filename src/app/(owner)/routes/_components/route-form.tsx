@@ -41,6 +41,7 @@ export type RouteInitial = {
   name: string;
   direction: "PICKUP" | "DROPOFF";
   weekdays: number;
+  isActive: boolean;
 };
 
 const EMPTY: RouteInitial = {
@@ -48,6 +49,7 @@ const EMPTY: RouteInitial = {
   name: "",
   direction: "PICKUP",
   weekdays: 31, // 월~금
+  isActive: true,
 };
 
 export function RouteForm({
@@ -183,6 +185,25 @@ export function RouteForm({
           <p className="text-muted-foreground text-xs">
             여러 요일 선택 가능. 월·수·금 = 1+4+16=21, 평일=31, 매일=127.
           </p>
+        </div>
+
+        {/* W26-B: 노선 사용/미사용 토글 */}
+        <div className="space-y-2">
+          <Label>사용 상태</Label>
+          <label className="border-input bg-background hover:bg-accent flex cursor-pointer items-start gap-3 rounded-md border p-3 text-sm">
+            <input
+              type="checkbox"
+              name="isActive"
+              defaultChecked={initial.isActive}
+              className="mt-0.5 h-4 w-4"
+            />
+            <div className="flex-1">
+              <div className="font-semibold">노선 사용 중</div>
+              <div className="text-muted-foreground text-xs">
+                체크 해제하면 미사용 — 오늘 운행 후보·KPI·기사 운행 화면에서 제외됩니다. 학생 배정·정류장 순서는 그대로 유지되어 재활성화 시 즉시 복귀.
+              </div>
+            </div>
+          </label>
         </div>
 
         {state.error ? (

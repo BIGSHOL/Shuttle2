@@ -25,6 +25,7 @@ import { db } from "@/lib/db";
 import { getOrgId, requireOwner } from "@/lib/auth/session";
 import { cn } from "@/lib/utils";
 
+import { ToggleActiveButton } from "../_components/toggle-active-button";
 import { formatDirection, formatWeekdays } from "../_lib/weekdays";
 
 // 노선 360° read-only 상세. ground truth `Owner Route Detail.html` 패턴:
@@ -109,8 +110,18 @@ export default async function RouteDetailPage({
                 어린이용
               </span>
             ) : null}
+            {!route.isActive ? (
+              <span className="bg-muted text-muted-foreground rounded-md px-2 py-0.5 text-xs font-extrabold tracking-wide">
+                미사용
+              </span>
+            ) : null}
           </div>
-          <h2 className="mt-2 text-2xl font-black tracking-tight lg:text-3xl">
+          <h2
+            className={cn(
+              "mt-2 text-2xl font-black tracking-tight lg:text-3xl",
+              !route.isActive && "text-muted-foreground",
+            )}
+          >
             {route.name}
           </h2>
           <p className="text-muted-foreground mt-1.5 text-xs font-semibold lg:text-sm">
@@ -120,6 +131,7 @@ export default async function RouteDetailPage({
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
+          <ToggleActiveButton id={route.id} isActive={route.isActive} />
           <Button asChild variant="outline" size="sm">
             <Link
               href={`/routes/${route.id}/edit`}
